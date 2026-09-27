@@ -24,6 +24,7 @@ if str(BASE) not in sys.path:
     sys.path.insert(0, str(BASE))
 
 import mem  # noqa: E402
+import backup  # noqa: E402
 
 PORT = int(os.environ.get("PMEM_WEB_PORT", "8765"))
 INDEX_FILE = WEB / "index.html"
@@ -452,6 +453,9 @@ class Handler(BaseHTTPRequestHandler):
                         "over30": sum(1 for i in items if i["age"] >= 30),
                         "over60": sum(1 for i in items if i["age"] >= 60)})
             return
+        if p == "/api/backup":
+            self._json(backup.sync_status())
+            return
         if p == "/api/note":
             did = parse_qs(u.query).get("id", [""])[0]
             idx = cached_index()
@@ -544,6 +548,29 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         u = urlparse(self.path)
         p = u.path
+        if p == "/api/backup/save":
+            b = self._body()
+            target = (b.get("target") or "").strip()
+            note = (b.get("note") or "").strip()
+            backup.CONFIG_FILE.write_text(
+                json.dumps({"target": target, "note": note}, ensure_ascii=False, indent=1),
+                encoding="utf-8")
+            self._json(backup.sync_status())
+            return
+        if p == "/api/backup/run":
+            st = backup.sync_status()
+            if not st["configured"]:
+                self._json({"ok": False, "error": "未配置备份目标（pmem_backup.json 或 PMEM_BACKUP_TARGET）"}, 400)
+                return
+            self._json(backup.run_sync(st["target"]))
+            return
+        if p == "/api/backup/restore":
+            st = backup.sync_status()
+            if not st["configured"]:
+                self._json({"ok": False, "error": "未配置备份目标"}, 400)
+                return
+            self._json(backup.restore_sync(st["target"]))
+            return
         if p == "/api/candidates/archive":
             cand_dir = mem.NOTES / "candidates"
             archive_dir = cand_dir / "archive"

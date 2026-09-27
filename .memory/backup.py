@@ -56,6 +56,84 @@ def data_items() -> list[Path]:
     return out
 
 
+def sync_status() -> dict:
+    """返回备份状态（供 CLI/Web API 共用）。"""
+    target, note = load_target()
+    items = []
+    for src in data_items():
+        collect(src, src.name, items)
+    last = {}
+    try:
+        last = json.loads((BASE / MANIFEST).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        pass
+    ok = bool(target) and Path(target).exists() and os.access(Path(target), os.W_OK)
+    return {"target": target, "note": note, "configured": bool(target),
+            "target_ok": bool(Path(target).exists() and os.access(Path(target), os.W_OK)) if target else False,
+            "files": len(items), "bytes": total_size(items), "last": last.get("at", "-"),
+            "manifest": (BASE / MANIFEST).exists()}
+
+
+def run_sync(target: str) -> dict:
+    """执行增量同步（供 CLI/Web API 共用），返回统计。"""
+    dst = Path(target)
+    dst.mkdir(parents=True, exist_ok=True)
+    if not dst.is_dir() or not os.access(dst.parent, os.W_OK):
+        return {"ok": False, "error": f"目标不可写：{target}"}
+    items = []
+    for src in data_items():
+        collect(src, src.name, items)
+    last_map = {}
+    try:
+        last_map = {i["rel"]: i for i in json.loads((BASE / MANIFEST).read_text(encoding="utf-8")).get("items", [])}
+    except (OSError, json.JSONDecodeError):
+        pass
+    synced, skipped, copied = 0, 0, 0
+    for i in items:
+        old = last_map.get(i["rel"])
+        dst_p = dst / i["rel"]
+        # 跳过条件：清单状态未变 且 目标端文件确实存在（换目标后旧清单不得导致空同步）
+        if old and old["mtime"] == i["mtime"] and old["size"] == i["size"] and dst_p.exists():
+            skipped += 1
+            continue
+        src_p = BASE / i["rel"]
+        dst_p.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src_p, dst_p)
+        synced += 1
+        copied += i["size"]
+    at = time.strftime("%Y-%m-%d %H:%M:%S")
+    (BASE / MANIFEST).write_text(
+        json.dumps({"at": at, "items": items}, ensure_ascii=False, indent=1), encoding="utf-8")
+    return {"ok": True, "synced": synced, "skipped": skipped, "bytes": copied,
+            "files": len(items), "target": target, "at": at}
+
+
+def restore_sync(target: str) -> dict:
+    """从目标恢复数据到本地（覆盖同名），返回统计。"""
+    src = Path(target)
+    if not src.is_dir():
+        return {"ok": False, "error": f"目标目录不可用：{target}"}
+    restored = []
+    for name in DATA_PATHS:
+        p = src / name
+        if not p.exists():
+            continue
+        d = BASE / name
+        if p.is_dir():
+            d.mkdir(parents=True, exist_ok=True)
+            for f in p.rglob("*"):
+                if f.is_file():
+                    rel = f.relative_to(p)
+                    out = d / rel
+                    out.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(f, out)
+                    restored.append(str(rel))
+        else:
+            shutil.copy2(p, d)
+            restored.append(name)
+    return {"ok": True, "restored": restored, "count": len(restored), "target": target}
+
+
 def collect(src: Path, rel: str, items: list[dict]) -> None:
     if src.is_file():
         st = src.stat()

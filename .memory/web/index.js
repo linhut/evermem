@@ -27,7 +27,7 @@ $('#themeBtn').onclick = () => applyTheme(document.documentElement.dataset.theme
 
 /* 视图 */
 let VIEW = 'browse', CURRENT = null, EDIT_ID = null;
-const VIEWS = { browse: '记忆浏览', triage: '候选审核', import: '文档导入', hot: '核心经验', stats: '统计诊断', integ: '接入设置' };
+const VIEWS = { browse: '记忆浏览', triage: '候选审核', import: '文档导入', hot: '核心经验', stats: '统计诊断', integ: '接入设置', backup: '数据备份' };
 document.querySelectorAll('.nav').forEach(n => n.onclick = () => {
   document.querySelectorAll('.nav').forEach(x => x.classList.remove('active'));
   n.classList.add('active');
@@ -48,6 +48,54 @@ async function render() {
   else if (VIEW === 'hot') { c.innerHTML = '<div style="width:100%"><h2 style="margin-bottom:14px" id="hotTitle">核心经验</h2><div id="hotArea"></div></div>'; loadHot(); }
   else if (VIEW === 'stats') { c.innerHTML = '<div style="width:100%"><div class="stat-grid" id="statGrid"></div><p style="color:var(--text2);font-size:11.5px;margin-top:14px" id="statFoot"></p></div>'; loadStats(); }
   else if (VIEW === 'integ') { c.innerHTML = integHTML(); loadInteg(); }
+  else if (VIEW === 'backup') { c.innerHTML = backupHTML(); loadBackup(); }
+}
+
+const backupHTML = () => `<div style="width:100%"><div class="pane"><h3>数据备份 · 云端同步</h3>
+  <div class="sub">数据（笔记/事件/索引）与代码分离：代码在 GitHub 私人仓库，数据只经此处同步到你的云端位置</div>
+  <div style="margin-top:14px;display:flex;flex-direction:column;gap:10px">
+    <div><label style="font-size:12px;color:var(--text2)">云端目录（本机可写入：网盘同步夹 / NAS / WebDAV 挂载路径）</label>
+      <input id="bkTarget" style="width:100%;margin-top:4px" placeholder="如 D:/坚果云/evermem-backup 或 Y:/evermem-backup" /></div>
+    <div><label style="font-size:12px;color:var(--text2)">备注（可选）</label>
+      <input id="bkNote" style="width:100%;margin-top:4px" placeholder="例如：坚果云主备份" /></div>
+    <div class="btnrow">
+      <button class="btn primary" onclick="bkSave()">保存设置</button>
+      <button class="btn" onclick="bkRun()">立即备份</button>
+      <button class="btn ghost" onclick="bkRestore()">从云端恢复（覆盖本地）</button>
+    </div>
+    <div id="bkStatus" class="sub" style="margin-top:4px">读取中…</div>
+  </div></div></div>`;
+
+async function loadBackup() {
+  const d = await (await fetch('/api/backup')).json();
+  $('#bkTarget').value = d.target || '';
+  $('#bkNote').value = d.note || '';
+  const mb = (d.bytes / 1048576).toFixed(2);
+  const ok = d.configured && d.target_ok;
+  $('#bkStatus').innerHTML = (ok
+    ? `<span style="color:var(--success)">● 目标已就绪</span>`
+    : (d.configured ? `<span style="color:var(--warning)">● 目标不可写（请确认云盘已挂载/已登录）</span>`
+                     : `<span style="color:var(--danger)">○ 未配置目标</span>`))
+    + ` · 数据 ${d.files} 个文件 / ${mb} MB · 上次备份：${d.last}`
+    + (d.note ? ` · 备注：${esc(d.note)}` : '');
+}
+async function bkSave() {
+  const target = $('#bkTarget').value.trim();
+  const note = $('#bkNote').value.trim();
+  const d = await post('/api/backup/save', { target, note });
+  toast('设置已保存'); loadBackup(); bkRun();
+}
+async function bkRun() {
+  const d = await post('/api/backup/run', {});
+  if (!d.ok) { toast(d.error || '备份失败', 3000); return; }
+  toast(`已同步 ${d.synced} 个文件（跳过 ${d.skipped} 未变）`); loadBackup();
+}
+async function bkRestore() {
+  if (!confirm('将从云端恢复全部数据并覆盖本地同名文件，确定继续？')) return;
+  if (!confirm('再次确认：恢复操作不可逆，本地最新改动可能被覆盖！')) return;
+  const d = await post('/api/backup/restore', {});
+  toast(d.ok ? `已恢复 ${d.count} 个文件` : (d.error || '恢复失败'), d.ok ? 2000 : 4000);
+  loadBackup();
 }
 
 const browseHTML = () => `<div class="col list-col"><div class="list-head" id="listHead">共 0 条</div><div id="noteList"></div></div>

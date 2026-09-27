@@ -23,8 +23,8 @@
 
 | 文件 | 职责 |
 |------|------|
-| server.py | 零依赖 HTTP 服务 + 15+ API（notes/search/note/hot/stats/spaces/blocks/candidates/…status/unhot/mcp…），三层缓存（索引/spaces/blocks） |
-| index.html + index.js | 六视图：记忆浏览 / 候选审核（AI 徽章）/ 文档导入 / 核心经验 / 统计诊断 / 接入设置 |
+| server.py | 零依赖 HTTP 服务 + 18+ API（notes/search/note/hot/stats/spaces/blocks/candidates/**backup(状态/保存/执行/恢复)**/…status/unhot/mcp…），三层缓存（索引/spaces/blocks） |
+| index.html + index.js | 七视图：记忆浏览 / 候选审核（AI 徽章）/ 文档导入 / 核心经验 / 统计诊断 / 接入设置 / **数据备份** |
 | launcher.py | pywebview 桌面封装（跨 Win/macOS/Linux），`PMEM_DEV=1` 热预览 |
 
 ## 三、注入 & 联动
