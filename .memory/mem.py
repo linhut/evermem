@@ -167,6 +167,9 @@ def iter_notes():
         return []
     out = []
     for p in sorted(NOTES.rglob("*.md")):
+        # 候选/归档是无决策的暂存与证据区，不参与正式索引（--all 也不含）
+        if "/candidates/" in p.as_posix():
+            continue
         note = parse_note(p)
         if note:
             out.append(note)
