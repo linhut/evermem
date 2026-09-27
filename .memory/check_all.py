@@ -148,12 +148,18 @@ st, body = api("/api/note", "POST", {"title": ""})
 check("POST /api/note（空标题→400）", st == 400)
 st, body = api("/api/note", "POST", {"title": "边界测试笔记", "body": "x"})
 check("POST /api/note（正常新建）", st == 200 and "staged" in body)
-if st == 200 and isinstance(body, dict) and body.get("id"):
-    # 清理测试残留，避免污染正式库（web-*.md 是 staged 测试笔记）
-    test_path = BASE / "notes" / "lessons" / f"web-{body['id']}.md"
-    if test_path.exists():
-        test_path.unlink()
-        mem.build_index()
+if st == 200:
+    nid = None
+    try:
+        nid = json.loads(body).get("id")
+    except (ValueError, TypeError):
+        pass
+    if nid:
+        # 清理测试残留，避免污染正式库（Web 新建的笔记是 staged 测试笔记）
+        test_path = BASE / "notes" / "lessons" / f"web-{nid}.md"
+        if test_path.exists():
+            test_path.unlink()
+            mem.build_index()
 
 print()
 print("六、前端与数据健康")
