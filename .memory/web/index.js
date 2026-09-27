@@ -54,7 +54,8 @@ async function render() {
 const backupHTML = () => `<div style="width:100%;max-width:760px"><div class="pane"><h3>数据备份</h3>
   <div class="sub">填一个云端目录，记忆与知识自动同步上去（本地=事实源，单向备份）</div>
   <div style="margin-top:14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-    <input id="bkMain" placeholder="云端目录，如 D:/坚果云/evermem（先挂载网盘/NAS）" style="flex:1;min-width:240px" />
+    <select id="bkMain" style="flex:1;min-width:220px"><option value="">正在探测本机可用位置…</option></select>
+    <input id="bkCustom" placeholder="或用自定义路径（网盘/NAS 挂载目录）" style="flex:1;min-width:220px" />
     <button class="btn primary" onclick="bkSaveMain()">保存并立即备份</button>
     <button class="btn" onclick="bkRunAll()">立即备份</button>
   </div>
@@ -129,20 +130,26 @@ async function loadBackup() {
   $('#bkAuto').checked = !!d.auto;
   $('#bkAlert').value = d.alert_email || '';
   const main = (d.channels || []).find(c => c.type === 'local') || (d.channels || [])[0] || {};
-  $('#bkMain').value = main.target || '';
+  const mainTarget = main.target || '';
+  // 填充位置下拉（自动探测的本机网盘/磁盘）
+  try {
+    const t = await (await fetch('/api/backup/targets')).json();
+    const opts = (t.targets || []).map(x =>
+      `<option value="${esc(x.path)}" ${x.path === mainTarget ? 'selected' : ''}>${esc(x.name)}${x.writable ? '' : '（不可写）'}</option>`).join('');
+    $('#bkMain').innerHTML = `<option value="">— 选择备份位置 —</option>${opts}`;
+  } catch (e) { $('#bkMain').innerHTML = '<option value="">— 位置探测失败，请用下方自定义路径 —</option>'; }
+  if (mainTarget && ![...$('#bkMain').options].some(o => o.value === mainTarget)) $('#bkCustom').value = mainTarget;
   $('#bkChannels').innerHTML = d.channels.map((c, i) => `<div data-type="${c.type}" data-name="${esc(c.name)}">${bkCard(c, i)}</div>`).join('')
-    || '<div class="empty">暂无额外渠道（主备份即上方目录）</div>';
-  const ok = !!main.target && main.target_ok !== false;
-  const mb = ((d.channels || []).reduce((s, c) => s + (c.bytes || 0), 0) / 1048576).toFixed(2);
+    || '<div class="empty">暂无额外渠道（主备份即上方位置）</div>';
   const mainSt = (d.channels || []).map(c => `${c.name}${c.ok === true ? '✓' : c.ok === false ? `✗×${c.fail_count || 1}` : ''}`).join(' ');
-  $('#bkStatus').innerHTML = (main.target
-    ? `<span style="color:var(--success)">● 已配置：${esc(main.target)}</span> · ${d.channels.length} 渠道 · 上次备份：${(d.history && d.history[0] && d.history[0].at) || '—'} · ${mainSt}`
-    : `<span style="color:var(--danger)">○ 尚未配置云端目录</span> · 填上方目录后点「保存并立即备份」`);
+  $('#bkStatus').innerHTML = (mainTarget
+    ? `<span style="color:var(--success)">● 已配置：${esc(mainTarget)}</span> · ${d.channels.length} 渠道 · 上次备份：${(d.history && d.history[0] && d.history[0].at) || '—'} · ${mainSt}`
+    : `<span style="color:var(--danger)">○ 尚未配置备份位置</span> · 上面选一个位置，点「保存并立即备份」`);
   $('#bkLogArea').textContent = '';
 }
 async function bkSaveMain() {
-  const target = $('#bkMain').value.trim();
-  if (!target) { toast('请先填写云端目录', 3000); return; }
+  const target = ($('#bkCustom').value.trim()) || $('#bkMain').value.trim();
+  if (!target) { toast('请先选择或填写备份位置', 3000); return; }
   const extra = bkCollectChannels().filter(c => c.name !== '主备份');
   const main = { type: 'local', name: '主备份', enabled: true, target,
     scope: ['notes', 'events', 'index', 'meta'], frequency_hours: 24 };

@@ -461,6 +461,9 @@ class Handler(BaseHTTPRequestHandler):
         if p == "/api/backup":
             self._json(backup.sync_status())
             return
+        if p == "/api/backup/targets":
+            self._json({"targets": backup.discover_targets()})
+            return
         if p == "/api/backup/log":
             lines = []
             try:

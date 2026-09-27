@@ -372,6 +372,34 @@ def run_channel(ch: dict) -> dict:
 
 # ---------------- 全局流程 ----------------
 
+def discover_targets() -> list[dict]:
+    """自动探测本机可作为备份目标的位置（网盘同步夹/可写磁盘），供 UI 下拉选择，无需手填路径。"""
+    out = []
+    seen = set()
+    home = Path.home()
+    cloud_dirs = ("OneDrive", "OneDrive - 个人", "坚果云", "Nutstore", "百度网盘",
+                  "BaiduNetdiskWorkspace", "Dropbox", "iCloud Drive", "iCloud 云盘", "阿里云盘")
+    for name in cloud_dirs:
+        for root in (home, home / "Documents", Path("C:/"), Path("D:/"), Path("E:/")):
+            p = root / name
+            if p.is_dir() and str(p) not in seen:
+                seen.add(str(p))
+                out.append({"name": f"网盘同步夹：{name}", "path": str(p),
+                            "writable": bool(os.access(p, os.W_OK))})
+    # 剩余空间 ≥5G 的可写盘根
+    for d in ("C:/", "D:/", "E:/", "F:/", "G:/", "H:/"):
+        p = Path(d)
+        if not p.exists() or not os.access(p, os.W_OK) or str(p) in seen:
+            continue
+        try:
+            free = shutil.disk_usage(p).free / 2**30
+        except OSError:
+            continue
+        if free >= 5:
+            out.append({"name": f"磁盘 {d.rstrip('/:')}（剩余 {free:.0f}G）", "path": str(p), "writable": True})
+    return out
+
+
 def sync_status() -> dict:
     cfg = load_cfg()
     chans = []
