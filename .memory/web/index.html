@@ -209,6 +209,20 @@
   <pre id="viewBody" style="white-space:pre-wrap;font-size:12px;line-height:1.7;max-height:58vh;overflow:auto;background:var(--gray-bg);padding:10px;border-radius:8px;margin:0"></pre>
   <div class="actions" id="viewActions" style="display:none"></div>
 </div></div>
+<div class="modal-mask" id="addMask"><div class="modal" style="max-width:520px">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><b>新增备份渠道</b><button class="btn ghost small" onclick="closeAdd()">关闭</button></div>
+  <div id="addStep1" style="display:flex;flex-direction:column;gap:8px"></div>
+  <div id="addStep2" style="display:none">
+    <div class="sub" id="addTypeDesc" style="margin-bottom:10px"></div>
+    <div id="addForm" style="display:flex;flex-direction:column;gap:8px"></div>
+    <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+      <button class="btn ghost small" onclick="addBack()">← 返回选类型</button>
+      <button class="btn small" onclick="addTest()">测试连接</button>
+      <button class="btn primary small" onclick="addSave()">添加渠道</button>
+    </div>
+    <div id="addResult" class="sub" style="margin-top:8px"></div>
+  </div>
+</div></div>
 <div class="toast" id="toast"></div>
 <script src="index.js"></script>
 </body>

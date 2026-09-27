@@ -465,6 +465,9 @@ class Handler(BaseHTTPRequestHandler):
         if p == "/api/backup/targets":
             self._json({"targets": backup.discover_targets()})
             return
+        if p == "/api/backup/providers":
+            self._json({"providers": backup.PROVIDERS, "scopes": list(backup.SCOPE_GROUPS.keys())})
+            return
         if p == "/api/backup/log":
             lines = []
             try:
@@ -582,6 +585,10 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         u = urlparse(self.path)
         p = u.path
+        if p == "/api/backup/test":
+            b = self._body()
+            self._json(backup.test_connection((b or {}).get("type", ""), b or {}))
+            return
         if p == "/api/backup/check":
             b = self._body()
             ch_name = (b or {}).get("channel") or ""

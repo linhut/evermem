@@ -457,6 +457,69 @@ def deobscure(text: str) -> str:
     return text
 
 
+# Provider 字段 schema：前端向导据此动态渲染表单（借鉴 rclone config / Borgmatic generate）
+PROVIDERS = {
+    "local": {"label": "镜像（网盘/NAS 目录）", "desc": "增量同步到本机可写目录，零依赖",
+              "fields": [
+                  {"k": "target", "label": "云端目录", "required": True, "placeholder": "D:/坚果云/evermem"},
+                  {"k": "frequency_hours", "label": "自动频率（小时）", "default": 24, "type": "number"}]},
+    "archive": {"label": "快照（保留 N 份）", "desc": "全量 zip 快照到本机目录，可回溯",
+                "fields": [
+                    {"k": "target", "label": "归档目录", "required": True, "placeholder": "F:/evermem-snapshots"},
+                    {"k": "retention", "label": "保留份数", "default": 7, "type": "number"},
+                    {"k": "frequency_hours", "label": "自动频率（小时）", "default": 24, "type": "number"}]},
+    "remote": {"label": "服务器（ssh/scp）", "desc": "增量到异地服务器，需本机 ssh/scp 可用",
+               "fields": [
+                   {"k": "target", "label": "user@host:/path", "required": True, "placeholder": "user@1.2.3.4:/backup/evermem"},
+                   {"k": "ssh_port", "label": "SSH 端口", "default": 22, "type": "number"},
+                   {"k": "frequency_hours", "label": "自动频率（小时）", "default": 48, "type": "number"}]},
+    "mail": {"label": "邮箱（SMTP 附件）", "desc": "全量 zip 发到邮箱，需 SMTP 凭据（密码走 PMEM_SMTP_PASS）",
+             "fields": [
+                 {"k": "target", "label": "收件邮箱", "required": True, "placeholder": "bk@x.com"},
+                 {"k": "smtp_host", "label": "SMTP 服务器", "required": True, "placeholder": "smtp.xx.com"},
+                 {"k": "smtp_port", "label": "SMTP 端口", "default": 465, "type": "number"},
+                 {"k": "smtp_user", "label": "SMTP 用户", "required": True},
+                 {"k": "frequency_hours", "label": "自动频率（小时）", "default": 168, "type": "number"}]},
+}
+
+
+def test_connection(ntype: str, params: dict) -> dict:
+    """测试渠道连接（只读/建目录探测，不触碰已有数据；借 rclone lsd / borgmatic validate）。"""
+    try:
+        if ntype in ("local", "archive"):
+            dst = Path(str(params.get("target") or "").strip())
+            if not dst:
+                return {"ok": False, "error": "请先填写目录路径"}
+            try:
+                dst.mkdir(parents=True, exist_ok=True)
+                return {"ok": True, "msg": f"✅ 目录可写：{dst}"}
+            except OSError as exc:
+                return {"ok": False, "error": f"目录不可写：{exc}"}
+        if ntype == "mail":
+            host = str(params.get("smtp_host") or "").strip()
+            port = int(params.get("smtp_port") or 465)
+            user = str(params.get("smtp_user") or "").strip()
+            passwd = deobscure(str(params.get("smtp_pass") or "")) or os.environ.get("PMEM_SMTP_PASS", "")
+            if not host or not user or not passwd:
+                return {"ok": False, "error": "SMTP 需 host/user/密码（密码留空读 PMEM_SMTP_PASS）"}
+            try:
+                server = smtplib.SMTP_SSL(host, port) if port == 465 else smtplib.SMTP(host, port)
+                try:
+                    if port != 465:
+                        server.starttls()
+                    server.login(user, passwd)
+                    return {"ok": True, "msg": f"✅ SMTP 登录成功：{host}"}
+                finally:
+                    server.quit()
+            except Exception as exc:  # noqa: BLE001
+                return {"ok": False, "error": f"SMTP 连接失败：{exc}"}
+        if ntype == "remote":
+            return {"ok": False, "error": "remote 测试需真实 ssh 环境，请保存后用「校验完整性」验证"}
+        return {"ok": False, "error": f"未知后端：{ntype}"}
+    except Exception as exc:  # noqa: BLE001
+        return {"ok": False, "error": f"测试异常：{exc}"}
+
+
 def sync_status() -> dict:
     cfg = load_cfg()
     chans = []

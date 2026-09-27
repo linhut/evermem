@@ -140,8 +140,16 @@ async function loadBackup() {
     $('#bkMain').innerHTML = `<option value="">— 选择备份位置 —</option>${opts}`;
   } catch (e) { $('#bkMain').innerHTML = '<option value="">— 位置探测失败，请用下方自定义路径 —</option>'; }
   if (mainTarget && ![...$('#bkMain').options].some(o => o.value === mainTarget)) $('#bkCustom').value = mainTarget;
-  $('#bkChannels').innerHTML = d.channels.map((c, i) => `<div data-type="${c.type}" data-name="${esc(c.name)}">${bkCard(c, i)}</div>`).join('')
-    || '<div class="empty">暂无额外渠道（主备份即上方位置）</div>';
+  const bkGroups = [['local', '镜像'], ['archive', '快照'], ['remote', '远端'], ['mail', '邮箱']];
+  let gi = 0;
+  $('#bkChannels').innerHTML = d.channels.length
+    ? bkGroups.map(([t, l]) => {
+        const chs = d.channels.filter(c => c.type === t);
+        if (!chs.length) return '';
+        return `<div class="sub" style="margin-top:8px;font-weight:500">${l}（${chs.length}）</div>` +
+          chs.map(c => `<div data-type="${c.type}" data-name="${esc(c.name)}">${bkCard(c, gi++)}</div>`).join('');
+      }).join('')
+    : '<div class="empty">暂无额外渠道（主备份即上方位置）</div>';
   const mainSt = (d.channels || []).map(c => `${c.name}${c.ok === true ? '✓' : c.ok === false ? `✗×${c.fail_count || 1}` : ''}`).join(' ');
   $('#bkStatus').innerHTML = (mainTarget
     ? `<span style="color:var(--success)">● 已配置：${esc(mainTarget)}</span> · ${d.channels.length} 渠道 · 上次备份：${(d.history && d.history[0] && d.history[0].at) || '—'} · ${mainSt}`
@@ -202,13 +210,62 @@ async function bkRestoreChannel(i) {
   loadBackup();
 }
 function bkDelChannel(i) { const el = document.querySelectorAll('#bkChannels > .pane')[i]; if (el) el.remove(); }
-function bkAddChannel() {
-  const type = $('#bkNewType').value;
-  const box = document.createElement('div');
-  box.dataset.type = type;
-  box.innerHTML = bkCard({ type, name: type === 'local' ? '主备份' : type, enabled: true, target: '', scope: BK_SCOPES.map(x=>x[0]), frequency_hours: 24, retention: 7, ssh_port: 22, smtp: {} }, 0);
-  $('#bkChannels').appendChild(box);
+function bkAddChannel() { openAddWizard(); }
+/* 向导式新增渠道（借 rclone config / Borgmatic generate 交互） */
+let _providers = {}, _addType = null;
+function openAddWizard() {
+  $('#addMask').classList.add('show');
+  _addType = null;
+  $('#addStep1').style.display = 'flex';
+  $('#addStep2').style.display = 'none';
+  $('#addResult').textContent = '';
+  fetch('/api/backup/providers').then(r => r.json()).then(d => {
+    _providers = d.providers || {};
+    $('#addStep1').innerHTML = Object.entries(_providers).map(([k, p]) =>
+      `<div class="pane" style="cursor:pointer" onclick="addPick('${k}')"><div style="font-weight:500">${esc(p.label)}</div><div class="sub">${esc(p.desc)}</div></div>`).join('');
+  });
 }
+function addPick(k) {
+  _addType = k;
+  $('#addStep1').style.display = 'none';
+  $('#addStep2').style.display = 'block';
+  const p = _providers[k] || {};
+  $('#addTypeDesc').textContent = `${p.label || k}：${p.desc || ''}`;
+  const common = `<label class="sub" style="display:flex;flex-direction:column;gap:2px">渠道名称<input id="af_name" value="${esc(k)}" /></label>
+    <label class="sub" style="display:flex;flex-direction:column;gap:2px">备份范围<span style="display:flex;gap:10px;flex-wrap:wrap">${BK_SCOPES.map(([s, l]) => `<label style="display:flex;gap:3px;align-items:center"><input type="checkbox" class="af-scope" value="${s}" checked>${l}</label>`).join('')}</span></label>`;
+  const fields = (p.fields || []).map(f => `<label class="sub" style="display:flex;flex-direction:column;gap:2px">${esc(f.label)}${f.required ? ' <span style="color:var(--danger)">*</span>' : ''}
+    <input data-k="${f.k}" ${f.type === 'number' ? 'type="number"' : ''} value="${f.default !== undefined ? f.default : ''}" placeholder="${esc(f.placeholder || '')}" /></label>`).join('');
+  $('#addForm').innerHTML = common + fields;
+  $('#addResult').textContent = '';
+}
+function addCollect() {
+  const get = k => { const e = document.querySelector('#addForm [data-k="' + k + '"]'); return e ? e.value.trim() : ''; };
+  const c = { type: _addType, name: $('#af_name').value.trim() || _addType, enabled: true,
+    target: get('target'), frequency_hours: parseInt(get('frequency_hours') || '24', 10),
+    scope: [...document.querySelectorAll('.af-scope:checked')].map(x => x.value) };
+  if (c.type === 'archive') c.retention = parseInt(get('retention') || '7', 10);
+  if (c.type === 'remote') c.ssh_port = parseInt(get('ssh_port') || '22', 10);
+  if (c.type === 'mail') c.smtp = { host: get('smtp_host'), port: parseInt(get('smtp_port') || '465', 10), user: get('smtp_user') };
+  return c;
+}
+async function addTest() {
+  const c = addCollect();
+  const d = await post('/api/backup/test', c);
+  $('#addResult').innerHTML = d.ok ? `<span style="color:var(--success)">${esc(d.msg || '连接成功')}</span>` : `<span style="color:var(--danger)">${esc(d.error || '测试失败')}</span>`;
+}
+async function addSave() {
+  const c = addCollect();
+  if (!c.target && c.type !== 'mail') { toast('请先填写目标', 3000); return; }
+  const box = document.createElement('div');
+  box.dataset.type = c.type;
+  box.innerHTML = bkCard(c, $('#bkChannels').children.length);
+  $('#bkChannels').appendChild(box);
+  closeAdd();
+  toast('渠道已添加——点「保存全部设置」生效');
+  loadBackup();
+}
+function addBack() { _addType = null; $('#addStep1').style.display = 'flex'; $('#addStep2').style.display = 'none'; $('#addResult').textContent = ''; }
+function closeAdd() { $('#addMask').classList.remove('show'); }
 async function bkLog() {
   const d = await (await fetch('/api/backup/log')).json();
   $('#bkLogArea').textContent = '—— backup.log（最近 50 行）——\n' + (d.lines || []).join('\n');
