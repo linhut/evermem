@@ -415,20 +415,20 @@ async function loadTriage() {
 async function triBody(id) {
   const d = await (await fetch('/api/candidates/body?id=' + encodeURIComponent(id))).json();
   if (!d.body) { toast('无正文'); return; }
-  $('#modalMask').classList.add('show');
-  $('#modalBox').innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-    <b>${esc(d.title)}</b><button class="btn ghost small" onclick="$('#modalMask').classList.remove('show')">关闭</button></div>
-    <pre style="white-space:pre-wrap;font-size:12px;line-height:1.7;max-height:52vh;overflow:auto;background:var(--gray-bg);padding:10px;border-radius:8px;margin:0">${esc(d.body)}</pre>
-    <div class="btnrow" style="margin-top:10px">
-      <button class="btn primary small" onclick="triModalAct('${esc(id)}','active')">转正</button>
-      <button class="btn ghost small" onclick="triModalAct('${esc(id)}','suspect')">存疑</button>
-      <button class="btn ghost small" onclick="triModalAct('${esc(id)}','archive')">归档</button>
-    </div>`;
+  $('#viewMask').classList.add('show');
+  $('#viewTitle').textContent = d.title;
+  $('#viewBody').textContent = d.body;
+  const va = $('#viewActions');
+  va.innerHTML = `<button class="btn primary small" onclick="triModalAct('${esc(id)}','active')">转正</button>
+    <button class="btn ghost small" onclick="triModalAct('${esc(id)}','suspect')">存疑</button>
+    <button class="btn ghost small" onclick="triModalAct('${esc(id)}','archive')">归档</button>`;
+  va.style.display = 'flex';
 }
+function closeView() { $('#viewMask').classList.remove('show'); }
 async function triModalAct(id, op) {
   if (op === 'archive') { await triageArchiveId(id); }
   else { await triageAct(id, op); }
-  $('#modalMask').classList.remove('show');
+  closeView();
   loadTriage();
 }
 async function triAutoReview() {

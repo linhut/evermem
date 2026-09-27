@@ -204,6 +204,11 @@
   <label>正文（Markdown）</label><textarea id="fBody" placeholder="问题 → 无效做法 → 已验证做法 → 适用范围"></textarea>
   <div class="actions"><button class="btn ghost" id="cancelBtn">取消</button><button class="btn primary" id="saveBtn">保存</button></div>
 </div></div>
+<div class="modal-mask" id="viewMask"><div class="modal">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><b id="viewTitle"></b><button class="btn ghost small" onclick="closeView()">关闭</button></div>
+  <pre id="viewBody" style="white-space:pre-wrap;font-size:12px;line-height:1.7;max-height:58vh;overflow:auto;background:var(--gray-bg);padding:10px;border-radius:8px;margin:0"></pre>
+  <div class="actions" id="viewActions" style="display:none"></div>
+</div></div>
 <div class="toast" id="toast"></div>
 <script src="index.js"></script>
 </body>
