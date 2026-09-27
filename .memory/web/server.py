@@ -270,12 +270,15 @@ _blocks_cache: dict[str, tuple[float, list]] = {}
 
 
 def cached_index() -> dict:
+    # 关键：必须用 force=False（mem.load_index 自动检测笔记变化才重建）。
+    # 若用 force=True，build_index 每次写盘 → index.json mtime 每次变 → 缓存永不命中，
+    # 每个请求都全量重建（0.2-0.4s），这就是"浏览记忆条目慢"的根源。
     try:
         m = mem.INDEX_PATH.stat().st_mtime
     except OSError:
-        return mem.load_index(force=True)
+        return mem.load_index(force=False)
     if _idx_cache["mtime"] != m:
-        _idx_cache["idx"] = mem.load_index(force=True)
+        _idx_cache["idx"] = mem.load_index(force=False)
         _idx_cache["mtime"] = m
     return _idx_cache["idx"]
 
