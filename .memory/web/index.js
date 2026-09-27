@@ -106,6 +106,7 @@ function bkCard(c, i) {
     </div>
     <div class="btnrow">
       <button class="btn small" onclick="bkRunChannel(${i})">立即备份本渠道</button>
+      <button class="btn ghost small" onclick="bkCheckChannel(${i})">校验完整性</button>
       <button class="btn ghost small" onclick="bkRestoreChannel(${i})">从本渠道恢复</button>
       <button class="btn ghost small" style="color:var(--danger)" onclick="bkDelChannel(${i})">删除渠道</button>
     </div></div>`;
@@ -172,6 +173,14 @@ async function bkRunAll() {
   if (!d.ok && !d.results) { toast(d.error || '未配置渠道', 3000); return; }
   const fails = (d.results || []).filter(r => !r.ok);
   toast(`已执行 ${(d.results||[]).length} 渠道，失败 ${fails.length}`); loadBackup();
+}
+async function bkCheckChannel(i) {
+  await bkSaveAll();
+  const card = document.querySelectorAll('#bkChannels > .pane')[i];
+  const name = card ? card.querySelector('[data-k="name"]').value.trim() : '';
+  const d = await post('/api/backup/check', { channel: name });
+  toast(d.ok ? `[${name}] 一致性校验通过` : `[${name}] ${d.error || '校验失败'}` + (d.missing_n ? ` · 缺失 ${d.missing_n}` : '') + (d.size_bad_n ? ` · 大小异常 ${d.size_bad_n}` : ''), d.ok ? 2000 : 4500);
+  loadBackup();
 }
 async function bkRunChannel(i) {
   await bkSaveAll();

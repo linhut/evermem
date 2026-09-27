@@ -316,7 +316,7 @@ def run_mail(ch: dict) -> dict:
     smtp = ch.get("smtp") or {}
     host, port = smtp.get("host", ""), int(smtp.get("port", 465) or 465)
     user = smtp.get("user", "")
-    passwd = smtp.get("pass") or os.environ.get("PMEM_SMTP_PASS", "")
+    passwd = deobscure(smtp.get("pass") or "") or os.environ.get("PMEM_SMTP_PASS", "")
     to = ch["target"]
     if not host or not user or not passwd or not to:
         raise RuntimeError("mail 渠道需 smtp.host/user/pass（或 PMEM_SMTP_PASS）与 target 收件人")
@@ -398,6 +398,63 @@ def discover_targets() -> list[dict]:
         if free >= 5:
             out.append({"name": f"磁盘 {d.rstrip('/:')}（剩余 {free:.0f}G）", "path": str(p), "writable": True})
     return out
+
+
+def check_channel(ch: dict) -> dict:
+    """校验渠道云端数据与本地清单的一致性（借鉴 rclone check：文件存在+大小）。"""
+    name = ch["name"]
+    if ch["type"] == "local":
+        dst = Path(ch["target"])
+        if not dst.is_dir():
+            return {"ok": False, "channel": name, "error": f"目标目录不可用：{ch['target']}"}
+        items = data_items(ch["scope"])
+        missing, size_bad = [], []
+        for i in items:
+            p = dst / i["rel"]
+            if not p.exists():
+                missing.append(i["rel"])
+            elif abs(p.stat().st_size - i["size"]) > 8:
+                size_bad.append(i["rel"])
+        return {"ok": not missing and not size_bad, "channel": name, "type": "local",
+                "total": len(items), "missing": missing[:5], "missing_n": len(missing),
+                "size_bad": size_bad[:5], "size_bad_n": len(size_bad)}
+    if ch["type"] == "archive":
+        snap_dir = Path(ch["target"]) / "snapshots"
+        snaps = sorted(snap_dir.glob("evermem-*.zip")) if snap_dir.exists() else []
+        if not snaps:
+            return {"ok": False, "channel": name, "error": "无快照可校验", "snapshots": 0}
+        bad = []
+        for s in snaps:
+            try:
+                z = zipfile.ZipFile(s)
+                badz = z.testzip()
+                z.close()
+                if badz:
+                    bad.append(f"{s.name}:{badz}")
+            except (zipfile.BadZipFile, OSError) as exc:
+                bad.append(f"{s.name}:{exc}")
+        return {"ok": not bad, "channel": name, "type": "archive", "snapshots": len(snaps), "bad": bad[:5]}
+    return {"ok": False, "channel": name, "error": f"渠道 {ch['type']} 暂不支持完整性校验（local/archive 支持）"}
+
+
+def obscure(text: str) -> str:
+    """轻量密码混淆（借鉴 rclone obscure）：非明文存储，本机可还原。"""
+    import base64
+    key = "evermem-obf"
+    data = bytes([ord(c) ^ ord(key[i % len(key)]) for i, c in enumerate(text)])
+    return "ob1:" + base64.b64encode(data).decode()
+
+
+def deobscure(text: str) -> str:
+    if isinstance(text, str) and text.startswith("ob1:"):
+        import base64
+        key = "evermem-obf"
+        try:
+            raw = base64.b64decode(text[4:])
+            return "".join(chr(b ^ ord(key[i % len(key)])) for i, b in enumerate(raw))
+        except Exception:
+            return text
+    return text
 
 
 def sync_status() -> dict:
@@ -552,6 +609,21 @@ def main() -> int:
             print("最近记录：")
             for h in st["history"][:5]:
                 print(f"  · {h['at']} [{h['channel']}] {'OK' if h['ok'] else 'FAIL'} 同步 {h['synced']} 文件")
+        return 0
+
+    if "check" in sys.argv:
+        targets = [ch for ch in cfg["channels"] if (not ch_name or ch["name"] == ch_name)]
+        if ch_name and not targets:
+            print(f"未找到渠道：{ch_name}")
+            return 1
+        for ch in targets:
+            r = check_channel(ch)
+            if r.get("ok"):
+                print(f"✅ [{ch['type']}/{ch['name']}] 一致性校验通过"
+                      + (f"（{r.get('total', r.get('snapshots'))} 项）" if r.get("total") or r.get("snapshots") else ""))
+            else:
+                print(f"❌ [{ch['type']}/{ch['name']}] {r.get('error', '校验失败')}"
+                      + (f" 缺失{r.get('missing_n', 0)}/大小异常{r.get('size_bad_n', 0)}" if r.get("missing_n") else ""))
         return 0
 
     # 执行（--channel 指定或全部 enabled）

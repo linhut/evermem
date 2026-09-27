@@ -582,6 +582,16 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         u = urlparse(self.path)
         p = u.path
+        if p == "/api/backup/check":
+            b = self._body()
+            ch_name = (b or {}).get("channel") or ""
+            cfg = backup.load_cfg()
+            ch = next((c for c in cfg["channels"] if not ch_name or c["name"] == ch_name), None)
+            if not ch:
+                self._json({"ok": False, "error": "未找到渠道"}, 400)
+                return
+            self._json(backup.check_channel(ch))
+            return
         if p == "/api/backup/save":
             b = self._body()
             auto = bool(b.get("auto", False))
@@ -603,7 +613,8 @@ class Handler(BaseHTTPRequestHandler):
                     "note": str(c.get("note") or ""),
                     "retention": int(c.get("retention", 7) or 7),
                     "ssh_port": int(c.get("ssh_port", 22) or 22),
-                    "smtp": c.get("smtp") if isinstance(c.get("smtp"), dict) else {},
+                    "smtp": ({k: v for k, v in (c.get("smtp") or {}).items() if k != "pass"}
+                             | ({"pass": backup.obscure(c["smtp"]["pass"])} if isinstance(c.get("smtp"), dict) and c.get("smtp", {}).get("pass") else {})),
                 })
             backup.save_cfg({"auto": auto, "alert_email": alert, "channels": channels})
             resp = backup.sync_status()
