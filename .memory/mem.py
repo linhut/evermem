@@ -817,12 +817,21 @@ def cmd_candidates(args) -> int:
                 kept.append(d.get("id"))
             else:
                 rejected.append(d.get("id"))
+        # --purge：评审否决的候选直接归档（避免自动收割持续产出导致候选池爆满）
+        if args.purge and rejected:
+            archive_dir = cand_dir / "archive"
+            archive_dir.mkdir(exist_ok=True)
+            for p, d, age in targets:
+                if d.get("id") in rejected and p.exists():
+                    target = archive_dir / p.name
+                    if target.exists():  # 归档区已有同名（旧批次），加时间戳后缀防冲突
+                        target = archive_dir / f"{p.stem}-{int(time.time())}.md"
+                    p.rename(target)
         print(f"多角色评审 {len(targets)} 条 → 自动转正 {len(promoted)} | 保留观察 {len(kept)} | "
-              f"否决/归档 {len(rejected)}" + (f" | 转正失败 {len(failed)}" if failed else ""))
+              f"否决/归档 {len(rejected)}" + (f" | 转正失败 {len(failed)}" if failed else "")
+              + (f" | 否决项已归档 {len(rejected)}" if args.purge and rejected else ""))
         for pid in promoted:
             print(f"  ✅ 转正 {pid}")
-        for rid in rejected:
-            print(f"  ⛔ 否决/归档 {rid}")
         return 0
     return 0
 
@@ -959,6 +968,7 @@ def main() -> int:
     p.add_argument("--cap", type=int, default=None, help="容量上限（默认 50）")
     p.add_argument("--ids", nargs="*", default=None, help="review 指定候选 id（默认全部）")
     p.add_argument("--llm", action="store_true", help="review 时尝试 LLM 精审（需 PMEM_AI_REVIEW 配置）")
+    p.add_argument("--purge", action="store_true", help="auto 时把评审否决的候选直接归档")
     p.add_argument("--reindex", action="store_true")
     p.set_defaults(func=cmd_candidates)
 
