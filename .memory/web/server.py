@@ -388,6 +388,7 @@ class Handler(BaseHTTPRequestHandler):
         if p == "/api/notes":
             full = parse_qs(u.query).get("full", ["0"])[0] == "1"
             notes = list_notes()
+            notes.sort(key=lambda n: n.get("id", ""), reverse=True)  # 按 id（含日期时间）倒序，最新在前
             if not full:
                 # 列表瘦身：去掉 body 与 path（详情走 /api/note），响应大幅减小
                 for n in notes:
