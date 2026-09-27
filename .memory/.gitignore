@@ -9,3 +9,15 @@ tmp_ui/
 nul
 *.log
 .lock
+
+# ===== 数据（知识/证据/索引）——与代码分离，绝不同步到 GitHub =====
+# 数据与知识只经云端备份同步（backup.py / PMEM_BACKUP_TARGET），代码仓库仅含代码与平台文档
+notes/
+events/
+corpus_spaces.json
+kb.json
+knowledge-base.md
+pmem_config.json
+*.db
+*.db-shm
+*.db-wal

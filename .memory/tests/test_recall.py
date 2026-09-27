@@ -53,7 +53,26 @@ def main() -> int:
     print("\n[4] staged 候选可用 --all 查到")
     allhits = mem.search(idx, "命令签名 失败", limit=20, include_all=True)
     staged = [h for h in allhits if h["status"] == "staged"]
-    check("能查到 staged", len(staged) > 0 or not docs, "（库中可能没有 staged 笔记）")
+    tmp_path = None
+    if staged:
+        check("--all 含 staged", True)
+    else:
+        # 库中无 staged 时自建临时夹具验证，测完删除，保证任意数据状态下可执行
+        import time as _t
+        nid = _t.strftime("%Y%m%d-%H%M%S") + "-fixture"
+        tmp_path = mem.NOTES / "lessons" / f"fixture-{nid}.md"
+        tmp_path.write_text(
+            f"---\nid: {nid}\ntype: lesson\nstatus: staged\ntitle: 临时夹具 staged 检索验证\n"
+            "created: 2026-09-27\n---\n\n正文：命令签名 失败的临时夹具，验证 include_all 行为。\n",
+            encoding="utf-8")
+        idx = mem.build_index()
+        try:
+            h2 = mem.search(idx, "临时夹具 staged 检索验证", limit=5, include_all=True)
+            check("--all 能查到 staged（临时夹具）", any(x["status"] == "staged" for x in h2))
+        finally:
+            if tmp_path.exists():
+                tmp_path.unlink()
+                mem.build_index()
 
     print("\n[5] 热层默认只取人工标记（hot: true）")
     hot = mem.select_hot(idx, limit=12)

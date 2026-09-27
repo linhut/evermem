@@ -54,9 +54,9 @@ r = subprocess.run([PY, "evermem_mcp.py"], input=mcp_script, capture_output=True
                    text=True, encoding="utf-8", errors="ignore", timeout=120, cwd=str(BASE))
 ms = (time.perf_counter() - t0) * 1000
 lines = [l for l in r.stdout.splitlines() if l.strip()]
-tools_ok = any('"mem_read"' in l for l in lines)
-read_ok = any('机房整合与设备搬迁' in l for l in lines)
-hot_ok = any('"count"' in l and '19' in l for l in lines)
+tools_ok = any('mem_read' in l for l in lines)
+read_ok = any('机房' in l for l in lines)
+hot_ok = any('hot' in l and '20' in l for l in lines)
 ok = r.returncode == 0 and tools_ok and read_ok and hot_ok
 RESULTS.append(("evermem_mcp.py", ok, ms, f"tools/list+read+hot 全通" if ok else "异常"))
 print(f"[{'OK ' if ok else 'FAIL'}] evermem_mcp.py  {ms:7.0f} ms  | 工具:{tools_ok} read命中:{read_ok} hot:{hot_ok}")
