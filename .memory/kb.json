@@ -1,0 +1,1906 @@
+{
+ "generated": "2026-09-27 02:48:45",
+ "scope": {
+  "sessions": 13,
+  "files": 13,
+  "lines_total": 1647,
+  "atomcode_sessions": 9,
+  "dsh_sessions": 115
+ },
+ "sessions": [
+  {
+   "file": "a8fe24e7-13cb-4054-9642-255eea634153.jsonl",
+   "id": "a8fe24e7-13c",
+   "mtime": "2026-09-26 22:03",
+   "lines": 236,
+   "first_query": "（无主题）",
+   "query_count": 2,
+   "cmd_count": 19,
+   "tools": {
+    "Bash": 123,
+    "Edit": 49,
+    "Read": 22,
+    "TaskUpdate": 14
+   }
+  },
+  {
+   "file": "17cb3448-c2c6-4a72-bf8a-78f57e8f1985.jsonl",
+   "id": "17cb3448-c2c",
+   "mtime": "2026-09-25 09:34",
+   "lines": 16,
+   "first_query": "（无主题）",
+   "query_count": 0,
+   "cmd_count": 0,
+   "tools": {
+    "Read": 4,
+    "DeferExecuteTool": 4,
+    "Bash": 3,
+    "Skill": 1
+   }
+  },
+  {
+   "file": "agent-0d0c84452909446f.jsonl",
+   "id": "agent-0d0c84",
+   "mtime": "2026-09-25 00:06",
+   "lines": 9,
+   "first_query": "请作为软件架构评审者，针对下面问题给出批判性、可落地的方案评审：用户想把会话中昂贵试错（例如某命令尝试100次才找到正确用法）沉淀为本地长期记忆，后续会话在第一",
+   "query_count": 1,
+   "cmd_count": 7,
+   "tools": {
+    "Bash": 7,
+    "Glob": 2
+   }
+  },
+  {
+   "file": "2b295ff5-2e2b-499b-8d3d-1d9c14c90fb7.jsonl",
+   "id": "2b295ff5-2e2",
+   "mtime": "2026-09-24 23:48",
+   "lines": 805,
+   "first_query": "（无主题）",
+   "query_count": 23,
+   "cmd_count": 120,
+   "tools": {
+    "Bash": 343,
+    "Edit": 223,
+    "Write": 79,
+    "Read": 28
+   }
+  },
+  {
+   "file": "5a05143b-84af-4c3b-a637-036bbbd39787.jsonl",
+   "id": "5a05143b-84a",
+   "mtime": "2026-09-25 10:18",
+   "lines": 5,
+   "first_query": "（无主题）",
+   "query_count": 0,
+   "cmd_count": 2,
+   "tools": {
+    "Read": 3,
+    "Bash": 2
+   }
+  },
+  {
+   "file": "d15a5895-1da6-4d56-a074-4df1c07b8de9.jsonl",
+   "id": "d15a5895-1da",
+   "mtime": "2026-09-25 01:05",
+   "lines": 20,
+   "first_query": "（无主题）",
+   "query_count": 0,
+   "cmd_count": 3,
+   "tools": {
+    "Bash": 13,
+    "Read": 4,
+    "Edit": 2,
+    "Glob": 1
+   }
+  },
+  {
+   "file": "b951780a-7531-4de2-8b63-22f1878bd49e.jsonl",
+   "id": "b951780a-753",
+   "mtime": "2026-09-26 22:02",
+   "lines": 181,
+   "first_query": "（无主题）",
+   "query_count": 9,
+   "cmd_count": 3,
+   "tools": {
+    "Bash": 97,
+    "Edit": 21,
+    "Read": 19,
+    "TaskUpdate": 16
+   }
+  },
+  {
+   "file": "2901e6b2-a0c4-491a-8ff3-6784a6cdea0a.jsonl",
+   "id": "2901e6b2-a0c",
+   "mtime": "2026-08-20 01:04",
+   "lines": 7,
+   "first_query": "（无主题）",
+   "query_count": 0,
+   "cmd_count": 0,
+   "tools": {
+    "DeferExecuteTool": 5,
+    "ToolSearch": 1,
+    "AskUserQuestion": 1
+   }
+  },
+  {
+   "file": "1d86b5d6-297e-486a-ab18-fab622e12a3a.jsonl",
+   "id": "1d86b5d6-297",
+   "mtime": "2026-08-20 01:19",
+   "lines": 41,
+   "first_query": "（无主题）",
+   "query_count": 0,
+   "cmd_count": 11,
+   "tools": {
+    "Bash": 12,
+    "Read": 8,
+    "TaskUpdate": 6,
+    "Edit": 4
+   }
+  },
+  {
+   "file": "f5096ddb-dd99-4aee-9d99-ba90c5297894.jsonl",
+   "id": "f5096ddb-dd9",
+   "mtime": "2026-08-21 02:47",
+   "lines": 70,
+   "first_query": "（无主题）",
+   "query_count": 1,
+   "cmd_count": 30,
+   "tools": {
+    "Bash": 34,
+    "Read": 20,
+    "TaskUpdate": 6,
+    "Grep": 6
+   }
+  },
+  {
+   "file": "agent-0a2e3ed9.jsonl",
+   "id": "agent-0a2e3e",
+   "mtime": "2026-08-18 02:21",
+   "lines": 2,
+   "first_query": "只做调研，不写代码。我在开发一个 Node.js 股票插件（无任何 npm 运行时依赖，只能用原生 fetch），已有数据源是腾讯行情接口 qt.gtimg.c",
+   "query_count": 1,
+   "cmd_count": 0,
+   "tools": {
+    "Read": 2
+   }
+  },
+  {
+   "file": "97d53432-1801-417c-a304-05697469d598.jsonl",
+   "id": "97d53432-180",
+   "mtime": "2026-08-18 01:25",
+   "lines": 215,
+   "first_query": "Please continue with the conversation based on the summarized context above. Mai",
+   "query_count": 5,
+   "cmd_count": 39,
+   "tools": {
+    "Bash": 71,
+    "Edit": 57,
+    "Read": 33,
+    "Write": 19
+   }
+  },
+  {
+   "file": "595699ec-007c-451f-970a-bd9dd1de8f27.jsonl",
+   "id": "595699ec-007",
+   "mtime": "2026-09-26 21:55",
+   "lines": 40,
+   "first_query": "（无主题）",
+   "query_count": 0,
+   "cmd_count": 15,
+   "tools": {
+    "Bash": 21,
+    "Read": 8,
+    "Grep": 4,
+    "PowerShell": 2
+   }
+  },
+  {
+   "file": "fe8afd76-6dfc-4d65-bb95-c8bc09d5c4cd.jsonl",
+   "id": "fe8afd76-6df",
+   "mtime": "2026-09-17 13:59",
+   "lines": 7,
+   "query_count": 7,
+   "user_msgs": 7,
+   "first_query": "请看看目前可使用的关于编程的有哪一些skill",
+   "cmd_count": 0,
+   "tools": {
+    "atomcode": 7
+   }
+  },
+  {
+   "file": "16f4d0cd-91e6-435b-b324-f75064f170e0.jsonl",
+   "id": "16f4d0cd-91e",
+   "mtime": "2026-09-22 03:33",
+   "lines": 18,
+   "query_count": 18,
+   "user_msgs": 18,
+   "first_query": "请梳理项目目录在本地开发环境进行开发，注意文件夹归类控制，深度思考，严谨可靠，可行可用   ,注意版权控制Jose-AI www.linhut.cn  ,还有要",
+   "cmd_count": 0,
+   "tools": {
+    "atomcode": 18
+   }
+  },
+  {
+   "file": "a403af99-c352-4a17-8e9d-891cd3435b1f.jsonl",
+   "id": "a403af99-c35",
+   "mtime": "2026-09-22 11:47",
+   "lines": 6,
+   "query_count": 6,
+   "user_msgs": 6,
+   "first_query": "继续开发任务，另外F:\\省民宗委\\15_项目实施\\深化设计中有拓扑图分析-第十三届全国少数民族传统体育运动会网络规划拓扑图20260610.md ，请分析并参考",
+   "cmd_count": 0,
+   "tools": {
+    "atomcode": 6
+   }
+  },
+  {
+   "file": "667da2da-9e8b-4a6e-91c0-c12651971e9f.jsonl",
+   "id": "667da2da-9e8",
+   "mtime": "2026-09-11 13:27",
+   "lines": 10,
+   "query_count": 10,
+   "user_msgs": 10,
+   "first_query": "请学习并找到DSH官方最新版本和其他版本的要求，检查本插件是否满足适配",
+   "cmd_count": 0,
+   "tools": {
+    "atomcode": 10
+   }
+  },
+  {
+   "file": "f2ebd514-35b9-4019-b87b-efcb826d69e2.jsonl",
+   "id": "f2ebd514-35b",
+   "mtime": "2026-09-11 12:55",
+   "lines": 10,
+   "query_count": 10,
+   "user_msgs": 10,
+   "first_query": "请认真阅读和理解桌面上的gongwen-skill_展示名统一改造_会话执行报告.md 文件，对本项目进行全面的分析和理解，给出优化和分析报告",
+   "cmd_count": 0,
+   "tools": {
+    "atomcode": 10
+   }
+  },
+  {
+   "file": "1c5e8a4e-b160-4b20-a196-f5b5584ca1a3.jsonl",
+   "id": "1c5e8a4e-b16",
+   "mtime": "2026-09-13 16:21",
+   "lines": 3,
+   "query_count": 3,
+   "user_msgs": 3,
+   "first_query": "优化本skills，思考下如果里面的skill要更新，本skill集会怎么样",
+   "cmd_count": 0,
+   "tools": {
+    "atomcode": 3
+   }
+  },
+  {
+   "file": "a5cf28cc-aebe-4206-a7f8-fb50131ccae2.jsonl",
+   "id": "a5cf28cc-aeb",
+   "mtime": "2026-09-11 14:11",
+   "lines": 3,
+   "query_count": 3,
+   "user_msgs": 3,
+   "first_query": "1、搜索下目前GitHub上火热的类似类型的项目，梳理出他们的特点和优点，并思考是否可借鉴 2、搜索代码时，检查是否有codegraph的缓存，有的话先调用co",
+   "cmd_count": 0,
+   "tools": {
+    "atomcode": 3
+   }
+  },
+  {
+   "file": "4998f15d-a30d-46dc-8d0d-f470283dcec8.jsonl",
+   "id": "4998f15d-a30",
+   "mtime": "2026-09-11 11:45",
+   "lines": 33,
+   "query_count": 33,
+   "user_msgs": 33,
+   "first_query": "请把我ATOMCOOE的y配置的模型配置上下文修改为输入1M，输出384k",
+   "cmd_count": 0,
+   "tools": {
+    "atomcode": 33
+   }
+  },
+  {
+   "file": "34f7eb93-f648-4e92-922d-f2ab165d8d4c.jsonl",
+   "id": "34f7eb93-f64",
+   "mtime": "2026-09-11 16:20",
+   "lines": 3,
+   "query_count": 3,
+   "user_msgs": 3,
+   "first_query": "1、搜索代码时，检查是否有codegraph的缓存，有的话先调用codegraph的mcp工具搜索代码；2、进行架构和项目分析 3、搜索市面上相关类似项目，进行",
+   "cmd_count": 0,
+   "tools": {
+    "atomcode": 3
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "197994b6-0b8",
+   "mtime": "2026-08-18 01:12",
+   "lines": 1,
+   "query_count": 1,
+   "user_msgs": 1,
+   "first_query": "你在优化一个 FastAPI 项目的 bac",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 15
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "2695a612-ff4",
+   "mtime": "2026-08-24 07:27",
+   "lines": 1,
+   "query_count": 1,
+   "user_msgs": 1,
+   "first_query": "请审查以下项目中的 marketplace",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 22
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "5329628b-10e",
+   "mtime": "2026-08-24 07:26",
+   "lines": 1,
+   "query_count": 1,
+   "user_msgs": 1,
+   "first_query": "请审查以下项目中的 renderer 端",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 16
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "58e590c5-618",
+   "mtime": "2026-08-24 07:34",
+   "lines": 1,
+   "query_count": 1,
+   "user_msgs": 1,
+   "first_query": "请修复以下项目中的代码质量",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 39
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "61076e05-c24",
+   "mtime": "2026-08-18 01:12",
+   "lines": 1,
+   "query_count": 1,
+   "user_msgs": 1,
+   "first_query": "你在优化一个 FastAPI 项目的 bac",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 33
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "6e544c5f-9f9",
+   "mtime": "2026-08-24 07:27",
+   "lines": 1,
+   "query_count": 1,
+   "user_msgs": 1,
+   "first_query": "请审查以下项目中的 packages/cor",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 16
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "81fce362-b04",
+   "mtime": "2026-08-18 01:12",
+   "lines": 1,
+   "query_count": 1,
+   "user_msgs": 1,
+   "first_query": "你在优化一个 FastAPI 项目，需",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 12
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "9143d5aa-cb7",
+   "mtime": "2026-08-17 19:18",
+   "lines": 1,
+   "query_count": 28,
+   "user_msgs": 28,
+   "first_query": "web ui插件自带皮肤中Trading Termi",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 141
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "9519a286-9c5",
+   "mtime": "2026-08-24 07:34",
+   "lines": 1,
+   "query_count": 1,
+   "user_msgs": 1,
+   "first_query": "请修复以下项目中的 IPC 事件",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 12
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "bc7ecd27-707",
+   "mtime": "2026-08-20 07:43",
+   "lines": 1,
+   "query_count": 1,
+   "user_msgs": 1,
+   "first_query": "You are auditing the main-process/busine",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 31
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "f5fec1c3-593",
+   "mtime": "2026-08-20 07:43",
+   "lines": 1,
+   "query_count": 1,
+   "user_msgs": 1,
+   "first_query": "You are auditing the renderer",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 33
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "f7ba4834-bcd",
+   "mtime": "2026-08-18 01:14",
+   "lines": 1,
+   "query_count": 1,
+   "user_msgs": 1,
+   "first_query": "修复前端 TypeScript/React 项目的",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 72
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-068d",
+   "mtime": "2026-08-20 07:24",
+   "lines": 1,
+   "query_count": 5,
+   "user_msgs": 5,
+   "first_query": "请完善项目，优化架构、优化用户体验、提高运行效率、确",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 291
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-1471",
+   "mtime": "2026-08-16 14:36",
+   "lines": 1,
+   "query_count": 82,
+   "user_msgs": 82,
+   "first_query": "我现在想你构建一个DeepSeek Harn",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 544
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-15f7",
+   "mtime": "2026-08-18 01:04",
+   "lines": 1,
+   "query_count": 8,
+   "user_msgs": 8,
+   "first_query": "请持续优化C:\\Users\\Administrator\\Documents\\document-skills\\gongwen-skill",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 138
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-4657",
+   "mtime": "2026-08-24 07:23",
+   "lines": 1,
+   "query_count": 6,
+   "user_msgs": 6,
+   "first_query": "请完善项目，优化架构、优化用户体验、提高运行效率、确",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 114
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-587c",
+   "mtime": "2026-08-24 00:31",
+   "lines": 1,
+   "query_count": 2,
+   "user_msgs": 2,
+   "first_query": "请完善项目，优化架构、优化用户体验、提高运行效率、确",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 119
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-5e13",
+   "mtime": "2026-08-15 18:07",
+   "lines": 1,
+   "query_count": 2,
+   "user_msgs": 2,
+   "first_query": "你好",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 0
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-74e1",
+   "mtime": "2026-08-18 08:10",
+   "lines": 1,
+   "query_count": 15,
+   "user_msgs": 15,
+   "first_query": "另外增加持仓盯盘功能，设置",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 166
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-81c6",
+   "mtime": "2026-08-25 23:20",
+   "lines": 1,
+   "query_count": 1,
+   "user_msgs": 1,
+   "first_query": "请完善项目，优化架构、优化用户体验、提高运行效率、确",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 31
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-8291",
+   "mtime": "2026-08-31 08:50",
+   "lines": 1,
+   "query_count": 1,
+   "user_msgs": 1,
+   "first_query": "https://github.com/z953218350/dsh-np-ppt",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 30
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-834c",
+   "mtime": "2026-08-17 19:18",
+   "lines": 1,
+   "query_count": 105,
+   "user_msgs": 105,
+   "first_query": "dsh-stock-terminal 插件项目",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 892
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-d77c",
+   "mtime": "2026-08-22 05:00",
+   "lines": 1,
+   "query_count": 1,
+   "user_msgs": 1,
+   "first_query": "请完善项目，优化架构、优化用户体验、提高运行效率、确",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 97
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-dabd",
+   "mtime": "2026-08-15 18:08",
+   "lines": 1,
+   "query_count": 4,
+   "user_msgs": 4,
+   "first_query": "# 🧠 P8 工程师工作准则（任务",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 0
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-e6ef",
+   "mtime": "2026-08-21 07:10",
+   "lines": 1,
+   "query_count": 1,
+   "user_msgs": 1,
+   "first_query": "请完善项目，优化架构、优化用户体验、提高运行效率、确",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 0
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-ede1",
+   "mtime": "2026-08-18 01:43",
+   "lines": 1,
+   "query_count": 18,
+   "user_msgs": 18,
+   "first_query": "gongwen-skill持续优化项目",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 1007
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "0a4f5e06-f58",
+   "mtime": "2026-09-04 11:34",
+   "lines": 1,
+   "query_count": 1,
+   "user_msgs": 1,
+   "first_query": "你是一名软件质量审计员。请",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 18
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "431aec42-7cf",
+   "mtime": "2026-09-04 11:34",
+   "lines": 1,
+   "query_count": 1,
+   "user_msgs": 1,
+   "first_query": "你是一名资深 Electron/前端安全",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 29
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "4dcd87d1-684",
+   "mtime": "2026-09-01 20:59",
+   "lines": 1,
+   "query_count": 1,
+   "user_msgs": 1,
+   "first_query": "你是 DSH Manager（一个 DeepSeek Har",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 22
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "89683775-b91",
+   "mtime": "2026-08-24 00:56",
+   "lines": 1,
+   "query_count": 1,
+   "user_msgs": 1,
+   "first_query": "你是一个代码审查专家。请审",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 25
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "99a5928c-1d2",
+   "mtime": "2026-08-21 11:44",
+   "lines": 1,
+   "query_count": 1,
+   "user_msgs": 1,
+   "first_query": "You are in the DSH",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 0
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "9d7a1cca-fe5",
+   "mtime": "2026-09-04 11:34",
+   "lines": 1,
+   "query_count": 1,
+   "user_msgs": 1,
+   "first_query": "你是一名资深 Node.js 代码审计",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 17
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "d9a40d61-992",
+   "mtime": "2026-08-24 00:56",
+   "lines": 1,
+   "query_count": 1,
+   "user_msgs": 1,
+   "first_query": "你是一个代码审查专家。请审",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 22
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "e32d3e32-b31",
+   "mtime": "2026-08-24 00:56",
+   "lines": 1,
+   "query_count": 1,
+   "user_msgs": 1,
+   "first_query": "你是一个代码审查专家。请审",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 32
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "e804758a-032",
+   "mtime": "2026-08-19 23:46",
+   "lines": 1,
+   "query_count": 1,
+   "user_msgs": 1,
+   "first_query": "Run the DSH Manager build",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 0
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "e9c8ed53-27d",
+   "mtime": "2026-08-24 00:56",
+   "lines": 1,
+   "query_count": 1,
+   "user_msgs": 1,
+   "first_query": "你是一个代码审查专家。请审",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 24
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-05f9",
+   "mtime": "2026-08-19 07:46",
+   "lines": 1,
+   "query_count": 3,
+   "user_msgs": 3,
+   "first_query": "安装https://github.com/linhut/dsh-skil",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 41
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-07c4",
+   "mtime": "2026-08-19 02:48",
+   "lines": 1,
+   "query_count": 2,
+   "user_msgs": 2,
+   "first_query": "点击启动dsh后，会弹出node的命",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 58
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-0931",
+   "mtime": "2026-08-19 07:27",
+   "lines": 1,
+   "query_count": 2,
+   "user_msgs": 2,
+   "first_query": "优化项目，达到可用好用易用",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 48
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-22b8",
+   "mtime": "2026-08-19 00:30",
+   "lines": 1,
+   "query_count": 7,
+   "user_msgs": 7,
+   "first_query": "#1 安装弹窗增加关闭按钮（避",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 95
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-2cde",
+   "mtime": "2026-08-21 11:14",
+   "lines": 1,
+   "query_count": 1,
+   "user_msgs": 1,
+   "first_query": "请完善项目，优化架构、优化用户体验、提高运行效率、确",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 67
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-2e1d",
+   "mtime": "2026-08-19 15:03",
+   "lines": 1,
+   "query_count": 8,
+   "user_msgs": 8,
+   "first_query": "参考FlashingChen/dsh-desktop-hub项目",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 191
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-4180",
+   "mtime": "2026-09-05 00:08",
+   "lines": 1,
+   "query_count": 4,
+   "user_msgs": 4,
+   "first_query": "对同步更新到仓库的所有文件",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 51
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-45e3",
+   "mtime": "2026-08-24 00:36",
+   "lines": 1,
+   "query_count": 1,
+   "user_msgs": 1,
+   "first_query": "请完善项目，优化架构、优化用户体验、提高运行效率、确",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 67
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-4d63",
+   "mtime": "2026-08-19 01:43",
+   "lines": 1,
+   "query_count": 2,
+   "user_msgs": 2,
+   "first_query": "项目是否有RELEASE.md",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 2
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-601c",
+   "mtime": "2026-08-24 09:37",
+   "lines": 1,
+   "query_count": 8,
+   "user_msgs": 8,
+   "first_query": "为什么我通过DSH manager工具，",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 205
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-61da",
+   "mtime": "2026-08-21 07:45",
+   "lines": 1,
+   "query_count": 37,
+   "user_msgs": 37,
+   "first_query": "请根据刚刚出现的问题分析优",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 498
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-67ac",
+   "mtime": "2026-09-06 16:05",
+   "lines": 1,
+   "query_count": 16,
+   "user_msgs": 16,
+   "first_query": "检查目前版本可用性，并进行",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 303
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-7b44",
+   "mtime": "2026-09-02 10:35",
+   "lines": 1,
+   "query_count": 11,
+   "user_msgs": 11,
+   "first_query": "输出下目前的处理流程",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 180
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-8fea",
+   "mtime": "2026-08-24 03:00",
+   "lines": 1,
+   "query_count": 1,
+   "user_msgs": 1,
+   "first_query": "请完善项目，优化架构、优化用户体验、提高运行效率、确",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 93
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-929a",
+   "mtime": "2026-08-20 03:00",
+   "lines": 1,
+   "query_count": 26,
+   "user_msgs": 26,
+   "first_query": "请完善项目，优化架构、优化用户体验、提高运行效率、确",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 179
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-9b1b",
+   "mtime": "2026-08-19 21:16",
+   "lines": 1,
+   "query_count": 5,
+   "user_msgs": 5,
+   "first_query": "搞定，dsh 主页现在可以正常打",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 126
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-ae97",
+   "mtime": "2026-08-19 23:15",
+   "lines": 1,
+   "query_count": 30,
+   "user_msgs": 30,
+   "first_query": "请吸取项目的教训，改良本项",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 394
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-be74",
+   "mtime": "2026-09-09 08:12",
+   "lines": 1,
+   "query_count": 12,
+   "user_msgs": 12,
+   "first_query": "刚刚进行了测试，关于插件和",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 286
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-c489",
+   "mtime": "2026-09-06 03:05",
+   "lines": 1,
+   "query_count": 4,
+   "user_msgs": 4,
+   "first_query": "根据目前DSH最新版本官方准则",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 140
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-c705",
+   "mtime": "2026-08-25 23:05",
+   "lines": 1,
+   "query_count": 119,
+   "user_msgs": 119,
+   "first_query": "请完善项目，优化架构、优化用户体验、提高运行效率、确",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 2783
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-d196",
+   "mtime": "2026-08-19 02:37",
+   "lines": 1,
+   "query_count": 2,
+   "user_msgs": 2,
+   "first_query": "项目下载按钮替换建议",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 28
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-d61b",
+   "mtime": "2026-08-18 21:36",
+   "lines": 1,
+   "query_count": 22,
+   "user_msgs": 22,
+   "first_query": "设置里也要完善配置，实现配",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 184
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-d80e",
+   "mtime": "2026-08-19 01:35",
+   "lines": 1,
+   "query_count": 24,
+   "user_msgs": 24,
+   "first_query": "安装软件后，卡在起始页，一",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 297
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-f8ed",
+   "mtime": "2026-09-05 20:34",
+   "lines": 1,
+   "query_count": 2,
+   "user_msgs": 2,
+   "first_query": "... (日志已截断，取最近 200KB)",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 0
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-fd1d",
+   "mtime": "2026-08-21 03:00",
+   "lines": 1,
+   "query_count": 2,
+   "user_msgs": 2,
+   "first_query": "优化项目，达到可用好用易用",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 0
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-fdfa",
+   "mtime": "2026-09-05 09:10",
+   "lines": 1,
+   "query_count": 3,
+   "user_msgs": 3,
+   "first_query": "DSH Manager 本身自己的更新逻辑",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 68
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-2bcf",
+   "mtime": "2026-09-06 14:18",
+   "lines": 1,
+   "query_count": 14,
+   "user_msgs": 14,
+   "first_query": "根据目前DSH最新版本官方准则",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 223
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-8680",
+   "mtime": "2026-09-08 11:52",
+   "lines": 1,
+   "query_count": 1,
+   "user_msgs": 1,
+   "first_query": "请只回复两个字：正常",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 0
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-a374",
+   "mtime": "2026-09-08 12:11",
+   "lines": 1,
+   "query_count": 1,
+   "user_msgs": 1,
+   "first_query": "请只回复两个字：正常",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 0
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-aab2",
+   "mtime": "2026-09-05 00:08",
+   "lines": 1,
+   "query_count": 4,
+   "user_msgs": 4,
+   "first_query": "对同步更新到仓库的所有文件",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 33
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-aaca",
+   "mtime": "2026-09-08 17:41",
+   "lines": 1,
+   "query_count": 3,
+   "user_msgs": 3,
+   "first_query": "插件 API 与宿主 0.1.2-rc.1 逐项",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 162
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-b5cb",
+   "mtime": "2026-09-06 15:11",
+   "lines": 1,
+   "query_count": 1,
+   "user_msgs": 1,
+   "first_query": "插件功能可用，问题在插件管",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 92
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-fa41",
+   "mtime": "2026-08-31 08:51",
+   "lines": 1,
+   "query_count": 3,
+   "user_msgs": 3,
+   "first_query": "根据最新的DSH要求和规则，优",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--192.168.1.115-~8FC": 109
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-7e2c",
+   "mtime": "2026-09-06 19:47",
+   "lines": 1,
+   "query_count": 8,
+   "user_msgs": 8,
+   "first_query": "根据目前DSH最新版本官方准则",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--C-Users-Administra": 108
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-84ac",
+   "mtime": "2026-09-09 02:04",
+   "lines": 1,
+   "query_count": 2,
+   "user_msgs": 2,
+   "first_query": "看看cathrynlavery/diagram-design项目",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--C-Users-Administra": 198
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-b295",
+   "mtime": "2026-09-02 18:06",
+   "lines": 1,
+   "query_count": 31,
+   "user_msgs": 31,
+   "first_query": "请将 html-ppt 和Color Scheme -",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--C-Users-Administra": 618
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "1bc9688d-408",
+   "mtime": "2026-08-16 01:05",
+   "lines": 1,
+   "query_count": 1,
+   "user_msgs": 1,
+   "first_query": "你是代码审计员。项目在 C:\\\\Us",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--C-Users-Administra": 5
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "20676160-934",
+   "mtime": "2026-08-16 01:04",
+   "lines": 1,
+   "query_count": 1,
+   "user_msgs": 1,
+   "first_query": "你是 gongwen-skill 项目的代码审",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--C-Users-Administra": 5
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "317e7e0b-ae0",
+   "mtime": "2026-08-16 01:04",
+   "lines": 1,
+   "query_count": 1,
+   "user_msgs": 1,
+   "first_query": "你是 gongwen-skill 项目的代码审",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--C-Users-Administra": 6
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "3e0a2f0d-497",
+   "mtime": "2026-08-16 01:04",
+   "lines": 1,
+   "query_count": 1,
+   "user_msgs": 1,
+   "first_query": "你是 gongwen-skill 项目的代码审",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--C-Users-Administra": 3
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "67ae7a27-5e1",
+   "mtime": "2026-08-17 07:20",
+   "lines": 1,
+   "query_count": 1,
+   "user_msgs": 1,
+   "first_query": "在 C:\\Users\\Administrator\\Documents\\doc",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--C-Users-Administra": 6
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "756a5ade-1c6",
+   "mtime": "2026-08-17 07:20",
+   "lines": 1,
+   "query_count": 1,
+   "user_msgs": 1,
+   "first_query": "在 C:\\Users\\Administrator\\Documents\\doc",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--C-Users-Administra": 3
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "8051a08d-ea3",
+   "mtime": "2026-08-17 02:19",
+   "lines": 1,
+   "query_count": 2,
+   "user_msgs": 2,
+   "first_query": "在 C:\\Users\\Administrator\\Documents\\doc",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--C-Users-Administra": 108
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "82d9c376-350",
+   "mtime": "2026-08-19 01:03",
+   "lines": 1,
+   "query_count": 1,
+   "user_msgs": 1,
+   "first_query": "Please investigate the repository at",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--C-Users-Administra": 29
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "9d10cde4-b1b",
+   "mtime": "2026-08-16 01:05",
+   "lines": 1,
+   "query_count": 1,
+   "user_msgs": 1,
+   "first_query": "你是代码审计员。项目在 C:\\\\Us",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--C-Users-Administra": 3
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "a0deb48d-1a0",
+   "mtime": "2026-08-16 01:04",
+   "lines": 1,
+   "query_count": 1,
+   "user_msgs": 1,
+   "first_query": "你是 gongwen-skill 项目的代码审",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--C-Users-Administra": 2
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "b222dfa6-028",
+   "mtime": "2026-08-16 01:05",
+   "lines": 1,
+   "query_count": 1,
+   "user_msgs": 1,
+   "first_query": "你是代码审计员。项目在 C:\\\\Us",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--C-Users-Administra": 5
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "d51de578-fdb",
+   "mtime": "2026-09-07 17:08",
+   "lines": 1,
+   "query_count": 4,
+   "user_msgs": 4,
+   "first_query": "你是一名技术调研员。请通过",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--C-Users-Administra": 29
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "e09838cd-bff",
+   "mtime": "2026-08-19 01:03",
+   "lines": 1,
+   "query_count": 1,
+   "user_msgs": 1,
+   "first_query": "Please investigate the repository at",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--C-Users-Administra": 21
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "e8eb5bd2-483",
+   "mtime": "2026-08-17 07:20",
+   "lines": 1,
+   "query_count": 1,
+   "user_msgs": 1,
+   "first_query": "在 C:\\Users\\Administrator\\Documents\\doc",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--C-Users-Administra": 7
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "fb3f70b4-1ae",
+   "mtime": "2026-08-16 01:05",
+   "lines": 1,
+   "query_count": 1,
+   "user_msgs": 1,
+   "first_query": "你是代码审计员。项目在 C:\\\\Us",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--C-Users-Administra": 2
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-0a64",
+   "mtime": "2026-09-03 21:35",
+   "lines": 1,
+   "query_count": 58,
+   "user_msgs": 58,
+   "first_query": "梳理下目前的处理流程，流线",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--C-Users-Administra": 904
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-1b1d",
+   "mtime": "2026-09-03 10:45",
+   "lines": 1,
+   "query_count": 11,
+   "user_msgs": 11,
+   "first_query": "向导式交互实现",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--C-Users-Administra": 257
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-2bed",
+   "mtime": "2026-09-09 00:53",
+   "lines": 1,
+   "query_count": 0,
+   "user_msgs": 0,
+   "first_query": "（无主题）",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--C-Users-Administra": 0
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-3998",
+   "mtime": "2026-09-08 16:45",
+   "lines": 1,
+   "query_count": 16,
+   "user_msgs": 16,
+   "first_query": "1、这个版本对新的版本进行了",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--C-Users-Administra": 318
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-482d",
+   "mtime": "2026-08-31 23:47",
+   "lines": 1,
+   "query_count": 55,
+   "user_msgs": 55,
+   "first_query": "工具局限处理：md2docx/optimize",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--C-Users-Administra": 984
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-5bc2",
+   "mtime": "2026-08-27 12:57",
+   "lines": 1,
+   "query_count": 4,
+   "user_msgs": 4,
+   "first_query": "检查这个问题是否存在，并顺",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--C-Users-Administra": 148
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-69c2",
+   "mtime": "2026-08-19 09:45",
+   "lines": 1,
+   "query_count": 42,
+   "user_msgs": 42,
+   "first_query": "gongwen-skill 条目，该包不是合",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--C-Users-Administra": 464
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-6aec",
+   "mtime": "2026-08-15 18:27",
+   "lines": 1,
+   "query_count": 51,
+   "user_msgs": 51,
+   "first_query": "# 🧠 P8 工程师工作准则（任务",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--C-Users-Administra": 204
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-6cbe",
+   "mtime": "2026-08-20 02:00",
+   "lines": 1,
+   "query_count": 12,
+   "user_msgs": 12,
+   "first_query": "请完善项目，优化架构、优化用户体验、提高运行效率、确",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--C-Users-Administra": 230
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-740b",
+   "mtime": "2026-08-24 20:00",
+   "lines": 1,
+   "query_count": 1,
+   "user_msgs": 1,
+   "first_query": "安装linhut/gongwen-skill 无法安装",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--C-Users-Administra": 15
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-a22f",
+   "mtime": "2026-09-06 23:11",
+   "lines": 1,
+   "query_count": 19,
+   "user_msgs": 19,
+   "first_query": "请研究在本skill，在不同的agnet",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--C-Users-Administra": 199
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-a3ef",
+   "mtime": "2026-08-27 13:08",
+   "lines": 1,
+   "query_count": 18,
+   "user_msgs": 18,
+   "first_query": "1、检查这个问题是否存在，并",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--C-Users-Administra": 669
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-ae9c",
+   "mtime": "2026-09-05 00:00",
+   "lines": 1,
+   "query_count": 0,
+   "user_msgs": 0,
+   "first_query": "（无主题）",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--C-Users-Administra": 0
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-aeb7",
+   "mtime": "2026-08-19 01:44",
+   "lines": 1,
+   "query_count": 10,
+   "user_msgs": 10,
+   "first_query": "项目是否有RELEASE.md",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--C-Users-Administra": 57
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-b22d",
+   "mtime": "2026-08-15 19:11",
+   "lines": 1,
+   "query_count": 120,
+   "user_msgs": 120,
+   "first_query": "请更新优化我的README，去掉其",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--C-Users-Administra": 1344
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-d50c",
+   "mtime": "2026-09-06 19:42",
+   "lines": 1,
+   "query_count": 19,
+   "user_msgs": 19,
+   "first_query": "根据目前DSH最新版本官方准则",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--C-Users-Administra": 201
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-bc76",
+   "mtime": "2026-08-24 02:05",
+   "lines": 1,
+   "query_count": 0,
+   "user_msgs": 0,
+   "first_query": "（无主题）",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--C-Users-Administra": 0
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-d7b7",
+   "mtime": "2026-08-20 08:49",
+   "lines": 1,
+   "query_count": 44,
+   "user_msgs": 44,
+   "first_query": "> [x] #1 更新设计文档：确认架",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--C-Users-Administra": 198
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-0f18",
+   "mtime": "2026-09-05 00:07",
+   "lines": 1,
+   "query_count": 1,
+   "user_msgs": 1,
+   "first_query": "指示性文字取消，另外是对同",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--C-Users-Administra": 0
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-32c6",
+   "mtime": "2026-09-05 00:08",
+   "lines": 1,
+   "query_count": 3,
+   "user_msgs": 3,
+   "first_query": "对同步更新到仓库的所有文件",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--C-Users-Administra": 51
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-3cfa",
+   "mtime": "2026-09-02 01:53",
+   "lines": 1,
+   "query_count": 3,
+   "user_msgs": 3,
+   "first_query": "用户反馈最新1.5.2版本装上报",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--C-Users-Administra": 120
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-6573",
+   "mtime": "2026-08-31 20:41",
+   "lines": 1,
+   "query_count": 3,
+   "user_msgs": 3,
+   "first_query": "继续web部分的提升优化计划，",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--C-Users-Administra": 141
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-6e7a",
+   "mtime": "2026-09-02 00:50",
+   "lines": 1,
+   "query_count": 7,
+   "user_msgs": 7,
+   "first_query": "Release list 部分混乱请，检查是",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--C-Users-Administra": 252
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-fdb8",
+   "mtime": "2026-09-04 08:18",
+   "lines": 1,
+   "query_count": 2,
+   "user_msgs": 2,
+   "first_query": "添加的AI模型能不能增加一个",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--C-Users-Administra": 92
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-a49f",
+   "mtime": "2026-08-25 23:13",
+   "lines": 1,
+   "query_count": 5,
+   "user_msgs": 5,
+   "first_query": "我现在可以用gongwenskill进行文",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--F-~7701~6C11~5B97~": 25
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-e30b",
+   "mtime": "2026-08-24 19:35",
+   "lines": 1,
+   "query_count": 6,
+   "user_msgs": 6,
+   "first_query": "给我梳理为一个表格，表头我",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--F-~7701~6C11~5B97~": 43
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-130e",
+   "mtime": "2026-09-02 16:33",
+   "lines": 1,
+   "query_count": 3,
+   "user_msgs": 3,
+   "first_query": "请调用skill和插件（https://github",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--F-~7701~6C11~5B97~": 102
+   }
+  },
+  {
+   "file": "session.jsonl.zstd",
+   "id": "session-2931",
+   "mtime": "2026-08-31 23:07",
+   "lines": 1,
+   "query_count": 4,
+   "user_msgs": 4,
+   "first_query": "针对张家界目前进度况情况调",
+   "cmd_count": 0,
+   "tools": {
+    "dsh:--F-~7701~6C11~5B97~": 107
+   }
+  }
+ ],
+ "common_commands": [
+  {
+   "cmd": "\"C:/Users/Administrator/.workbuddy/binaries/python/versions/3.13.12/python.exe\" \"C:/Users/Administrator/.workbuddy/pmem/_test_recall.py\"",
+   "count": 4,
+   "failed": 0
+  },
+  {
+   "cmd": "\"C:/Users/Administrator/.workbuddy/binaries/python/versions/3.13.12/python.exe\" \"C:/Users/Administrator/.workbuddy/pmem/mem.py\" reindex",
+   "count": 2,
+   "failed": 0
+  },
+  {
+   "cmd": "\"C:/Users/Administrator/.workbuddy/binaries/python/versions/3.13.12/python.exe\" \"C:/Users/Administrator/Documents/个人知识库/.memory/_probe_session.py\"",
+   "count": 2,
+   "failed": 0
+  },
+  {
+   "cmd": "netstat -ano | grep \":3080\" | head -5",
+   "count": 2,
+   "failed": 0
+  }
+ ],
+ "repeated_failures": [
+  {
+   "cmd": "TMP_POSIX=\"/c/Users/Administrator/AppData/Local/Temp/tmp.3SzwDUxYoh\" && rm -rf \"$TMP_POSIX\" && echo \"删除成功\" && ls \"$TMP_POSIX\" 2>&1 | head -1; echo \"---临时目录检查---\"; ls -d /c/Users/Administrator/AppData/Local/Temp/tmp.3SzwDUxYoh 2>&1 | head -1",
+   "count": 1
+  },
+  {
+   "cmd": "gh api repos/linhut/gongwen-skill/environments --jq '.environments[].name' 2>&1 | head -5; echo \"===再试 push gc（60s）===\"; cd \"C:/Users/Administrator/Documents/document-skills/gongwen-skill\" && timeout 60 git -c http.version=HTTP/1.1 push gc master --tags 2>&1 | tail -4; echo \"gc rc=$?\"; echo \"===再试 push atomgit（60s）===\"; timeout 60 git -c http.version=HTTP/1.1 push atomgit master --tags 2>&1 | tail -3; echo \"atomgit rc=$?\"",
+   "count": 1
+  },
+  {
+   "cmd": "ls \"C:/Users/Administrator/Documents/个人知识库/.workbuddy\"",
+   "count": 1
+  },
+  {
+   "cmd": "PY=\"C:/Users/Administrator/.workbuddy/binaries/python/versions/3.13.12/python.exe\"; MEM=\"C:/Users/Administrator/.workbuddy/pmem/mem.py\"; cd \"C:/Users/Administrator/.workbuddy/pmem\"; \"$PY\" \"$MEM\" add --type fact --title \"WorkBuddy 桌面端禁用第三方插件钩子\" --tags \"workbuddy,hooks,插件\" --body \"宿主 app.asar 在启动子进程时硬编码注入 CODEBUDDY_DISABLE_EXTENDED_PLUGIN_HOOKS=1，且 conversation-hook 策略 allowedTrust 仅为 trusted。因此第三方插件的 hooks.json（PreToolUse/SessionStart 等）在桌面端不会执行，这是产品信任模型，不是配置问题。绕行：改 app.asar（不推荐）、用 codebuddy CLI headless、或接受降级改用 MCP/skill。\"; \"$PY\" \"$MEM\" add --type lesson --title \"排查插件钩子未触发要查三层开关\" --tags \"workbuddy,排查\" --body \"第一层 installed_plugins.json 是否注册；第二层 settings.json 的 enabledPlugins 映射是否为 true（装了不等于启用）；第三层 CODEBUDDY_DISABLE_EXTENDED_PLUGIN_HOOKS 环境变量。判断插件是否真被加载看 daemon.log 里 resolveConversationConfig 的 enabledPluginIds 列表，不要相信 UI 绿灯。\"; \"$PY\" \"$MEM\" add --type procedure --title \"在 WorkBuddy 桌面端接入自建 MCP 的当前结论\" --tags \"workbuddy,mcp\" --body \"把插件登记为 xxx@local 这类不存在的 market 名时，mcpServers 不会注入；直接写 ~/.workbuddy/mcp.json 与 .mcp.json 也未被宿主读取（当前会话 CODEBUDDY_MCP_CONFIG 仍只有内置六个）。结论：桌面端自定义 MCP 通道当前不通，自建记忆服务应走本地 CLI + skill 路线。\"; echo \"=== 检索测试 ===\"; \"$PY\" \"$MEM\" recall \"插件钩子 为什么不执行\"; echo; \"$PY\" \"$MEM\" stats",
+   "count": 1
+  },
+  {
+   "cmd": "PY=\"C:/Users/Administrator/.workbuddy/binaries/python/versions/3.13.12/python.exe\"; MEM=\"C:/Users/Administrator/.workbuddy/pmem/mem.py\"; \"$PY\" \"$MEM\" reindex; echo \"=== 检索：钩子 ===\"; \"$PY\" \"$MEM\" recall \"插件钩子 不执行\"; echo; echo \"=== 检索：记忆服务路线 ===\"; \"$PY\" \"$MEM\" recall \"自建记忆 可行路线\"",
+   "count": 1
+  },
+  {
+   "cmd": "SK=\"C:/Program Files/WorkBuddy/resources/app.asar.unpacked/resources/plugins/workbuddy-builtin/skills/tencent-local-office-edit\"; python3 \"$SK/edsdk.py\" list doc 2>&1 | grep -i \"content\\|get_document\" | head -8; echo \"=== schema get_document_content ===\"; python3 \"$SK/edsdk.py\" schema get_document_content 2>&1 | head -40",
+   "count": 1
+  },
+  {
+   "cmd": "python -c \"\nfrom PIL import Image\nfor p in ['C:/Users/Administrator/.workbuddy/skills/gongwen-skill/logo/2026-08-19_11-17-43.png','C:/Users/Administrator/.workbuddy/skills/gongwen-skill/logo/2026-08-19_11-18-15.png']:\n    im = Image.open(p); print(p.split('/')[-1], im.size, im.mode)\n\"",
+   "count": 1
+  },
+  {
+   "cmd": "python -c \"\nfrom PIL import Image\nsrc = 'C:/Users/Administrator/WorkBuddy/2026-08-20-01-19-08/publish/App_icon_for_a_Chinese_officia_2026-08-19T17-24-58.png'\nim = Image.open(src).convert('RGBA')\nprint('original:', im.size)\nim512 = im.resize((512,512), Image.LANCZOS)\nout = 'C:/Users/Administrator/WorkBuddy/2026-08-20-01-19-08/publish/icon-512.png'\nim512.save(out)\nprint('saved:', out)\n\"",
+   "count": 1
+  },
+  {
+   "cmd": "mkdir -p y:/AI-DATA/dsh-stock-terminal/.smoke/node_modules/@deepseek-ai/dsh-settings y:/AI-DATA/dsh-stock-terminal/.smoke/node_modules/schemastery",
+   "count": 1
+  },
+  {
+   "cmd": "ls C:/Windows/Fonts/msyh.ttc C:/Windows/Fonts/msyhbd.ttc 2>&1; mkdir -p y:/AI-DATA/dsh-stock-terminal/tools",
+   "count": 1
+  },
+  {
+   "cmd": "WORK=$(mktemp -d) && echo \"$WORK\" && cd y:/AI-DATA/dsh-stock-terminal && node tools/gen-music.mjs \"$WORK/music.wav\" 15 && cp \"$WORK/music.wav\" .promo/music.wav 2>&1 && echo COPIED || echo COPY_DENIED",
+   "count": 1
+  },
+  {
+   "cmd": "ls -la /c/Users/Administrator/AppData/Local/Temp/tmp.AHiLlSbC29/t1.png && cd y:/AI-DATA/dsh-stock-terminal && node tools/build-promo.mjs \"C:/Users/Administrator/AppData/Local/Temp/tmp.AHiLlSbC29/config.json\" 2>&1 | tail -4",
+   "count": 1
+  },
+  {
+   "cmd": "cp \"/c/Users/Administrator/AppData/Local/Temp/tmp.AHiLlSbC29/promo-final.mp4\" y:/AI-DATA/dsh-stock-terminal/.promo/promo-final.mp4 && cp \"/c/Users/Administrator/AppData/Local/Temp/tmp.AHiLlSbC29/music.wav\" y:/AI-DATA/dsh-stock-terminal/.promo/music.wav && ls -la y:/AI-DATA/dsh-stock-terminal/.promo/",
+   "count": 1
+  },
+  {
+   "cmd": "TMP=$(ls -dt /c/Users/Administrator/AppData/Local/Temp/tmp.* | head -1) && cd \"$TMP\" && cat > debug.mjs <<'EOF'\nconst KLINE_ENDPOINT = \"https://ifzq.gtimg.cn/appstock/app/fqkline/get\";\nconst symbol = \"sh600519\", count = 60;\nconst url = `${KLINE_ENDPOINT}?param=${encodeURIComponent(`${symbol},day,,${count},qfq`)}&_t=${Date.now()}`;\nconsole.log(\"URL:\", url);\ntry {\n  const response = await fetch(url, { signal: AbortSignal.timeout(8000) });\n  console.log(\"status:\", response.ok, response.status);\n  const text = await response.text();\n  console.log(\"len:\", text.length, \"head:\", text.slice(0, 120));\n  const payload = JSON.parse(text);\n  const node = payload?.data?.[symbol];\n  console.log(\"node keys:\", node && Object.keys(node));\n  const rows = node?.qfqday ?? node?.day;\n  console.log(\"rows:\", Array.isArray(rows) ? rows.length : rows);\n} catch (e) {\n  console.error(\"ERR:\", e.name, e.message, e.cause?.message ?? \"\");\n}\nprocess.exit(0);\nEOF\nnode debug.mjs",
+   "count": 1
+  },
+  {
+   "cmd": "node /c/Users/Administrator/AppData/Local/Temp/kline-debug.mjs",
+   "count": 1
+  }
+ ],
+ "active_projects": [
+  {
+   "name": "公文文档优化器",
+   "mentions": 45
+  },
+  {
+   "name": "个人知识库",
+   "mentions": 6
+  }
+ ],
+ "notes": "本机记忆库另有 40 条人工/AI 提炼的经验笔记（notes/），本清单为会话层结构化索引，二者互补。"
+}
