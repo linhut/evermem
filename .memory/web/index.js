@@ -51,26 +51,32 @@ async function render() {
   else if (VIEW === 'backup') { c.innerHTML = backupHTML(); loadBackup(); }
 }
 
-const backupHTML = () => `<div style="width:100%"><div class="pane"><h3>数据备份 · 多渠道云同步</h3>
-  <div class="sub">数据与代码分离：代码在 GitHub 私人仓库；数据经下方渠道冗余备份（本地=事实源，渠道=副本单向同步）</div>
-  <div style="margin-top:12px;display:flex;gap:16px;align-items:center;flex-wrap:wrap">
-    <label style="display:flex;gap:6px;align-items:center;font-size:12.5px"><input id="bkAuto" type="checkbox" style="transform:scale(1.15)">自动备份（按各渠道频率）</label>
-    <label style="font-size:12px;color:var(--text2)">告警邮箱 <input id="bkAlert" placeholder="me@x.com" style="width:150px" /></label>
-    <button class="btn primary" onclick="bkSaveAll()">保存全部设置</button>
-    <button class="btn" onclick="bkRunAll()">立即备份全部渠道</button>
-    <button class="btn ghost" onclick="bkLog()">查看备份日志</button>
+const backupHTML = () => `<div style="width:100%;max-width:760px"><div class="pane"><h3>数据备份</h3>
+  <div class="sub">填一个云端目录，记忆与知识自动同步上去（本地=事实源，单向备份）</div>
+  <div style="margin-top:14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+    <input id="bkMain" placeholder="云端目录，如 D:/坚果云/evermem（先挂载网盘/NAS）" style="flex:1;min-width:240px" />
+    <button class="btn primary" onclick="bkSaveMain()">保存并立即备份</button>
+    <button class="btn" onclick="bkRunAll()">立即备份</button>
   </div>
-  <div id="bkChannels" style="margin-top:12px;display:flex;flex-direction:column;gap:10px"></div>
-  <div style="margin-top:12px;display:flex;gap:8px;align-items:center">
-    <select id="bkNewType" style="width:110px">
-      <option value="local">local 目录</option><option value="archive">archive 快照</option>
-      <option value="remote">remote 服务器</option><option value="mail">mail 邮箱</option>
-    </select>
-    <button class="btn ghost" onclick="bkAddChannel()">＋ 新增渠道</button>
-    <span class="sub">local/archive 零依赖；remote 需本机 ssh/scp；mail 需 SMTP（pass 留空则读 PMEM_SMTP_PASS）</span>
-  </div>
-  <div id="bkLogArea" class="sub" style="margin-top:10px;white-space:pre-wrap;font-size:11.5px"></div>
-</div></div>`;
+  <div id="bkStatus" class="sub" style="margin-top:10px">读取中…</div>
+  <details style="margin-top:12px"><summary style="cursor:pointer;font-size:12.5px;color:var(--text2)">高级设置（多渠道 / 频率 / 保留 / 告警）</summary>
+    <div style="margin-top:10px;display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+      <label style="display:flex;gap:6px;align-items:center;font-size:12.5px"><input id="bkAuto" type="checkbox" style="transform:scale(1.15)">自动备份（按各渠道频率）</label>
+      <label style="font-size:12px;color:var(--text2)">告警邮箱 <input id="bkAlert" placeholder="me@x.com" style="width:150px" /></label>
+      <button class="btn ghost small" onclick="bkSaveAll()">保存全部设置</button>
+      <button class="btn ghost small" onclick="bkLog()">查看备份日志</button>
+    </div>
+    <div id="bkChannels" style="margin-top:10px;display:flex;flex-direction:column;gap:10px"></div>
+    <div style="margin-top:10px;display:flex;gap:8px;align-items:center">
+      <select id="bkNewType" style="width:110px">
+        <option value="local">local 目录</option><option value="archive">archive 快照</option>
+        <option value="remote">remote 服务器</option><option value="mail">mail 邮箱</option>
+      </select>
+      <button class="btn ghost small" onclick="bkAddChannel()">＋ 新增渠道（锦上添花）</button>
+      <span class="sub">local/archive 零依赖；remote 需 ssh/scp；mail 需 SMTP（pass 留空读 PMEM_SMTP_PASS）</span>
+    </div>
+    <div id="bkLogArea" class="sub" style="margin-top:10px;white-space:pre-wrap;font-size:11.5px"></div>
+  </details></div></div>`;
 
 const BK_TYPES = { local: '镜像', archive: '快照', remote: '远端', mail: '邮箱' };
 const BK_SCOPES = [['notes','笔记'],['events','事件'],['index','索引'],['meta','配置']];
@@ -122,9 +128,27 @@ async function loadBackup() {
   const d = await (await fetch('/api/backup')).json();
   $('#bkAuto').checked = !!d.auto;
   $('#bkAlert').value = d.alert_email || '';
+  const main = (d.channels || []).find(c => c.type === 'local') || (d.channels || [])[0] || {};
+  $('#bkMain').value = main.target || '';
   $('#bkChannels').innerHTML = d.channels.map((c, i) => `<div data-type="${c.type}" data-name="${esc(c.name)}">${bkCard(c, i)}</div>`).join('')
-    || '<div class="empty">尚未配置渠道，点下方「新增渠道」</div>';
+    || '<div class="empty">暂无额外渠道（主备份即上方目录）</div>';
+  const ok = !!main.target && main.target_ok !== false;
+  const mb = ((d.channels || []).reduce((s, c) => s + (c.bytes || 0), 0) / 1048576).toFixed(2);
+  const mainSt = (d.channels || []).map(c => `${c.name}${c.ok === true ? '✓' : c.ok === false ? `✗×${c.fail_count || 1}` : ''}`).join(' ');
+  $('#bkStatus').innerHTML = (main.target
+    ? `<span style="color:var(--success)">● 已配置：${esc(main.target)}</span> · ${d.channels.length} 渠道 · 上次备份：${(d.history && d.history[0] && d.history[0].at) || '—'} · ${mainSt}`
+    : `<span style="color:var(--danger)">○ 尚未配置云端目录</span> · 填上方目录后点「保存并立即备份」`);
   $('#bkLogArea').textContent = '';
+}
+async function bkSaveMain() {
+  const target = $('#bkMain').value.trim();
+  if (!target) { toast('请先填写云端目录', 3000); return; }
+  const extra = bkCollectChannels().filter(c => c.name !== '主备份');
+  const main = { type: 'local', name: '主备份', enabled: true, target,
+    scope: ['notes', 'events', 'index', 'meta'], frequency_hours: 24 };
+  const d = await post('/api/backup/save', { auto: $('#bkAuto').checked, alert_email: $('#bkAlert').value.trim(),
+    channels: [main, ...extra] });
+  toast('已保存并执行备份'); loadBackup(); bkRunAll();
 }
 function bkCollectChannels() {
   const cards = document.querySelectorAll('#bkChannels > .pane');
@@ -376,9 +400,18 @@ async function loadTriage() {
   $('#triList').innerHTML = d.items.map(n => `<div class="pane" style="display:flex;align-items:center;gap:12px"><div style="flex:1">
     <div style="font-weight:500">${esc(n.title)}</div>
     <div class="sub" style="margin-top:2px">${badge(n.type_label, typeColor(n.type), typeBg(n.type))} ${aiBadge(n)} ${n.age} 天 · ${esc(n.created)}</div></div>
-    <div class="btnrow"><button class="btn primary small" onclick="triageAct('${esc(n.id)}','active')">转正</button>
+    <div class="btnrow"><button class="btn ghost small" onclick="triBody('${esc(n.id)}')">内容</button>
+    <button class="btn primary small" onclick="triageAct('${esc(n.id)}','active')">转正</button>
     <button class="btn ghost small" onclick="triageAct('${esc(n.id)}','suspect')">存疑</button>
     <button class="btn ghost small" onclick="triageArchiveId('${esc(n.id)}')">归档</button></div></div>`).join('') || '<div class="empty">没有候选</div>';
+}
+async function triBody(id) {
+  const d = await (await fetch('/api/candidates/body?id=' + encodeURIComponent(id))).json();
+  if (!d.body) { toast('无正文'); return; }
+  $('#modalMask').classList.add('show');
+  $('#modalBox').innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+    <b>${esc(d.title)}</b><button class="btn ghost small" onclick="$('#modalMask').classList.remove('show')">关闭</button></div>
+    <pre style="white-space:pre-wrap;font-size:12px;line-height:1.7;max-height:60vh;overflow:auto;background:var(--gray-bg);padding:10px;border-radius:8px;margin:0">${esc(d.body)}</pre>`;
 }
 async function triAutoReview() {
   const d = await post('/api/candidates/autoreview', {});

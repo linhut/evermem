@@ -469,6 +469,23 @@ class Handler(BaseHTTPRequestHandler):
                 pass
             self._json({"lines": lines})
             return
+        if p == "/api/candidates/body":
+            did = parse_qs(u.query).get("id", [""])[0]
+            cand_dir = mem.NOTES / "candidates"
+            hit = None
+            if cand_dir.exists():
+                for f in cand_dir.glob("cand-*.md"):
+                    d = mem.parse_note(f) or {}
+                    if d.get("id") == did:
+                        hit = f
+                        break
+            if not hit:
+                self._json({"error": "not found"}, 404)
+                return
+            d = mem.parse_note(hit) or {}
+            self._json({"id": did, "title": d.get("title", ""), "body": d.get("body", ""),
+                        "type": d.get("type", "fact")})
+            return
         if p == "/api/note":
             did = parse_qs(u.query).get("id", [""])[0]
             idx = cached_index()
