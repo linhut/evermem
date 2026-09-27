@@ -687,13 +687,16 @@ class Handler(BaseHTTPRequestHandler):
                 self._json({"error": "title 必填"}, 400)
                 return
             body = (b.get("body") or "").strip()
-            ntype = b.get("type", "lesson")
+            ntype = b.get("type", "lesson") if b.get("type") in ("procedure", "lesson", "fact") else "lesson"
+            status = b.get("status") if b.get("status") in ("active", "staged", "suspect", "superseded") else "staged"
+            tags_raw = (b.get("tags") or "").strip()
+            tags = [t.strip() for t in tags_raw.replace("，", ",").split(",") if t.strip()] or ["手动", "待整理"]
             nid = time.strftime("%Y%m%d-%H%M%S") + "-web"
-            note = (f"---\nid: {nid}\ntype: {ntype}\nstatus: staged\ntitle: {title}\n"
-                    f"tags: [手动, 待整理]\ncreated: {time.strftime('%Y-%m-%d')}\n---\n\n{body}\n")
+            note = (f"---\nid: {nid}\ntype: {ntype}\nstatus: {status}\ntitle: {title}\n"
+                    f"tags: [{', '.join(tags)}]\ncreated: {time.strftime('%Y-%m-%d')}\n---\n\n{body}\n")
             (BASE / "notes" / "lessons" / f"web-{nid}.md").write_text(note, encoding="utf-8")
             mem.build_index()
-            self._json({"ok": True, "id": nid, "status": "staged"})
+            self._json({"ok": True, "id": nid, "status": status})
             return
         if p.startswith("/api/note/"):
             parts = p.split("/")

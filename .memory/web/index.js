@@ -554,7 +554,7 @@ $('#saveBtn').onclick = async () => {
   }
   const data = { title, body: $('#fBody').value, type: $('#fType').value, status: $('#fStatus').value, tags: $('#fTags').value };
   if (EDIT_ID) await post('/api/note/' + encodeURIComponent(EDIT_ID) + '/edit', data);
-  else await post('/api/note', { title: data.title, body: data.body, type: data.type });
+  else await post('/api/note', { title: data.title, body: data.body, type: data.type, status: data.status, tags: data.tags });
   $('#modalMask').classList.remove('show'); toast('已保存'); loadNotes();
 };
 document.addEventListener('keydown', e => {
