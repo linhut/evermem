@@ -356,6 +356,8 @@ class Handler(BaseHTTPRequestHandler):
             return
         self.send_response(200)
         self.send_header("Content-Type", ctype)
+        # 前端改动频繁，禁用缓存避免浏览器加载旧 JS 导致白页（Ctrl+F5 后永久生效）
+        self.send_header("Cache-Control", "no-store")
         self.send_header("Content-Length", str(len(raw)))
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
