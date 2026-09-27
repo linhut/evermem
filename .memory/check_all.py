@@ -10,6 +10,11 @@ import sys
 import time
 from pathlib import Path
 
+BASE = Path(__file__).resolve().parent
+if str(BASE) not in sys.path:
+    sys.path.insert(0, str(BASE))
+import mem  # noqa: E402
+
 BASE = Path(r"C:/Users/Administrator/Documents/个人知识库/.memory")
 PY = r"C:/Users/Administrator/.workbuddy/binaries/python/versions/3.13.12/python.exe"
 SYS = r"C:/Python314/python.exe"
@@ -163,6 +168,8 @@ if st == 200:
 
 print()
 print("六、前端与数据健康")
+ok, out, ms = run([PY, "frontend_smoke.py"])
+check("前端静态契约冒烟（元素/函数/路由）", ok)
 ok, out, ms = run(["C:/Program Files/nodejs/node.exe", "--check", "web/index.js"])
 check("index.js 语法", ok)
 ok, out, ms = run([PY, "-m", "py_compile", "web/server.py", "web/launcher.py", "evermem_mcp.py", "mem.py", "ingest.py", "harvest.py", "knowledge_scan.py"])

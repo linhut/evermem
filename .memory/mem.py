@@ -335,7 +335,7 @@ def search(idx: dict, query: str, limit: int = 5, include_all: bool = False) -> 
 
 def slugify(text: str) -> str:
     s = re.sub(r"[^\w\u4e00-\u9fff]+", "-", text).strip("-")
-    return (s[:40] or "note").lower()
+    return (s[:30] or "note").lower()
 
 
 def _recency_boost(created: str, now_ts: float) -> float:
@@ -542,6 +542,7 @@ def cand_score(d: dict, idx: dict) -> dict:
 
 # ============ 多角色评判（参考 UZI-Skill 多角色评审团：独立打分→引用规则→加权共识→critical 否决） ============
 AUTO_REVIEW_LOG = "events/auto-review.jsonl"
+RECALL_LOG = "events/recall-log.jsonl"
 AUTO_PROMOTE_TOTAL = 78      # 自动转正总分阈值（强共识）
 AUTO_PROMOTE_PASS = 4        # 至少通过的独立角色数
 ROLES = [
@@ -876,9 +877,25 @@ def cmd_add(args) -> int:
     return 0
 
 
+def log_recall(query: str, hits: list) -> None:
+    """记录检索命中（救火榜数据源）：谁被查、命中哪些、多少分。"""
+    try:
+        p = ROOT / RECALL_LOG
+        p.parent.mkdir(parents=True, exist_ok=True)
+        with p.open("a", encoding="utf-8") as f:
+            f.write(json.dumps({
+                "ts": time.strftime("%Y-%m-%d %H:%M:%S"),
+                "query": str(query)[:120], "n": len(hits),
+                "hits": [{"id": h["id"], "score": round(h["score"], 1)} for h in hits[:10]],
+            }, ensure_ascii=False) + "\n")
+    except OSError:
+        pass
+
+
 def cmd_recall(args) -> int:
     idx = load_index(force=args.reindex)
     hits = search(idx, args.query, limit=args.limit, include_all=args.all)
+    log_recall(args.query, hits)
     if not hits:
         print("无命中。")
         return 0

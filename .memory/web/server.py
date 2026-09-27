@@ -405,6 +405,7 @@ class Handler(BaseHTTPRequestHandler):
                 return
             idx = cached_index()
             hits = mem.search(idx, q, limit=50, include_all=include_all)
+            mem.log_recall(q, hits)
             note_map = idx.get("docs", {})
             self._json({"hits": [{"id": h["id"], "score": h["score"], "title": h["title"],
                                   "type": h["type"], "type_label": TYPE_LABEL.get(h["type"], h["type"]),
@@ -605,7 +606,11 @@ class Handler(BaseHTTPRequestHandler):
                     "smtp": c.get("smtp") if isinstance(c.get("smtp"), dict) else {},
                 })
             backup.save_cfg({"auto": auto, "alert_email": alert, "channels": channels})
-            self._json(backup.sync_status())
+            resp = backup.sync_status()
+            # mail 渠道安全提示：SMTP 密码建议走环境变量 PMEM_SMTP_PASS，不落配置明文；涉密快照慎用邮箱
+            if any(c.get("type") == "mail" and c.get("smtp", {}).get("pass") for c in channels):
+                resp["hint"] = "mail 渠道已记录 SMTP 密码——建议改用环境变量 PMEM_SMTP_PASS（配置只留 host/user）；涉密数据经邮箱需自行合规评估。"
+            self._json(resp)
             return
         if p == "/api/backup/run":
             b = self._body()
@@ -877,11 +882,34 @@ def main() -> int:
                     subprocess.run(
                         [sys.executable, str(BASE / "harvest.py"), "scan", "--days", "1"],
                         capture_output=True, text=True, timeout=300, cwd=str(BASE))
+                    # 扫描后自动评审：多角色转正（仅 lesson）+ 否决项归档，防止候选池随收割爆满
+                    subprocess.run(
+                        [sys.executable, str(BASE / "mem.py"), "candidates", "auto", "--purge"],
+                        capture_output=True, text=True, timeout=300, cwd=str(BASE))
                 except Exception as exc:  # noqa: BLE001
                     print(f"[auto-harvest] 失败：{exc}", file=sys.stderr)
                 time.sleep(harvest_secs)
 
         _threading.Thread(target=_harvest_loop, daemon=True, name="pmem-auto-harvest").start()
+
+    # 引擎变更检测：mem.py 等改动后提示重启（进程是启动时代码快照）
+    _engine_mtimes = {name: (BASE / name).stat().st_mtime
+                      for name in ("mem.py", "backup.py", "harvest.py", "server.py") if (BASE / name).exists()}
+
+    def _engine_watch():
+        while True:
+            try:
+                for name, m in _engine_mtimes.items():
+                    p = BASE / name
+                    if p.exists() and p.stat().st_mtime > m:
+                        print(f"[引擎变更] {name} 已在启动后被修改——当前进程仍是旧代码快照，"
+                              f"请重启 server 使改动生效", file=sys.stderr)
+                        _engine_mtimes[name] = p.stat().st_mtime  # 只提示一次
+            except OSError:
+                pass
+            time.sleep(60)
+
+    _threading.Thread(target=_engine_watch, daemon=True, name="pmem-engine-watch").start()
 
     srv = ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
     try:

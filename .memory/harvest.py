@@ -298,9 +298,17 @@ def build_candidate(sig: str, failures: list[dict], success: dict | None, sessio
 
 _SIMPLE_CMD = re.compile(r"^\s*(ls|cd|pwd|echo|cat|head|tail|clear|date|whoami|git status|git log|git ls-files)\b")
 
+# 工具名黑名单：只有单个工具名（无实质命令内容）的"成功配方"不是知识，过滤掉
+_TOOL_NAME_ONLY = re.compile(
+    r"^(?:Bash|PowerShell|Python|Node|Write|Read|Edit|TaskStop|TaskOutput|WebFetch|WebSearch|"
+    r"AskUserQuestion|ToolSearch|present_files|show_widget|Skill|Agent|TaskCreate|TaskUpdate|"
+    r"TaskGet|TaskList|DeferExecuteTool|Grep|Glob)\b[^\w]*$")
+
 
 def looks_like_complex_cmd(sig: str) -> bool:
     """高价值"成功配方"信号：非常规命令且带复杂度（多命令/变量/参数化路径/管道）。"""
+    if _TOOL_NAME_ONLY.match(sig.strip()):
+        return False
     if any(k in sig for k in ("&&", ";", "$", "|", "python", "--")):
         return True
     return not bool(_SIMPLE_CMD.match(sig))
@@ -371,10 +379,11 @@ def cmd_scan(args) -> int:
                         candidates.append((sig, rc[0], rc[1], "procedure"))
                 continue
             # 失败之后是否出现同签名的成功（late-success）
+            # 修正：成功项的输出必须不含错误特征（曾有"成功片段实为错误栈"的误判案例）
             success = None
             last_fail_idx = max(i for i, x in enumerate(items) if x["_failed"])
             for later in items[last_fail_idx + 1:]:
-                if not later["_failed"]:
+                if not later["_failed"] and not looks_like_error(str(later.get("output") or "")):
                     success = later
                     break
             if not success and not args.include_pure_failure:

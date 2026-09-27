@@ -417,12 +417,19 @@ async function triBody(id) {
   if (!d.body) { toast('无正文'); return; }
   $('#viewMask').classList.add('show');
   $('#viewTitle').textContent = d.title;
-  $('#viewBody').textContent = d.body;
+  $('#viewBody').innerHTML = mdLight(d.body);
   const va = $('#viewActions');
   va.innerHTML = `<button class="btn primary small" onclick="triModalAct('${esc(id)}','active')">转正</button>
     <button class="btn ghost small" onclick="triModalAct('${esc(id)}','suspect')">存疑</button>
     <button class="btn ghost small" onclick="triModalAct('${esc(id)}','archive')">归档</button>`;
   va.style.display = 'flex';
+}
+/* 正文轻渲染：``` 代码块转 pre，其余按纯文本安全展示（防 XSS） */
+function mdLight(t) {
+  const parts = String(t).split(/```/);
+  return parts.map((seg, i) => i % 2 === 1
+    ? `<pre style="white-space:pre-wrap;font-size:12px;background:var(--gray-bg);padding:8px;border-radius:6px;margin:4px 0">${esc(seg)}</pre>`
+    : esc(seg).replace(/\n/g, '<br>')).join('');
 }
 function closeView() { $('#viewMask').classList.remove('show'); }
 async function triModalAct(id, op) {
@@ -466,7 +473,7 @@ async function loadStats() {
   const cards = [
     { n: d.total, l: '笔记总数' }, { n: d.hot, l: '核心经验（/20）' },
     ...Object.entries(d.by_type).map(([k, v]) => ({ n: v, l: '类型：' + (t[k] || k) })),
-    ...Object.entries(d.by_status).map(([k, v]) => ({ n: v, l: '状态：' + k })),
+    ...Object.entries(d.by_status).map(([k, v]) => ({ n: v, l: '状态：' + (S(k) || k) })),
   ];
   $('#statGrid').innerHTML = cards.map(c => `<div class="stat-card"><div class="n">${c.n}</div><div class="l">${c.l}</div></div>`).join('');
   $('#statFoot').textContent = '索引更新：' + (d.built_at || '—') + ' · 引擎：本地检索引擎 · 无需联网、不上传';

@@ -21,6 +21,10 @@
 - 命令：`mem.py hot --limit 20`（看 pinned 构成）；对照上月清单
 - 记录：本月新进 __ 条，移出 __ 条；当前 fact __ / procedure __ / lesson __
 - 判断：热层是否"有进有出"；若 20 条长期不动 → 审查是否应淘汰已内化条目（auto-fill 曾误选 4/6 元笔记，必须人工评审）
+- **轮换机制（每月必做）**：
+  1. 淘汰已内化的元笔记（架构/调研/移植类，如"系统建设经验"已落地后不再需要常驻）
+  2. 提拔**救火榜新宠**（recall-log.jsonl 里被高频召回且分数高、尚未进热层的笔记）——`events/recall-log.jsonl` 按命中 id 聚合，top N 进热层候选
+  3. 操作：`mem.py hot --limit 20` 预览 → 对淘汰项 `edit` frontmatter 去掉 `hot: true` → `mem.py hot --apply` 重新同步
 
 ## 指标 5 · 无命中占比
 - 数据源：recall 无命中次数（**待建**：检索日志）
