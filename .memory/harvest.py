@@ -296,6 +296,44 @@ def build_candidate(sig: str, failures: list[dict], success: dict | None, sessio
     return title, "\n".join(body)
 
 
+_SIMPLE_CMD = re.compile(r"^\s*(ls|cd|pwd|echo|cat|head|tail|clear|date|whoami|git status|git log|git ls-files)\b")
+
+
+def looks_like_complex_cmd(sig: str) -> bool:
+    """高价值"成功配方"信号：非常规命令且带复杂度（多命令/变量/参数化路径/管道）。"""
+    if any(k in sig for k in ("&&", ";", "$", "|", "python", "--")):
+        return True
+    return not bool(_SIMPLE_CMD.match(sig))
+
+
+def build_success_candidate(sig: str, items: list[dict], session_id: str) -> tuple[str, str] | None:
+    """成功配方候选（procedure）：一次成功、命令复杂、会话内认可用它完成实作。"""
+    successes = [i for i in items if not i["_failed"]]
+    if not successes:
+        return None
+    first = successes[0]
+    tool = first["tool"]
+    cmd = redact(extract_command(first))[:160]
+    out_snip = redact(first["output"])[:300]
+    last = successes[-1]
+    title = f"[候选] 成功配方：{sig[:70]}"
+    body = [
+        f"工具：{tool}",
+        f"命令签名：{sig}",
+        f"首次命令：{cmd}",
+        f"执行次数：{len(successes)}",
+        "输出片段（末次）：",
+        "```",
+        out_snip or "(无输出)",
+        "```",
+        "",
+        "说明：本次会话中该命令（或等价命令）已成功执行，可作为可复用配方候选。",
+        f"来源会话：{session_id}",
+        f"来源 callId：{first['callId']}",
+    ]
+    return title, "\n".join(body)
+
+
 def cmd_scan(args) -> int:
     files = iter_session_files(args.days)
     if not files:
@@ -304,7 +342,7 @@ def cmd_scan(args) -> int:
     state = load_state()
     seen = set(state.get("processed_callids", []))
     events: list[dict] = []
-    candidates: list[tuple[str, str, str]] = []
+    candidates: list[tuple[str, str, str, str]] = []
 
     total_calls = 0
     for path in files:
@@ -326,6 +364,11 @@ def cmd_scan(args) -> int:
         for sig, items in groups.items():
             fails = [i for i in items if i["_failed"]]
             if len(fails) < args.min_failures:
+                # 成功配方候选：无失败但命令复杂（一次成功的价值同样值得沉淀）
+                if looks_like_complex_cmd(sig):
+                    rc = build_success_candidate(sig, items, session_id)
+                    if rc:
+                        candidates.append((sig, rc[0], rc[1], "procedure"))
                 continue
             # 失败之后是否出现同签名的成功（late-success）
             success = None
@@ -337,12 +380,12 @@ def cmd_scan(args) -> int:
             if not success and not args.include_pure_failure:
                 continue
             title, body = build_candidate(sig, fails, success, session_id)
-            candidates.append((sig, title, body))
+            candidates.append((sig, title, body, "lesson"))
 
     print(f"扫描会话文件 {len(files)} 个，新执行记录 {total_calls} 条")
     print(f"识别到候选模式 {len(candidates)} 组\n")
-    for sig, title, body in candidates[: args.limit]:
-        print(f"- {title}")
+    for sig, title, body, ntype in candidates[: args.limit]:
+        print(f"- [{ntype}] {title}")
         print(f"    {body.splitlines()[1] if len(body.splitlines()) > 1 else ''}")
     if args.dry_run:
         print("\n[dry-run] 未写入任何文件。")
@@ -351,7 +394,7 @@ def cmd_scan(args) -> int:
     n_ev = write_events(events)
     CANDIDATES.mkdir(parents=True, exist_ok=True)
     written = 0
-    for sig, title, body in candidates:
+    for sig, title, body, ntype in candidates:
         h = hashlib.sha1(sig.encode("utf-8")).hexdigest()[:8]
         nid = f"{time.strftime('%Y%m%d-%H%M')}-{h}"
         fp = CANDIDATES / f"cand-{h}.md"
@@ -360,7 +403,7 @@ def cmd_scan(args) -> int:
         text = (
             "---\n"
             f"id: {nid}\n"
-            "type: lesson\n"
+            f"type: {ntype}\n"
             "status: staged\n"
             f"title: {title}\n"
             "tags: [自动收割, 待验证]\n"

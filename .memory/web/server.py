@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 import sys
 import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -815,6 +816,23 @@ def main() -> int:
             time.sleep(backup.AUTO_CHECK_SECONDS)
 
     _threading.Thread(target=_auto_loop, daemon=True, name="pmem-auto-backup").start()
+
+    # 自动收割线程：定时 harvest scan（会话证据 → 候选池，自动积累待审核）
+    # 默认开启，环境变量 PMEM_NO_AUTO_HARVEST=1 可禁用
+    if not os.environ.get("PMEM_NO_AUTO_HARVEST"):
+        harvest_secs = int(os.environ.get("PMEM_AUTO_HARVEST_SECONDS", "3600"))
+
+        def _harvest_loop():
+            while True:
+                try:
+                    subprocess.run(
+                        [sys.executable, str(BASE / "harvest.py"), "scan", "--days", "1"],
+                        capture_output=True, text=True, timeout=300, cwd=str(BASE))
+                except Exception as exc:  # noqa: BLE001
+                    print(f"[auto-harvest] 失败：{exc}", file=sys.stderr)
+                time.sleep(harvest_secs)
+
+        _threading.Thread(target=_harvest_loop, daemon=True, name="pmem-auto-harvest").start()
 
     srv = ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
     try:
