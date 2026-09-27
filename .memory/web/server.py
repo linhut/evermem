@@ -442,14 +442,15 @@ class Handler(BaseHTTPRequestHandler):
                 for f in sorted(cand_dir.glob("cand-*.md")):
                     d = mem.parse_note(f) or {}
                     age = mem.cand_age_days(str(d.get("created", "")), now)
-                    rv = mem.cand_score(d, idx)
+                    rv = mem.multi_role_review(d, idx)
                     items.append({"id": d.get("id", f.stem), "type": d.get("type", "fact"),
                                   "status": d.get("status", "suspect"), "title": d.get("title", f.stem),
                                   "created": d.get("created", ""), "age": age,
                                   "type_label": TYPE_LABEL.get(d.get("type", "fact"), d.get("type", "fact")),
-                                  "ai_score": rv["score"], "ai_verdict": rv["verdict"],
-                                  "ai_label": rv["verdict_label"], "ai_reasons": rv["reasons"],
-                                  "ai_sim_id": rv["sim_id"]})
+                                  "ai_total": rv["total"], "ai_label": rv["label"],
+                                  "ai_passes": rv["passes"], "ai_verdict": rv["verdict"],
+                                  "roles": [{"k": k, "n": n, "score": r["score"], "v": r["verdict"]}
+                                            for k, n, r in rv["roles"]]})
             self._json({"items": items, "total": len(items), "cap": mem.DEFAULT_CAND_CAP,
                         "over30": sum(1 for i in items if i["age"] >= 30),
                         "over60": sum(1 for i in items if i["age"] >= 60)})
@@ -612,6 +613,25 @@ class Handler(BaseHTTPRequestHandler):
                 self._json({"ok": False, "error": "需指定要恢复的渠道"}, 400)
                 return
             self._json(backup.restore_channel(ch))
+            return
+        if p == "/api/candidates/autoreview":
+            # 多角色评审全部候选，强共识且无否决者自动转正
+            cand_dir = mem.NOTES / "candidates"
+            idx = mem.load_index(force=False)
+            promoted, kept, rejected = [], [], []
+            if cand_dir.exists():
+                for f in sorted(cand_dir.glob("cand-*.md")):
+                    d = mem.parse_note(f) or {}
+                    rv = mem.multi_role_review(d, idx)
+                    if rv["verdict"] == "promote":
+                        res = mem.promote_candidate(f, rv)
+                        (promoted if res.get("ok") else rejected).append(d.get("id"))
+                    elif rv["verdict"] == "keep":
+                        kept.append(d.get("id"))
+                    else:
+                        rejected.append(d.get("id"))
+            self._json({"reviewed": len(promoted) + len(kept) + len(rejected),
+                        "promoted": promoted, "kept": kept, "rejected": rejected})
             return
         if p == "/api/candidates/archive":
             cand_dir = mem.NOTES / "candidates"

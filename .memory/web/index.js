@@ -362,21 +362,28 @@ async function act(n, action, extra) {
 }
 
 /* 候选 */
-const AI_COLOR = { promote: 'var(--success)', keep: 'var(--warning)', archive: 'var(--danger)', archive_dup: 'var(--danger)' };
+const AI_COLOR = { promote: 'var(--success)', keep: 'var(--warning)', reject: 'var(--danger)', archive_dup: 'var(--danger)' };
 function aiBadge(r) {
   const c = AI_COLOR[r.ai_verdict] || 'var(--text2)';
-  return `<span style="font-size:11px;padding:1px 8px;border-radius:10px;border:1px solid ${c};color:${c};margin-right:6px">AI ${r.ai_score} 分 · ${r.ai_label}</span>`;
+  const roleLine = (r.roles || []).map(x => `${x.n[0]}${x.score}${x.v === 'pass' ? '✓' : (x.v === 'veto' ? '✗' : '●')}`).join(' ');
+  return `<div style="font-size:11px;line-height:1.7"><span style="padding:1px 8px;border-radius:10px;border:1px solid ${c};color:${c};margin-right:6px">AI ${r.ai_total} 分·${r.ai_label}（${r.ai_passes}/6通过）</span>
+    <span style="color:var(--text2)">${roleLine}</span></div>`;
 }
 async function loadTriage() {
   const d = await (await fetch('/api/candidates')).json();
   const full = d.total >= d.cap;
-  $('#triHead').innerHTML = `${d.total} 条候选（AI 建议 + 人工终审）· 上限 ${d.cap} · 超30天 ${d.over30} · 超60天 ${d.over60}${full ? ' · <b style="color:var(--danger)">已满，请处理</b>' : ''} <button class="btn ghost small" style="margin-left:8px" onclick="triageArchive()">归档超期(≥60天)</button>`;
+  $('#triHead').innerHTML = `${d.total} 条候选（多角色评审 + 人工终审）· 上限 ${d.cap}${full ? ' · <b style="color:var(--danger)">已满</b>' : ''} <button class="btn primary small" style="margin-left:8px" onclick="triAutoReview()">多角色评审并自动转正</button> <button class="btn ghost small" onclick="triageArchive()">归档超期(≥60天)</button>`;
   $('#triList').innerHTML = d.items.map(n => `<div class="pane" style="display:flex;align-items:center;gap:12px"><div style="flex:1">
     <div style="font-weight:500">${esc(n.title)}</div>
-    <div class="sub" style="margin-top:2px">${badge(n.type_label, typeColor(n.type), typeBg(n.type))} ${aiBadge(n)} ${n.age} 天 · ${esc(n.created)}${n.ai_sim_id ? ' · 疑似重复 ' + esc(n.ai_sim_id) : ''}</div></div>
+    <div class="sub" style="margin-top:2px">${badge(n.type_label, typeColor(n.type), typeBg(n.type))} ${aiBadge(n)} ${n.age} 天 · ${esc(n.created)}</div></div>
     <div class="btnrow"><button class="btn primary small" onclick="triageAct('${esc(n.id)}','active')">转正</button>
     <button class="btn ghost small" onclick="triageAct('${esc(n.id)}','suspect')">存疑</button>
     <button class="btn ghost small" onclick="triageArchiveId('${esc(n.id)}')">归档</button></div></div>`).join('') || '<div class="empty">没有候选</div>';
+}
+async function triAutoReview() {
+  const d = await post('/api/candidates/autoreview', {});
+  toast(`评审 ${d.reviewed} 条 → 自动转正 ${d.promoted.length}，保留 ${d.kept.length}，否决 ${d.rejected.length}`, d.promoted.length ? 2600 : 2000);
+  loadTriage(); loadNotes && loadNotes();
 }
 async function triageAct(id, status) { await post('/api/note/' + encodeURIComponent(id) + '/status', { status }); toast('已处理'); loadTriage(); }
 async function triageArchiveId(id) { const r = await post('/api/candidates/archive', { ids: [id] }); toast(`已归档 ${r.moved.length} 条`); loadTriage(); }
