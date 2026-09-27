@@ -431,15 +431,20 @@ class Handler(BaseHTTPRequestHandler):
         if p == "/api/candidates":
             cand_dir = mem.NOTES / "candidates"
             items = []
+            idx = cached_index()
             if cand_dir.exists():
                 now = time.time()
                 for f in sorted(cand_dir.glob("cand-*.md")):
                     d = mem.parse_note(f) or {}
                     age = mem.cand_age_days(str(d.get("created", "")), now)
+                    rv = mem.cand_score(d, idx)
                     items.append({"id": d.get("id", f.stem), "type": d.get("type", "fact"),
                                   "status": d.get("status", "suspect"), "title": d.get("title", f.stem),
                                   "created": d.get("created", ""), "age": age,
-                                  "type_label": TYPE_LABEL.get(d.get("type", "fact"), d.get("type", "fact"))})
+                                  "type_label": TYPE_LABEL.get(d.get("type", "fact"), d.get("type", "fact")),
+                                  "ai_score": rv["score"], "ai_verdict": rv["verdict"],
+                                  "ai_label": rv["verdict_label"], "ai_reasons": rv["reasons"],
+                                  "ai_sim_id": rv["sim_id"]})
             self._json({"items": items, "total": len(items), "cap": mem.DEFAULT_CAND_CAP,
                         "over30": sum(1 for i in items if i["age"] >= 30),
                         "over60": sum(1 for i in items if i["age"] >= 60)})
@@ -540,12 +545,18 @@ class Handler(BaseHTTPRequestHandler):
             cand_dir = mem.NOTES / "candidates"
             archive_dir = cand_dir / "archive"
             archive_dir.mkdir(parents=True, exist_ok=True)
+            body = self._body()
+            ids = set(body.get("ids") or []) if isinstance(body, dict) else set()
             moved = []
             if cand_dir.exists():
                 now = time.time()
                 for f in sorted(cand_dir.glob("cand-*.md")):
                     d = mem.parse_note(f) or {}
-                    if mem.cand_age_days(str(d.get("created", "")), now) >= 60:
+                    if ids:
+                        if str(d.get("id")) in ids:
+                            f.rename(archive_dir / f.name)
+                            moved.append(f.stem)
+                    elif mem.cand_age_days(str(d.get("created", "")), now) >= 60:
                         f.rename(archive_dir / f.name)
                         moved.append(f.stem)
             mem.build_index()

@@ -463,6 +463,80 @@ def cand_age_days(created: str, now: float) -> int:
         return 0
 
 
+VERDICT_LABEL = {"promote": "推荐转正", "keep": "保留观察", "archive": "建议归档", "archive_dup": "重复归档"}
+
+
+def cand_score(d: dict, idx: dict) -> dict:
+    """本地启发式候选评分（AI 审核第一层，零依赖）：返回 0-100 分与建议。
+
+    依据：与 active 笔记的相似度（与写前治理同源）、标题质量、正文信息完整度、
+    类型信号（教训类含失败细节）、命令上下文完整性。分数仅供参考，人工终审为准。
+    """
+    reasons: list[str] = []
+    score = 50.0
+    title = str(d.get("title", ""))
+    body = str(d.get("body", ""))
+    ntype = str(d.get("type", "fact"))
+    sim, sim_id = 0.0, ""
+    if title:
+        try:
+            hits = search(idx, title[:60], limit=3, include_all=True)
+            for h in hits:
+                if h["id"] == d.get("id") or h["status"] != "active":
+                    continue
+                if h["score"] > sim:
+                    sim, sim_id = h["score"], h["id"]
+        except Exception:
+            pass
+    if sim >= 25:
+        score -= 30
+        reasons.append(f"疑似重复 active 笔记（{sim_id}，相似 {sim:.0f}）")
+    elif sim >= 18:
+        score -= 15
+        reasons.append(f"与 active 笔记相似（{sim_id}，相似 {sim:.0f}），建议核实")
+    has_ph = bool(re.search(r"<[a-z]+>|<str>|<path>|<n>|<N>", title))
+    if has_ph and len(body) < 120:
+        score -= 15
+        reasons.append("标题含占位符且正文简短，信息量不足")
+    elif len(title) < 10:
+        score -= 8
+        reasons.append("标题过短")
+    if not body.strip():
+        score -= 15
+        reasons.append("正文为空")
+    elif len(body) < 80:
+        score -= 8
+        reasons.append("正文过短")
+    if "失败后成功" in title or "失败后成功" in body:
+        score += 12
+        reasons.append("含失败→成功完整路径，价值较高")
+    elif "反复失败" in title or "反复失败" in body:
+        score -= 8
+        reasons.append("重复失败的碎片记录，未收敛为可复用配方")
+    elif ntype == "lesson" and ("失败" in body or "Error" in body):
+        score += 5
+        reasons.append("教训类含失败细节")
+    m = re.search(r"失败次数[:：]\s*(\d+)", body)
+    if m and int(m.group(1)) >= 1:
+        score += 3
+    if "命令签名" in body and len(re.sub(r"<[^>]+>", "", body)) > 200:
+        score += 10
+        reasons.append("含完整命令上下文")
+    elif len(re.sub(r"<[^>]+>", "", body)) > 400:
+        score += 5
+        reasons.append("正文信息量充足")
+    if sim >= 25:
+        verdict = "archive_dup"
+    elif score >= 70:
+        verdict = "promote"
+    elif score >= 45:
+        verdict = "keep"
+    else:
+        verdict = "archive"
+    return {"score": round(score), "verdict": verdict, "verdict_label": VERDICT_LABEL[verdict],
+            "reasons": reasons, "sim_id": sim_id, "sim": round(sim, 1)}
+
+
 def cmd_candidates(args) -> int:
     """候选池治理：list / check / archive / cap。防止自动收割候选无限膨胀。"""
     cand_dir = NOTES / "candidates"
@@ -507,6 +581,20 @@ def cmd_candidates(args) -> int:
         print(f"候选 {len(rows)} / 上限 {cap}")
         if len(rows) >= cap:
             print("⚠️ 已达上限，请审核（转正/归档）候选。")
+        return 0
+    if action == "review":
+        idx = load_index(force=args.reindex)
+        targets = [r for r in rows if (not args.ids) or r[1].get("id") in args.ids]
+        for p, d, age in targets:
+            rv = cand_score(d, idx)
+            print(f"{rv['score']:3d} 分 | {VERDICT_LABEL.get(rv['verdict'], rv['verdict']):6s} | {d.get('id')} | {str(d.get('title',''))[:46]}")
+            for reason in rv["reasons"]:
+                print(f"          · {reason}")
+        if args.llm:
+            if not os.environ.get("PMEM_AI_REVIEW"):
+                print("\n[LLM 精审跳过]：未配置 PMEM_AI_REVIEW（如 base_url,key,model），保持本地启发式评分。涉密环境建议保持离线。")
+            else:
+                print("\n[LLM 精审] 已配置，可接入外部模型复核（默认仅本地评分）。")
         return 0
     return 0
 
@@ -638,9 +726,12 @@ def main() -> int:
     p.add_argument("--reindex", action="store_true")
     p.set_defaults(func=cmd_hot)
 
-    p = sub.add_parser("candidates", help="候选池治理（list/check/archive/cap）")
-    p.add_argument("action", nargs="?", choices=["list", "check", "archive", "cap"], default="check")
+    p = sub.add_parser("candidates", help="候选池治理（list/check/review/archive/cap）")
+    p.add_argument("action", nargs="?", choices=["list", "check", "review", "archive", "cap"], default="check")
     p.add_argument("--cap", type=int, default=None, help="容量上限（默认 50）")
+    p.add_argument("--ids", nargs="*", default=None, help="review 指定候选 id（默认全部）")
+    p.add_argument("--llm", action="store_true", help="review 时尝试 LLM 精审（需 PMEM_AI_REVIEW 配置）")
+    p.add_argument("--reindex", action="store_true")
     p.set_defaults(func=cmd_candidates)
 
     p = sub.add_parser("reindex", help="重建索引")

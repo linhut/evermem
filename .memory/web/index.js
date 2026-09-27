@@ -238,18 +238,25 @@ async function act(n, action, extra) {
 }
 
 /* 候选 */
+const AI_COLOR = { promote: 'var(--success)', keep: 'var(--warning)', archive: 'var(--danger)', archive_dup: 'var(--danger)' };
+function aiBadge(r) {
+  const c = AI_COLOR[r.ai_verdict] || 'var(--text2)';
+  return `<span style="font-size:11px;padding:1px 8px;border-radius:10px;border:1px solid ${c};color:${c};margin-right:6px">AI ${r.ai_score} 分 · ${r.ai_label}</span>`;
+}
 async function loadTriage() {
   const d = await (await fetch('/api/candidates')).json();
   const full = d.total >= d.cap;
-  $('#triHead').innerHTML = `${d.total} 条候选（自动提取未验证）· 上限 ${d.cap} · 超30天 ${d.over30} · 超60天 ${d.over60}${full ? ' · <b style="color:var(--danger)">已满，请处理</b>' : ''} <button class="btn ghost small" style="margin-left:8px" onclick="triageArchive()">归档超期(≥60天)</button>`;
+  $('#triHead').innerHTML = `${d.total} 条候选（AI 建议 + 人工终审）· 上限 ${d.cap} · 超30天 ${d.over30} · 超60天 ${d.over60}${full ? ' · <b style="color:var(--danger)">已满，请处理</b>' : ''} <button class="btn ghost small" style="margin-left:8px" onclick="triageArchive()">归档超期(≥60天)</button>`;
   $('#triList').innerHTML = d.items.map(n => `<div class="pane" style="display:flex;align-items:center;gap:12px"><div style="flex:1">
     <div style="font-weight:500">${esc(n.title)}</div>
-    <div class="sub" style="margin-top:2px">${badge(n.type_label, typeColor(n.type), typeBg(n.type))} ${n.age} 天 · ${esc(n.created)}</div></div>
+    <div class="sub" style="margin-top:2px">${badge(n.type_label, typeColor(n.type), typeBg(n.type))} ${aiBadge(n)} ${n.age} 天 · ${esc(n.created)}${n.ai_sim_id ? ' · 疑似重复 ' + esc(n.ai_sim_id) : ''}</div></div>
     <div class="btnrow"><button class="btn primary small" onclick="triageAct('${esc(n.id)}','active')">转正</button>
-    <button class="btn ghost small" onclick="triageAct('${esc(n.id)}','suspect')">存疑</button></div></div>`).join('') || '<div class="empty">没有候选</div>';
+    <button class="btn ghost small" onclick="triageAct('${esc(n.id)}','suspect')">存疑</button>
+    <button class="btn ghost small" onclick="triageArchiveId('${esc(n.id)}')">归档</button></div></div>`).join('') || '<div class="empty">没有候选</div>';
 }
 async function triageAct(id, status) { await post('/api/note/' + encodeURIComponent(id) + '/status', { status }); toast('已处理'); loadTriage(); }
-async function triageArchive() { const r = await post('/api/candidates/archive'); toast(`已归档 ${r.moved.length} 条超期候选`); loadTriage(); }
+async function triageArchiveId(id) { const r = await post('/api/candidates/archive', { ids: [id] }); toast(`已归档 ${r.moved.length} 条`); loadTriage(); }
+async function triageArchive() { const r = await post('/api/candidates/archive', {}); toast(`已归档 ${r.moved.length} 条超期候选`); loadTriage(); }
 
 /* 导入 */
 async function loadSpaces() {
