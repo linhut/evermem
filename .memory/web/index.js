@@ -210,7 +210,7 @@ const browseHTML = () => `<div class="col list-col"><div class="list-head" id="l
   <div class="opbar" id="opbar" style="display:none">
   <button class="btn ghost" id="editBtn">✎ 编辑</button><button class="btn ghost" id="hotBtn">★ 进核心经验</button>
   <button class="btn ghost" id="activeBtn">转正</button><button class="btn ghost" id="suspectBtn">存疑</button>
-  <button class="btn ghost" id="archiveBtn">归档</button></div></div>`;
+  <button class="btn ghost" id="supersedeBtn">替代</button></div></div>`;
 
 const importHTML = () => `<div style="width:100%"><div class="pane"><h3>文档导入</h3>
   <div class="btnrow" style="margin-bottom:8px">
@@ -253,7 +253,7 @@ function bindBrowse() {
   $('#hotBtn').onclick = () => act(CURRENT, 'hot');
   $('#activeBtn').onclick = () => act(CURRENT, 'status', 'active');
   $('#suspectBtn').onclick = () => act(CURRENT, 'status', 'suspect');
-  $('#archiveBtn').onclick = () => act(CURRENT, 'status', 'superseded');
+  $('#supersedeBtn').onclick = () => act(CURRENT, 'status', 'superseded');
 }
 function bindImport() {
   // 最近路径历史（localStorage）
@@ -418,7 +418,18 @@ async function triBody(id) {
   $('#modalMask').classList.add('show');
   $('#modalBox').innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
     <b>${esc(d.title)}</b><button class="btn ghost small" onclick="$('#modalMask').classList.remove('show')">关闭</button></div>
-    <pre style="white-space:pre-wrap;font-size:12px;line-height:1.7;max-height:60vh;overflow:auto;background:var(--gray-bg);padding:10px;border-radius:8px;margin:0">${esc(d.body)}</pre>`;
+    <pre style="white-space:pre-wrap;font-size:12px;line-height:1.7;max-height:52vh;overflow:auto;background:var(--gray-bg);padding:10px;border-radius:8px;margin:0">${esc(d.body)}</pre>
+    <div class="btnrow" style="margin-top:10px">
+      <button class="btn primary small" onclick="triModalAct('${esc(id)}','active')">转正</button>
+      <button class="btn ghost small" onclick="triModalAct('${esc(id)}','suspect')">存疑</button>
+      <button class="btn ghost small" onclick="triModalAct('${esc(id)}','archive')">归档</button>
+    </div>`;
+}
+async function triModalAct(id, op) {
+  if (op === 'archive') { await triageArchiveId(id); }
+  else { await triageAct(id, op); }
+  $('#modalMask').classList.remove('show');
+  loadTriage();
 }
 async function triAutoReview() {
   const d = await post('/api/candidates/autoreview', {});
@@ -553,3 +564,7 @@ document.addEventListener('keydown', e => {
 
 /* 初始 */
 loadNotes();
+
+/* 数据自动刷新：切回窗口 + 每 30s 轮询（浏览/候选视图），保证展示及时 */
+window.addEventListener('focus', () => { if (VIEW === 'browse') loadNotes(); else if (VIEW === 'triage') loadTriage(); });
+setInterval(() => { if (VIEW === 'browse') loadNotes(); else if (VIEW === 'triage') loadTriage(); }, 30000);
