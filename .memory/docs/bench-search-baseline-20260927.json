@@ -1,0 +1,210 @@
+{
+  "date": "2026-09-27",
+  "total_notes": 73,
+  "queries": 20,
+  "hit_rate": 1.0,
+  "empty": 0,
+  "avg_top_score": 172.6,
+  "details": [
+    {
+      "query": "工作提示函 督办 整改",
+      "expect": "工作提示函",
+      "top_id": "20260927-1042-149",
+      "top_score": 165.8,
+      "top_title": "工作提示函写作要点（督办式公文）",
+      "hit_expected": true,
+      "n": 5,
+      "ms": 29.0
+    },
+    {
+      "query": "会议通知 写作 复盘",
+      "expect": "会议",
+      "top_id": "20260927-1033-140",
+      "top_score": 95.8,
+      "top_title": "专题会议复盘与反思检讨材料写作要点",
+      "hit_expected": true,
+      "n": 5,
+      "ms": 1.0
+    },
+    {
+      "query": "复函 答复 平级单位",
+      "expect": "复函",
+      "top_id": "20260927-1047-154",
+      "top_score": 167.7,
+      "top_title": "复函写作要点（平级单位事项答复）",
+      "hit_expected": true,
+      "n": 5,
+      "ms": 2.0
+    },
+    {
+      "query": "系统上云 部署 方案",
+      "expect": "上云",
+      "top_id": "20260926-2140-123",
+      "top_score": 244.5,
+      "top_title": "系统上云部署方案编制要点",
+      "hit_expected": true,
+      "n": 5,
+      "ms": 2.0
+    },
+    {
+      "query": "机房 设备搬迁 方案 编制",
+      "expect": "机房",
+      "top_id": "20260926-2055-119",
+      "top_score": 176.6,
+      "top_title": "机房整合与设备搬迁项目方案编制要点",
+      "hit_expected": true,
+      "n": 5,
+      "ms": 2.0
+    },
+    {
+      "query": "可行性研究报告 编制 模板",
+      "expect": "可研",
+      "top_id": "20260927-1032-139",
+      "top_score": 194.3,
+      "top_title": "政务信息化项目可行性研究报告编制要点",
+      "hit_expected": true,
+      "n": 5,
+      "ms": 2.0
+    },
+    {
+      "query": "统一认证 接入 政务",
+      "expect": "统一认证",
+      "top_id": "20260927-1038-145",
+      "top_score": 180.9,
+      "top_title": "政务统一认证平台接入技术要点",
+      "hit_expected": true,
+      "n": 5,
+      "ms": 2.0
+    },
+    {
+      "query": "弱电 需求 指挥中心",
+      "expect": "弱电",
+      "top_id": "20260927-1054-161",
+      "top_score": 223.5,
+      "top_title": "指挥中心弱电/机电需求文档要点",
+      "hit_expected": true,
+      "n": 5,
+      "ms": 1.0
+    },
+    {
+      "query": "监理 规划 细则 文档",
+      "expect": "监理",
+      "top_id": "20260927-1039-146",
+      "top_score": 93.5,
+      "top_title": "政务项目全过程监理文档体系要点",
+      "hit_expected": true,
+      "n": 5,
+      "ms": 1.0
+    },
+    {
+      "query": "应急通信 装备 配置 乡村",
+      "expect": "应急通信",
+      "top_id": "20260927-1041-148",
+      "top_score": 277.8,
+      "top_title": "应急通信装备配置与提示函要点",
+      "hit_expected": true,
+      "n": 5,
+      "ms": 1.0
+    },
+    {
+      "query": "无线电台 备案 频率",
+      "expect": "无线电台",
+      "top_id": "20260927-1058-165",
+      "top_score": 196.2,
+      "top_title": "无线电台站备案登记与频率指配要点",
+      "hit_expected": true,
+      "n": 5,
+      "ms": 1.0
+    },
+    {
+      "query": "MCP 安装 宿主 配置",
+      "expect": "MCP",
+      "top_id": "20260927-0205-133",
+      "top_score": 94.5,
+      "top_title": "恒忆 skill 与 MCP 的多宿主一键安装",
+      "hit_expected": true,
+      "n": 5,
+      "ms": 1.0
+    },
+    {
+      "query": "会话 收割 记忆 候选",
+      "expect": "收割",
+      "top_id": "20260925-2250-108",
+      "top_score": 95.8,
+      "top_title": "会话收割器的四个调优陷阱",
+      "hit_expected": true,
+      "n": 5,
+      "ms": 1.0
+    },
+    {
+      "query": "钩子 禁用 桌面端",
+      "expect": "钩子",
+      "top_id": "20260925-1025-101",
+      "top_score": 122.2,
+      "top_title": "WorkBuddy 桌面端禁用第三方插件钩子",
+      "hit_expected": true,
+      "n": 5,
+      "ms": 1.0
+    },
+    {
+      "query": "密码 应用方案 密评",
+      "expect": "密码",
+      "top_id": "20260927-1030-137",
+      "top_score": 187.1,
+      "top_title": "政务项目密码应用方案（密评）编制要点",
+      "hit_expected": true,
+      "n": 5,
+      "ms": 1.0
+    },
+    {
+      "query": "政府采购 单一来源 文件",
+      "expect": "采购",
+      "top_id": "20260927-1057-164",
+      "top_score": 275.2,
+      "top_title": "政府采购单一来源采购文件编制要点",
+      "hit_expected": true,
+      "n": 5,
+      "ms": 1.0
+    },
+    {
+      "query": "责任状 任务 承诺",
+      "expect": "责任状",
+      "top_id": "20260927-1048-155",
+      "top_score": 137.1,
+      "top_title": "责任状写作要点（任务下达类）",
+      "hit_expected": true,
+      "n": 5,
+      "ms": 1.0
+    },
+    {
+      "query": "机房整合 核查 纳管",
+      "expect": "机房整合",
+      "top_id": "20260927-1050-157",
+      "top_score": 149.2,
+      "top_title": "机房整合现场核查与方案制定要点",
+      "hit_expected": true,
+      "n": 5,
+      "ms": 1.0
+    },
+    {
+      "query": "设备台账 字段 整理",
+      "expect": "台账",
+      "top_id": "20260927-1052-159",
+      "top_score": 180.4,
+      "top_title": "机房设备台账表字段规范与整理要点",
+      "hit_expected": true,
+      "n": 5,
+      "ms": 1.0
+    },
+    {
+      "query": "导则 建设规范 编制",
+      "expect": "导则",
+      "top_id": "20260927-1055-162",
+      "top_score": 192.9,
+      "top_title": "导则/建设规范类文件编制要点",
+      "hit_expected": true,
+      "n": 5,
+      "ms": 1.0
+    }
+  ]
+}
