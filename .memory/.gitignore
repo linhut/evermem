@@ -21,3 +21,4 @@ pmem_config.json
 *.db
 *.db-shm
 *.db-wal
+.pmem-backup-last.json

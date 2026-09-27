@@ -111,6 +111,14 @@ created: 2026-09-26
 - 涉及国家秘密、警务、未公开政府项目的信息**一律不写入笔记**，只保留公开口径的方法论。
 - `index.json`、`harvest_state.json`、`tmp_ui/`、日志等派生与临时文件已被 `.gitignore` 排除，不进版本库；笔记与脚本始终跟踪。
 
+## 数据备份与同步（数据与代码分离）
+
+- **双轨制**：代码（本仓库）→ GitHub 私人仓库；**数据与知识 → 云端备份，绝不进 Git**（notes/events/索引已被 .gitignore 排除）。
+- 备份命令：`python backup.py status`（查看）/ `--dry-run`（预览）/ 直接执行（增量同步）/ `--restore`（恢复）。
+- 目标配置（自定义云端位置）：编辑 `pmem_backup.json` 写入 `{"target": "<本机可写云端目录>"}`，或设环境变量 `PMEM_BACKUP_TARGET`。
+- 云端位置示例：坚果云 / OneDrive / 网盘同步夹、NAS / WebDAV 的本地挂载路径（先挂载后填写）。
+- 增量机制：按文件 mtime+size 跳过未变文件，重复执行低成本；本地清单 `.pmem-backup-last.json` 记录上次状态（不随仓库上传）。
+
 ## 当前状态
 
 - 笔记 20 条（active 13 / staged 7），证据 251 条。
