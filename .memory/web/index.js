@@ -51,51 +51,127 @@ async function render() {
   else if (VIEW === 'backup') { c.innerHTML = backupHTML(); loadBackup(); }
 }
 
-const backupHTML = () => `<div style="width:100%"><div class="pane"><h3>数据备份 · 云端同步</h3>
-  <div class="sub">数据（笔记/事件/索引）与代码分离：代码在 GitHub 私人仓库，数据只经此处同步到你的云端位置</div>
-  <div style="margin-top:14px;display:flex;flex-direction:column;gap:10px">
-    <div><label style="font-size:12px;color:var(--text2)">云端目录（本机可写入：网盘同步夹 / NAS / WebDAV 挂载路径）</label>
-      <input id="bkTarget" style="width:100%;margin-top:4px" placeholder="如 D:/坚果云/evermem-backup 或 Y:/evermem-backup" /></div>
-    <div><label style="font-size:12px;color:var(--text2)">备注（可选）</label>
-      <input id="bkNote" style="width:100%;margin-top:4px" placeholder="例如：坚果云主备份" /></div>
-    <div class="btnrow">
-      <button class="btn primary" onclick="bkSave()">保存设置</button>
-      <button class="btn" onclick="bkRun()">立即备份</button>
-      <button class="btn ghost" onclick="bkRestore()">从云端恢复（覆盖本地）</button>
-    </div>
-    <div id="bkStatus" class="sub" style="margin-top:4px">读取中…</div>
-  </div></div></div>`;
+const backupHTML = () => `<div style="width:100%"><div class="pane"><h3>数据备份 · 多渠道云同步</h3>
+  <div class="sub">数据与代码分离：代码在 GitHub 私人仓库；数据经下方渠道冗余备份（本地=事实源，渠道=副本单向同步）</div>
+  <div style="margin-top:12px;display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+    <label style="display:flex;gap:6px;align-items:center;font-size:12.5px"><input id="bkAuto" type="checkbox" style="transform:scale(1.15)">自动备份（按各渠道频率）</label>
+    <label style="font-size:12px;color:var(--text2)">告警邮箱 <input id="bkAlert" placeholder="me@x.com" style="width:150px" /></label>
+    <button class="btn primary" onclick="bkSaveAll()">保存全部设置</button>
+    <button class="btn" onclick="bkRunAll()">立即备份全部渠道</button>
+    <button class="btn ghost" onclick="bkLog()">查看备份日志</button>
+  </div>
+  <div id="bkChannels" style="margin-top:12px;display:flex;flex-direction:column;gap:10px"></div>
+  <div style="margin-top:12px;display:flex;gap:8px;align-items:center">
+    <select id="bkNewType" style="width:110px">
+      <option value="local">local 目录</option><option value="archive">archive 快照</option>
+      <option value="remote">remote 服务器</option><option value="mail">mail 邮箱</option>
+    </select>
+    <button class="btn ghost" onclick="bkAddChannel()">＋ 新增渠道</button>
+    <span class="sub">local/archive 零依赖；remote 需本机 ssh/scp；mail 需 SMTP（pass 留空则读 PMEM_SMTP_PASS）</span>
+  </div>
+  <div id="bkLogArea" class="sub" style="margin-top:10px;white-space:pre-wrap;font-size:11.5px"></div>
+</div></div>`;
 
+const BK_TYPES = { local: '镜像', archive: '快照', remote: '远端', mail: '邮箱' };
+const BK_SCOPES = [['notes','笔记'],['events','事件'],['index','索引'],['meta','配置']];
+function bkCard(c, i) {
+  const state = c.ok === true ? `<span style="color:var(--success)">● 上次成功</span>`
+    : c.ok === false ? `<span style="color:var(--danger)">● 失败×${c.fail_count||1}</span>${c.last_error ? ` <span title="${esc(c.last_error)}" style="color:var(--danger)">${esc((c.last_error||'').slice(0,40))}</span>` : ''}`
+    : '<span style="color:var(--text2)">○ 未执行</span>';
+  return `<div class="pane" style="display:flex;flex-direction:column;gap:8px">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span style="font-size:11px;padding:1px 8px;border-radius:10px;border:1px solid var(--blue);color:var(--blue)">${BK_TYPES[c.type]||c.type}</span>
+      <input data-k="name" value="${esc(c.name)}" style="width:120px;font-weight:600" />
+      <label style="display:flex;gap:5px;align-items:center;font-size:12px"><input data-k="enabled" type="checkbox" ${c.enabled?'checked':''}>启用</label>
+      <span style="flex:1"></span>${state}<span class="sub">上次 ${c.last}</span>${c.due?' <span style="color:var(--warning)">待备份</span>':''}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:6px">
+      <label class="sub" style="display:flex;flex-direction:column;gap:2px">目标（路径/主机:路径/邮箱）<input data-k="target" value="${esc(c.target||'')}" placeholder="${c.type==='local'?'D:/坚果云/evermem':c.type==='archive'?'F:/evermem-snapshots':c.type==='remote'?'user@host:/backup/evermem':'bk@x.com'}" /></label>
+      <label class="sub" style="display:flex;flex-direction:column;gap:2px">频率(小时)<input data-k="frequency_hours" type="number" min="1" value="${c.frequency_hours||24}" /></label>
+      ${c.type==='archive' ? `<label class="sub" style="display:flex;flex-direction:column;gap:2px">保留份数<input data-k="retention" type="number" min="1" value="${c.retention||7}" /></label>` : ''}
+      ${c.type==='remote' ? `<label class="sub" style="display:flex;flex-direction:column;gap:2px">SSH端口<input data-k="ssh_port" type="number" value="${c.ssh_port||22}" /></label>` : ''}
+      ${c.type==='mail' ? `<label class="sub" style="display:flex;flex-direction:column;gap:2px">SMTP host<input data-k="smtp_host" value="${esc((c.smtp&&c.smtp.host)||'')}" placeholder="smtp.xx.com" /></label>
+        <label class="sub" style="display:flex;flex-direction:column;gap:2px">SMTP port<input data-k="smtp_port" type="number" value="${(c.smtp&&c.smtp.port)||465}" /></label>
+        <label class="sub" style="display:flex;flex-direction:column;gap:2px">SMTP 用户<input data-k="smtp_user" value="${esc((c.smtp&&c.smtp.user)||'')}" /></label>
+        <label class="sub" style="display:flex;flex-direction:column;gap:2px">SMTP 密码（留空读环境变量）<input data-k="smtp_pass" type="password" /></label>` : ''}
+      <label class="sub" style="display:flex;flex-direction:column;gap:2px">范围
+        <span style="display:flex;gap:10px">${BK_SCOPES.map(([k,l]) => `<label style="display:flex;gap:3px;align-items:center"><input data-scope="${k}" type="checkbox" ${(c.scope||[]).includes(k)?'checked':''}>${l}</label>`).join('')}</span></label>
+    </div>
+    <div class="btnrow">
+      <button class="btn small" onclick="bkRunChannel(${i})">立即备份本渠道</button>
+      <button class="btn ghost small" onclick="bkRestoreChannel(${i})">从本渠道恢复</button>
+      <button class="btn ghost small" style="color:var(--danger)" onclick="bkDelChannel(${i})">删除渠道</button>
+    </div></div>`;
+}
+function bkCardData(i) {
+  const card = document.querySelectorAll('#bkChannels > .pane')[i];
+  const g = k => { const e = card.querySelector(`[data-k="${k}"]`); return e ? (e.type === 'checkbox' ? e.checked : e.value.trim()) : undefined; };
+  const c = { type: card.dataset.type, name: g('name') || card.dataset.type, enabled: !!g('enabled'),
+    target: g('target') || '', frequency_hours: parseInt(g('frequency_hours') || '24', 10),
+    scope: [...card.querySelectorAll('[data-scope]:checked')].map(x => x.dataset.scope) };
+  if (c.type === 'archive') c.retention = parseInt(g('retention') || '7', 10);
+  if (c.type === 'remote') c.ssh_port = parseInt(g('ssh_port') || '22', 10);
+  if (c.type === 'mail') {
+    c.smtp = { host: g('smtp_host') || '', port: parseInt(g('smtp_port') || '465', 10),
+      user: g('smtp_user') || '', pass: g('smtp_pass') || undefined };
+    if (!c.smtp.pass) delete c.smtp.pass;
+  }
+  return c;
+}
 async function loadBackup() {
   const d = await (await fetch('/api/backup')).json();
-  $('#bkTarget').value = d.target || '';
-  $('#bkNote').value = d.note || '';
-  const mb = (d.bytes / 1048576).toFixed(2);
-  const ok = d.configured && d.target_ok;
-  $('#bkStatus').innerHTML = (ok
-    ? `<span style="color:var(--success)">● 目标已就绪</span>`
-    : (d.configured ? `<span style="color:var(--warning)">● 目标不可写（请确认云盘已挂载/已登录）</span>`
-                     : `<span style="color:var(--danger)">○ 未配置目标</span>`))
-    + ` · 数据 ${d.files} 个文件 / ${mb} MB · 上次备份：${d.last}`
-    + (d.note ? ` · 备注：${esc(d.note)}` : '');
+  $('#bkAuto').checked = !!d.auto;
+  $('#bkAlert').value = d.alert_email || '';
+  $('#bkChannels').innerHTML = d.channels.map((c, i) => `<div data-type="${c.type}" data-name="${esc(c.name)}">${bkCard(c, i)}</div>`).join('')
+    || '<div class="empty">尚未配置渠道，点下方「新增渠道」</div>';
+  $('#bkLogArea').textContent = '';
 }
-async function bkSave() {
-  const target = $('#bkTarget').value.trim();
-  const note = $('#bkNote').value.trim();
-  const d = await post('/api/backup/save', { target, note });
-  toast('设置已保存'); loadBackup(); bkRun();
+function bkCollectChannels() {
+  const cards = document.querySelectorAll('#bkChannels > .pane');
+  return [...cards].map((_, i) => bkCardData(i)).filter(c => c && c.target);
 }
-async function bkRun() {
+async function bkSaveAll() {
+  const body = { auto: $('#bkAuto').checked, alert_email: $('#bkAlert').value.trim(), channels: bkCollectChannels() };
+  if (!body.channels.length) { toast('请先配置至少一个渠道', 3000); return; }
+  const d = await post('/api/backup/save', body);
+  toast('设置已保存'); loadBackup(); bkRunAll();
+}
+async function bkRunAll() {
   const d = await post('/api/backup/run', {});
-  if (!d.ok) { toast(d.error || '备份失败', 3000); return; }
-  toast(`已同步 ${d.synced} 个文件（跳过 ${d.skipped} 未变）`); loadBackup();
+  if (!d.ok && !d.results) { toast(d.error || '未配置渠道', 3000); return; }
+  const fails = (d.results || []).filter(r => !r.ok);
+  toast(`已执行 ${(d.results||[]).length} 渠道，失败 ${fails.length}`); loadBackup();
 }
-async function bkRestore() {
-  if (!confirm('将从云端恢复全部数据并覆盖本地同名文件，确定继续？')) return;
-  if (!confirm('再次确认：恢复操作不可逆，本地最新改动可能被覆盖！')) return;
-  const d = await post('/api/backup/restore', {});
+async function bkRunChannel(i) {
+  await bkSaveAll();
+  const card = document.querySelectorAll('#bkChannels > .pane')[i];
+  const name = card ? card.querySelector('[data-k="name"]').value.trim() : '';
+  const d = await post('/api/backup/run', { channel: name });
+  const r = (d.results || [])[0];
+  toast(r ? (r.ok ? `[${r.channel}] 同步 ${r.synced} 个` : `[${r.channel}] 失败：${r.error}`) : (d.error || '未执行'), r && r.ok ? 2000 : 4000);
+  loadBackup();
+}
+async function bkRestoreChannel(i) {
+  await bkSaveAll();
+  const card = document.querySelectorAll('#bkChannels > .pane')[i];
+  const name = card ? card.querySelector('[data-k="name"]').value.trim() : '';
+  if (!confirm(`将从渠道 [${name}] 恢复数据并覆盖本地同名文件，确定继续？`)) return;
+  if (!confirm('再次确认：恢复不可逆，本地最新改动可能被覆盖！')) return;
+  const d = await post('/api/backup/restore', { channel: name });
   toast(d.ok ? `已恢复 ${d.count} 个文件` : (d.error || '恢复失败'), d.ok ? 2000 : 4000);
   loadBackup();
+}
+function bkDelChannel(i) { const el = document.querySelectorAll('#bkChannels > .pane')[i]; if (el) el.remove(); }
+function bkAddChannel() {
+  const type = $('#bkNewType').value;
+  const box = document.createElement('div');
+  box.dataset.type = type;
+  box.innerHTML = bkCard({ type, name: type === 'local' ? '主备份' : type, enabled: true, target: '', scope: BK_SCOPES.map(x=>x[0]), frequency_hours: 24, retention: 7, ssh_port: 22, smtp: {} }, 0);
+  $('#bkChannels').appendChild(box);
+}
+async function bkLog() {
+  const d = await (await fetch('/api/backup/log')).json();
+  $('#bkLogArea').textContent = '—— backup.log（最近 50 行）——\n' + (d.lines || []).join('\n');
 }
 
 const browseHTML = () => `<div class="col list-col"><div class="list-head" id="listHead">共 0 条</div><div id="noteList"></div></div>

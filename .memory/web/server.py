@@ -456,6 +456,14 @@ class Handler(BaseHTTPRequestHandler):
         if p == "/api/backup":
             self._json(backup.sync_status())
             return
+        if p == "/api/backup/log":
+            lines = []
+            try:
+                lines = (backup.BASE / backup.LOG_FILE).read_text(encoding="utf-8", errors="ignore").splitlines()[-50:]
+            except OSError:
+                pass
+            self._json({"lines": lines})
+            return
         if p == "/api/note":
             did = parse_qs(u.query).get("id", [""])[0]
             idx = cached_index()
@@ -550,26 +558,59 @@ class Handler(BaseHTTPRequestHandler):
         p = u.path
         if p == "/api/backup/save":
             b = self._body()
-            target = (b.get("target") or "").strip()
-            note = (b.get("note") or "").strip()
-            backup.CONFIG_FILE.write_text(
-                json.dumps({"target": target, "note": note}, ensure_ascii=False, indent=1),
-                encoding="utf-8")
+            auto = bool(b.get("auto", False))
+            alert = (b.get("alert_email") or "").strip()
+            channels = []
+            for c in b.get("channels") or []:
+                if not isinstance(c, dict) or c.get("type") not in backup.CHANNEL_TYPES:
+                    continue
+                scope = [s for s in (c.get("scope") or backup.ALL_SCOPES) if s in backup.SCOPE_GROUPS]
+                try:
+                    freq = max(1, int(c.get("frequency_hours", 24)))
+                except (TypeError, ValueError):
+                    freq = 24
+                channels.append({
+                    "type": c["type"], "name": str(c.get("name") or f"{c['type']}"),
+                    "enabled": bool(c.get("enabled", True)),
+                    "target": str(c.get("target") or "").strip(),
+                    "scope": scope, "frequency_hours": freq,
+                    "note": str(c.get("note") or ""),
+                    "retention": int(c.get("retention", 7) or 7),
+                    "ssh_port": int(c.get("ssh_port", 22) or 22),
+                    "smtp": c.get("smtp") if isinstance(c.get("smtp"), dict) else {},
+                })
+            backup.save_cfg({"auto": auto, "alert_email": alert, "channels": channels})
             self._json(backup.sync_status())
             return
         if p == "/api/backup/run":
-            st = backup.sync_status()
-            if not st["configured"]:
-                self._json({"ok": False, "error": "未配置备份目标（pmem_backup.json 或 PMEM_BACKUP_TARGET）"}, 400)
+            b = self._body()
+            ch_name = (b or {}).get("channel") or ""
+            cfg = backup.load_cfg()
+            if not cfg["channels"]:
+                self._json({"ok": False, "error": "未配置备份渠道"}, 400)
                 return
-            self._json(backup.run_sync(st["target"]))
+            targets = [c for c in cfg["channels"] if (not ch_name or c["name"] == ch_name) and (ch_name or c["enabled"])]
+            if ch_name and not targets:
+                self._json({"ok": False, "error": f"未找到渠道：{ch_name}"}, 400)
+                return
+            results = [backup.run_channel(c) for c in targets]
+            self._json({"ok": all(r["ok"] for r in results), "results": results})
             return
         if p == "/api/backup/restore":
-            st = backup.sync_status()
-            if not st["configured"]:
-                self._json({"ok": False, "error": "未配置备份目标"}, 400)
+            b = self._body()
+            ch_name = (b or {}).get("channel") or ""
+            cfg = backup.load_cfg()
+            if not cfg["channels"]:
+                self._json({"ok": False, "error": "未配置备份渠道"}, 400)
                 return
-            self._json(backup.restore_sync(st["target"]))
+            if ch_name:
+                ch = next((c for c in cfg["channels"] if c["name"] == ch_name), None)
+            else:
+                ch = cfg["channels"][0] if len(cfg["channels"]) == 1 else None
+            if not ch:
+                self._json({"ok": False, "error": "需指定要恢复的渠道"}, 400)
+                return
+            self._json(backup.restore_channel(ch))
             return
         if p == "/api/candidates/archive":
             cand_dir = mem.NOTES / "candidates"
@@ -763,6 +804,18 @@ def main() -> int:
     from http.server import ThreadingHTTPServer
     Handler.protocol_version = "HTTP/1.1"  # keep-alive：省握手开销
     print(f"pmem Web 版启动：http://127.0.0.1:{PORT} （Ctrl+C 退出）")
+
+    # 后台自动备份线程（按 pmem_backup.json 的 auto + interval_hours 到期执行）
+    def _auto_loop():
+        while True:
+            try:
+                backup.auto_sync_if_due()
+            except Exception as exc:  # noqa: BLE001
+                print(f"[auto-backup] 失败：{exc}", file=sys.stderr)
+            time.sleep(backup.AUTO_CHECK_SECONDS)
+
+    _threading.Thread(target=_auto_loop, daemon=True, name="pmem-auto-backup").start()
+
     srv = ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
     try:
         srv.serve_forever()

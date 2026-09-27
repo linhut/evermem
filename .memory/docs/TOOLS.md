@@ -16,6 +16,7 @@
 | bench_search.py | 检索质量基准：20 组标准查询，`--save` 存基线 | `python bench_search.py --save` |
 | check_all.py | 全功能健康检查（35 项冒烟） | `python check_all.py` |
 | **evermem_mcp.py** | MCP stdio 桥：mem_read / mem_record / mem_update / mem_hot | 配置进各宿主 MCP |
+| **backup.py** | **数据多渠道备份 v3**：local 增量镜像 / archive 快照保留 N 份 / remote ssh-scp / mail SMTP；每渠道频率/保留/失败计数、自动定时+告警+校验+日志。规格 docs/BACKUP-DESIGN.md | `python backup.py status` / `--channel X` / `--restore` |
 | fluent_preview.py | 前端热预览（开发模式） | 配合 launcher `PMEM_DEV=1` |
 | app.py | 旧 PySide6 桌面版（**已弃用**，由 Web+pywebview 替代，保留可删） | — |
 

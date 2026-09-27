@@ -2,8 +2,13 @@
 
 ## Unreleased
 
-- **数据备份 Web 模块（第七视图）**：Web「数据备份」页可视化设置备份目标（pmem_backup.json 保存）、查看状态（目标就绪/数据规模/上次备份）、一键备份（增量同步）、从云端恢复（双重确认）。新增 API：GET /api/backup、POST /api/backup/{save,run,restore}。
-- 修复 backup.py 增量缺陷：换备份目标后旧清单误跳导致目标空同步（跳过条件增加"目标端文件存在"校验）。
+- **数据多渠道同步备份 v3**（规格 docs/BACKUP-DESIGN.md）：
+  - 渠道模型：local（增量镜像，零依赖）/ archive（全量快照 zip，保留 N 份）/ remote（ssh/scp 增量镜像，可选）/ mail（SMTP 附件，可选）。
+  - 每渠道独立：范围（notes/events/index/meta）、频率（小时）、启用开关、失败记录与连续失败计数。
+  - 全局：自动备份（后台线程按频率轮询）、告警邮箱（连续失败≥2 发邮件，可选）、备份日志 backup.log、最近 20 条历史。
+  - 同步后校验（文件数/大小）；换目标后增量不误跳（目标端存在校验）；旧单渠道配置自动迁移。
+  - Web「数据备份」页升级为**渠道列表管理**（新增/删除/编辑各渠道、立即备份单渠道或全部、从渠道恢复、查看日志）；API：GET /api/backup、GET /api/backup/log、POST /api/backup/{save,run,restore}。
+- 修复：GET /api/backup/log 路由错置于 POST（补 GET 分支）；增量同步换目标空同步缺陷（v2 修复，v3 保留目标端存在校验）。
 
 ## v0.1.0（2026-09-27）· 首个可发布版本
 
