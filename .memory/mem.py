@@ -733,7 +733,8 @@ def promote_candidate(path: Path, review: dict | None = None) -> dict:
         log_path = ROOT / AUTO_REVIEW_LOG
         log_path.parent.mkdir(parents=True, exist_ok=True)
         with log_path.open("a", encoding="utf-8") as f:
-            f.write(json.dumps({"ts": now, "id": d.get("id"), "title": title, "action": "auto_promote",
+            f.write(json.dumps({"ts": time.strftime("%Y-%m-%d %H:%M:%S"), "id": d.get("id"),
+                                "title": title, "action": "auto_promote",
                                 "total": review.get("total"), "passes": review.get("passes"),
                                 "roles": {n: r["score"] for _, n, r in review.get("roles", [])}},
                                ensure_ascii=False) + "\n")
@@ -811,6 +812,10 @@ def cmd_candidates(args) -> int:
         for p, d, age in targets:
             rv = multi_role_review(d, idx)
             if rv["verdict"] == "promote":
+                if d.get("type") == "procedure":
+                    # 收割的 procedure 多为"成功配方"工具碎片，缺知识价值，不自动转正，留人工终审
+                    kept.append(d.get("id"))
+                    continue
                 res = promote_candidate(p, rv)
                 (promoted if res.get("ok") else failed).append(d.get("id"))
             elif rv["verdict"] == "keep":

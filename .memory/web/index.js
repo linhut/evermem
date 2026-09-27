@@ -352,7 +352,7 @@ async function loadNotes() {
   const q = $('#search').value.trim(); let list;
   if (q) {
     const d = await (await fetch('/api/search?q=' + encodeURIComponent(q) + '&all=1')).json();
-    list = d.hits.map(h => ({ id: h.id, title: h.title, type: h.type, type_label: h.type_label, status: h.status, hot: false, tags: [], score: h.score }));
+    list = d.hits.map(h => ({ id: h.id, title: h.title, type: h.type, type_label: h.type_label, status: h.status, hot: false, tags: [], score: h.score, origin: h.origin }));
   } else {
     const d = await (await fetch('/api/notes')).json();
     list = d.notes.filter(n => $('#allBtn').classList.contains('on') || n.status === 'active');

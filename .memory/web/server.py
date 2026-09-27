@@ -647,6 +647,9 @@ class Handler(BaseHTTPRequestHandler):
                     d = mem.parse_note(f) or {}
                     rv = mem.multi_role_review(d, idx)
                     if rv["verdict"] == "promote":
+                        if d.get("type") == "procedure":  # 成功配方碎片不自动转正，留人工
+                            kept.append(d.get("id"))
+                            continue
                         res = mem.promote_candidate(f, rv)
                         (promoted if res.get("ok") else rejected).append(d.get("id"))
                     elif rv["verdict"] == "keep":
