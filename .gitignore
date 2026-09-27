@@ -1,0 +1,11 @@
+# 恒忆发布策略：只有 .memory/ 内的代码与平台文档进入版本库
+# 以下全部为数据/个人文件，绝不推送到 GitHub（数据走 backup.py 云端备份）
+
+# 文档样本与个人文件
+.memory/tmp_chk/
+/memory/
+notes/
+*.html
+
+# 宿主记忆与配置
+.workbuddy/
