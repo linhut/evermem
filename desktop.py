@@ -308,7 +308,8 @@ def run_gui(url: str, server: EmbeddedServer) -> int:
         w.show()
     app.aboutToQuit.connect(server.stop)
     if SMOKE:
-        QTimer.singleShot(6000, app.quit)
+        # 冒烟：6s 后直接结束进程（Qt 的 app.quit 在部分平台/无头环境下不返回，os._exit 最可靠）
+        QTimer.singleShot(6000, lambda: os._exit(0))
     return app.exec()
 
 
