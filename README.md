@@ -142,7 +142,15 @@
 python desktop.py            # 桌面壳（单实例 / 托盘 / 关闭即最小化并询问是否停服）
 ```
 
-> 也可直接用发布产物（GitHub Release 的 `evermem-gui-<平台>-v*`），或 `python web/server.py` 后浏览器打开。
+> 也可直接用发布产物（GitHub Release 的 `evergem-<平台>-v*`，每平台一个桌面运行包）：
+
+> - **Windows**：`evergem-windows-v*.exe`，双击运行
+> - **macOS**：`evergem-macos-v*.app.zip`，解压出 `evergem.app` 后双击（未签名首次：右键 → 打开）
+> - **Linux**：`evergem-linux-v*`（无后缀的 ELF 可执行文件），下载后先 `chmod +x` 再运行：
+>
+>   ```bash
+>   chmod +x evergem-linux-v0.2.1 && ./evergem-linux-v0.2.1
+>   ```
 
 ### 1. 启动 Web 界面
 
