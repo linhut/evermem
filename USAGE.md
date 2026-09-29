@@ -108,7 +108,7 @@ PY="C:/Users/Administrator/.workbuddy/binaries/python/versions/3.13.12/python.ex
 ## 九、文件与配置
 
 ```
-个人知识库/.memory/            核心（进 Git）
+<仓库根>（= 项目根）            核心（进 Git）
 ├── mem.py / harvest.py / scripts/ingest.py / evermem_mcp.py / scripts/knowledge_scan.py / scripts/check_all.py
 ├── web/  server.py + launcher.py + index.html/js（桌面封装）
 ├── notes/{procedures,lessons,facts}/ + candidates/   43 条笔记
