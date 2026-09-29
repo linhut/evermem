@@ -1,0 +1,115 @@
+name: build
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# 仓库根 = 项目根（恒忆源码直接位于仓库根）
+jobs:
+  build:
+    name: 打包 ${{ matrix.label }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            label: windows
+            sep: ";"
+            exe: ".exe"
+            artifact: evermem-windows
+          - os: ubuntu-latest
+            label: linux
+            sep: ":"
+            exe: ""
+            artifact: evermem-linux
+          - os: macos-latest
+            label: macos
+            sep: ":"
+            exe: ""
+            artifact: evermem-macos
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          # PyInstaller + PySide6 在 3.12 三平台 wheel 最稳定
+          python-version: "3.12"
+          cache: pip
+          # 默认只匹配 requirements.txt / pyproject.toml，这里指向实际锁文件（仓库根相对路径）
+          cache-dependency-path: requirements-build.txt
+
+      - name: 安装构建期依赖
+        run: pip install -r requirements-build.txt
+
+      - name: Ubuntu 补 Qt 运行时系统库
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libgl1 libegl1 libxkbcommon0 libdbus-1-3 \
+            libfontconfig1 libxcb-cursor0 libxcb-xinerama0 libxrandr2 libxfixes3 libxcb-icccm4 libxcb-keysyms1 libxcb-shape0
+
+      - name: 构建 CLI（mem.py，零第三方依赖）
+        run: pyinstaller --onefile --name evermem-cli mem.py
+
+      - name: 构建 Web 服务（零第三方依赖，内嵌前端资源）
+        # 单行书写：多行 run 里的 \ 续行在 Windows(Git Bash) 会被当成字面参数，务必不要跨行
+        run: pyinstaller --onefile --name evermem-web --add-data "web${{ matrix.sep }}web" --add-data "templates${{ matrix.sep }}templates" web/server.py
+
+      - name: 构建桌面 GUI（PySide6，PyInstaller 内置钩子）
+        run: pyinstaller --onefile --windowed --name evermem app.py
+
+      - name: CLI 冒烟（数据目录回退到当前目录）
+        run: ./dist/evermem-cli${{ matrix.exe }} stats
+
+      - name: GUI 启动冒烟（无头，仅验不崩溃）
+        shell: bash
+        run: |
+          # 不用 timeout（macOS 无 GNU coreutils），统一后台启动 + 存活探测
+          if [ "${{ matrix.os }}" != "windows-latest" ]; then export QT_QPA_PLATFORM=offscreen; fi
+          ./dist/evermem${{ matrix.exe }} &
+          PID=$!
+          sleep 8
+          if kill -0 "$PID" 2>/dev/null; then
+            echo "GUI 启动正常（进程存活）"
+            kill "$PID" 2>/dev/null || true
+          else
+            echo "GUI 提前退出或启动崩溃"
+            exit 1
+          fi
+
+      - name: 产物重命名（带平台与版本；macOS 打包 .app）
+        shell: bash
+        run: |
+          cd dist
+          VER="${GITHUB_REF_NAME#v}"
+          mv -f evermem-cli${{ matrix.exe }} evermem-cli-${{ matrix.label }}-v$VER${{ matrix.exe }}
+          mv -f evermem-web${{ matrix.exe }} evermem-web-${{ matrix.label }}-v$VER${{ matrix.exe }}
+          if [ "${{ matrix.label }}" = "macos" ]; then
+            # macOS onefile 同时产出裸可执行文件与 .app 目录；gh 不能上传目录，把 .app 打成 zip
+            zip -qry evermem-gui-macos-v$VER.app.zip evermem.app
+            rm -rf evermem.app evermem
+          else
+            mv -f evermem${{ matrix.exe }} evermem-gui-${{ matrix.label }}-v$VER${{ matrix.exe }}
+          fi
+          ls -1
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          # uses 步骤不受 defaults.working-directory 影响，路径相对仓库根
+          path: dist/*
+          if-no-files-found: error
+
+      - name: 上传二进制到 Release（tag 触发时）
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "${GITHUB_REF_NAME}" dist/* --clobber
