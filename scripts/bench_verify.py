@@ -12,9 +12,12 @@ import sys
 import time
 from pathlib import Path
 
-BASE = Path(r"C:/Users/Administrator/Documents/个人知识库/.memory")
-PY = r"C:/Users/Administrator/.workbuddy/binaries/python/versions/3.13.12/python.exe"
-SYS = r"C:/Python314/python.exe"
+BASE = Path(__file__).resolve().parents[1]  # 项目根（scripts/ 上一级），勿写死机器路径
+import os as _os
+PY = _os.environ.get("PMEM_SYS_PY", "") or sys.executable
+SYS = _os.environ.get("PMEM_SYS_PY", "") or sys.executable
+# 样本目录：默认项目内 tmp_chk（可提取文档置入或设 PMEM_TEST_DIR 指向真实数据目录）
+TEST_DIR = Path(_os.environ.get("PMEM_TEST_DIR", "")) if _os.environ.get("PMEM_TEST_DIR") else BASE / "tmp_chk"
 
 RESULTS = []
 
@@ -41,7 +44,7 @@ run("mem.py recall", [PY, "mem.py", "recall", "融合通信", "--limit", "2"])
 run("mem.py hot(同步预览)", [PY, "mem.py", "hot", "--limit", "5"])
 run("mem.py reindex", [PY, "mem.py", "reindex"])
 run("harvest signals", [PY, "harvest.py", "signals", "--days", "1"])
-run("ingest list", [PY, "ingest.py", "list", "F:/机房搬迁"])
+run("ingest list", [PY, "ingest.py", "list", str(TEST_DIR)])
 
 print()
 print("二、MCP 注入桥（stdio 四工具）")

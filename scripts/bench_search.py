@@ -15,7 +15,7 @@ import time
 from datetime import date
 from pathlib import Path
 
-BASE = Path(r"C:/Users/Administrator/Documents/个人知识库/.memory")
+BASE = Path(__file__).resolve().parents[1]  # 项目根（scripts/ 上一级），勿写死机器路径
 RESULT_DIR = BASE / "docs"
 
 # 标准查询集：(查询词, 预期命中标题关键词) —— 覆盖各领域/类型

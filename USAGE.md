@@ -15,7 +15,7 @@
 
 ```bash
 # 桌面端（开发热预览：PMEM_DEV=1 改前端自动刷新）
-"C:/Users/Administrator/.workbuddy/binaries/python/versions/3.13.12/python.exe" web/launcher.py
+python web/launcher.py
 ```
 
 ---
@@ -59,7 +59,7 @@
 ## 五、会话知识扫描（从 137 个历史会话挖索引）
 
 ```bash
-"C:/Users/Administrator/.workbuddy/binaries/python/versions/3.13.12/python.exe" scripts/knowledge_scan.py
+python scripts/knowledge_scan.py
 # 产出 knowledge-base.md + kb.json：22→137 会话索引
 # 数据源：WorkBuddy 13（工具调用）+ atomcode 9（真实对话）+
 #         DSH 115（zstd 压缩事件流，gongwen-skill 31/AI-DATA 26…）
@@ -93,14 +93,17 @@
 ## 八、命令行速查
 
 ```bash
-PY="C:/Users/Administrator/.workbuddy/binaries/python/versions/3.13.12/python.exe"
+PY=python                                   # 解释器：PMEM_SYS_PY 指定或当前 python
 "$PY" mem.py recall "融合通信 方案" --all      # 检索（--all 含候选）
 "$PY" mem.py add --title "经验" --body "正文" --type procedure
 "$PY" mem.py hot --limit 20 --tokens 900 --apply --target <MEMORY.md>  # 热层同步
 "$PY" harvest.py scan --days 3                  # 收割近3天→候选
-"$PY" scripts/ingest.py extract "F:/某目录" --out-dir "F:/知识库数据/chunks"
-"$PY" scripts/check_all.py                              # 35 项全面功能检查
-"$PY" scripts/knowledge_scan.py                         # 137 会话知识索引
+"$PY" scripts/ingest.py extract "<数据目录>" --out-dir "<块库目录>"   # 文档分块提取
+"$PY" scripts/check_all.py                              # 全面功能检查（PMEM_TEST_DIR 设样本目录可测 extract）
+"$PY" scripts/knowledge_scan.py                         # 历史会话知识索引
+"$PY" recipes.py scan                                   # 配方盘点：分层 + 同名/隐式覆盖检测
+"$PY" recipes.py resolve project:evermem org:yjxt       # 求值顺序（就近优先，附归属组织）
+"$PY" recipes.py lock                                   # 生成 .recipe-lock.json 依赖锁
 ```
 
 ---
@@ -111,12 +114,12 @@ PY="C:/Users/Administrator/.workbuddy/binaries/python/versions/3.13.12/python.ex
 <仓库根>（= 项目根）            核心（进 Git）
 ├── mem.py / harvest.py / scripts/ingest.py / evermem_mcp.py / scripts/knowledge_scan.py / scripts/check_all.py
 ├── web/  server.py + launcher.py + index.html/js（桌面封装）
-├── notes/{procedures,lessons,facts}/ + candidates/   43 条笔记
+├── notes/{procedures,lessons,facts}/ + candidates/（数量以 mem.py stats 为准）
 ├── index.json（派生，不进 Git）· events/ · kb.json + knowledge-base.md
-├── tests/test_recall.py（回归）
+├── tests/test_recall.py + test_recipes.py（回归）
 └── USAGE.md（本文档）
 
-F:/知识库数据/chunks/          文档块库
+<数据块库目录>/           文档块库（PMEM_CHUNKS）
 环境变量：PMEM_HOME / PMEM_SYS_PY / PMEM_CHUNKS / PMEM_SPACES / PMEM_THEME / PMEM_HOT_TOKENS
 来源图标：📄文档 · 💠DSH · 🧬atomcode · 🤖收割 · 🔌MCP · ✍️手动 · ✨AI
 ```

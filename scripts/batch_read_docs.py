@@ -7,11 +7,17 @@
 # 批量读取秋千测试赛每日运行报告（.doc，通过 editor_sdk），提取关键单元格。
 import json
 import subprocess
+import os
 import sys
 from pathlib import Path
 
-EDSDK = r"C:\Program Files\WorkBuddy\resources\app.asar.unpacked\resources\plugins\workbuddy-builtin\skills\tencent-local-office-edit\edsdk.py"
-BASE = Path(r"F:/省民宗委/15_项目实施/测试赛/第一次测试赛")
+# 环境专用工具脚本：机器路径一律走环境变量/参数，勿硬编码（发布约定）
+#   PMEM_EDSDK    指向 tencent-local-office-edit/edsdk.py 的完整路径
+#   PMEM_DOC_DIR  数据目录（或命令行第一个参数）
+EDSDK = os.environ.get("PMEM_EDSDK") or ""
+BASE = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(os.environ.get("PMEM_DOC_DIR", "."))
+if not EDSDK or not Path(EDSDK).exists():
+    raise SystemExit("缺少 edsdk.py：请设置环境变量 PMEM_EDSDK 指向 tencent-local-office-edit/edsdk.py")
 
 def run(args):
     r = subprocess.run([sys.executable, EDSDK, *args], capture_output=True, text=True, encoding="utf-8", errors="ignore")

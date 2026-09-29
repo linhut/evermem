@@ -47,6 +47,24 @@ def main() -> int:
     noise = mem.search(idx, "完全不存在的关键词xyzqwerty", limit=3)
     check("噪声词无命中", len(noise) == 0, f"实际命中 {len(noise)} 条：{[h['title'][:12] for h in noise]}")
 
+    print("\n[2c] 标题拉丁词可召回（强信号规则须同时查标题索引，曾误杀 GUI 类标题词）")
+    import time as _t2
+    tq = "TITLELATIN" + _t2.strftime("%H%M%S")
+    fix_path = mem.NOTES / "lessons" / f"fixture-latin-{_t2.strftime('%H%M%S')}.md"
+    fix_path.write_text(
+        f"---\nid: {_t2.strftime('%Y%m%d-%H%M%S')}-latin\ntype: lesson\nstatus: active\n"
+        f"title: {tq} 仅标题词\ncreated: 2026-09-29\n---\n\n正文不含该拉丁词。\n",
+        encoding="utf-8")
+    try:
+        idx2 = mem.build_index()
+        hits_latin = mem.search(idx2, tq, limit=3)
+        check("标题拉丁词搜索命中", any(tq.lower() in h["title"].lower() for h in hits_latin),
+              f"实际 {len(hits_latin)} 条：{[h['title'][:16] for h in hits_latin]}")
+    finally:
+        if fix_path.exists():
+            fix_path.unlink()
+            mem.build_index()
+
     print("\n[3] 默认只返回 active，不含 staged 候选")
     check("结果全为 active", all(h["status"] == "active" for h in hits + zh))
 

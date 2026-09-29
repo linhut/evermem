@@ -149,7 +149,9 @@ def extract_file_projects(items: list) -> Counter:
             continue
         if not p:
             continue
-        for m in re.findall(r"(?:F:/|C:/Users/Administrator/Documents/)([A-Za-z0-9_\u4e00-\u9fff]+)", p):
+        # 路径前缀动态构造（勿硬编码用户机器路径）：F:/ 数据盘 + <home>/Documents/
+        _home_docs = re.escape(str(Path.home())) + r"/Documents/"
+        for m in re.findall(r"(?:F:/|" + _home_docs + r")([A-Za-z0-9_\u4e00-\u9fff]+)", p):
             c[m] += 1
     return c
 

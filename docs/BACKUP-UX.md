@@ -59,7 +59,7 @@
 
 ### 3.4 默认值填充与预设
 - provider 模板自带默认值（前端下拉即得，看不懂的直接存）
-- 常用预设：local→"本机网盘目录"、archive→"本机快照目录/F:/evermem-snapshots"、mail→"SMTP 465 默认"——一键填入
+- 常用预设：local→"本机网盘目录"、archive→"本机快照目录/<快照目录>"、mail→"SMTP 465 默认"——一键填入
 
 ### 3.5 兼容性与数据安全
 - **配置兼容**：pmem_backup.json schema 向后兼容（channels 数组仍有效，新字段叠加）；旧渠道迁移脚本（已有 load_cfg 迁移逻辑，扩展 provider 映射）

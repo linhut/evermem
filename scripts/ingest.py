@@ -8,9 +8,9 @@
 #
 #
 # 依赖 python-docx / openpyxl / pypdf，需用系统 Python 运行：
-#   C:/Python314/python.exe ingest.py list    "F:/市应急指挥中心" --out files.json
-#   C:/Python314/python.exe ingest.py extract "F:/市应急指挥中心" --sample 100
-#   C:/Python314/python.exe ingest.py extract "F:/政务云" --out-dir "F:/知识库数据/chunks"
+#   python ingest.py list    "<数据目录>" --out files.json
+#   python ingest.py extract "<数据目录>" --sample 100
+#   python ingest.py extract "<数据目录>" --out-dir "<块库目录>"
 
 from __future__ import annotations
 

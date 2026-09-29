@@ -15,9 +15,9 @@
 #
 # 配置 pmem_backup.json：
 #   {"auto": true, "alert_email": "me@x.com", "channels": [
-#      {"type":"local","name":"坚果云","enabled":true,"target":"D:/坚果云/evermem-backup",
+#      {"type":"local","name":"本地网盘","enabled":true,"target":"<网盘同步目录>/evermem-backup",
 #       "scope":["notes","events","index","meta"],"frequency_hours":24},
-#      {"type":"archive","name":"本机快照","enabled":true,"target":"F:/evermem-snapshots","retention":7},
+#      {"type":"archive","name":"本机快照","enabled":true,"target":"<快照目录>","retention":7},
 #      {"type":"remote","name":"服务器","enabled":false,"target":"user@host:/backup/evermem","ssh_port":22},
 #      {"type":"mail","name":"邮箱","enabled":false,"target":"bk@x.com",
 #       "smtp":{"host":"smtp.x.com","port":465,"user":"me@x.com","pass":"***"}}]}

@@ -5,7 +5,7 @@
 <p align="center">
   <img alt="License MIT" src="https://img.shields.io/badge/License-MIT-yellow.svg">
   <img alt="Python 3.10+" src="https://img.shields.io/badge/Python-3.10%2B-blue">
-  <img alt="Version 0.2.0" src="https://img.shields.io/badge/Version-0.2.1-green">
+  <img alt="Version 0.2.2" src="https://img.shields.io/badge/Version-0.2.2-green">
   <img alt="Zero Dependency" src="https://img.shields.io/badge/Dependencies-Zero-orange">
   <img alt="Platform Win/macOS/Linux" src="https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey">
 </p>
@@ -149,7 +149,7 @@ python desktop.py            # 桌面壳（单实例 / 托盘 / 关闭即最小�
 > - **Linux**：`evergem-linux-v*`（无后缀的 ELF 可执行文件），下载后先 `chmod +x` 再运行：
 >
 >   ```bash
->   chmod +x evergem-linux-v0.2.1 && ./evergem-linux-v0.2.1
+>   chmod +x evergem-linux-v0.2.2 && ./evergem-linux-v0.2.2
 >   ```
 
 ### 1. 启动 Web 界面
@@ -208,7 +208,7 @@ python memimport.py preview --text "## 偏好
 [2026-09-27] - 输出先给结论再给依据"          # ① 画像导出格式（## 分类 + [日期] - 条目）
 python memimport.py preview --file 导出.json   # ② JSON（items/notes/memories 均可）
 python memimport.py preview --file 笔记.md     # ③ Markdown（带不带 frontmatter 都收）
-python memimport.py import  --dir "F:/另一个记忆库/notes"   # ④ 目录批量收 .md/.json
+python memimport.py import  --dir "<其他记忆库目录>/notes"   # ④ 目录批量收 .md/.json
 ```
 
 导入前会给出计划：每条标注 **可导入 / 疑似重复 / 已存在**（按内容哈希判重，重复导入天然幂等），

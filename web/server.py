@@ -7,7 +7,7 @@
 # pmem Web 版后端 —— 零依赖（Python 内置 http.server）+ JSON API
 #
 #
-# 启动：C:/Users/Administrator/.workbuddy/binaries/python/versions/3.13.12/python.exe server.py
+# 启动：python web/server.py（解释器用 PMEM_SYS_PY 指定或当前 python）
 # 打开：http://127.0.0.1:8765
 
 from __future__ import annotations
@@ -385,8 +385,20 @@ class Handler(BaseHTTPRequestHandler):
         except (ValueError, json.JSONDecodeError):
             return {}
 
+    def _host_ok(self) -> bool:
+        # 防 DNS rebinding / 恶意网页调用本地 API：只接受本机 Host。
+        # 本服务绑定 127.0.0.1 无鉴权，Host 校验是成本最低的一道闸。
+        host = self.headers.get("Host", "").strip()
+        if not host:
+            return False
+        h = host.split(":", 1)[0].strip().strip("[]").lower()
+        return h in ("127.0.0.1", "localhost", "::1")
+
     # ---------- GET ----------
     def do_GET(self):
+        if not self._host_ok():
+            self.send_error(403, "host not allowed")
+            return
         u = urlparse(self.path)
         p = u.path
         if p in ("/", "/index.html"):
@@ -676,6 +688,9 @@ class Handler(BaseHTTPRequestHandler):
 
     # ---------- POST ----------
     def do_POST(self):
+        if not self._host_ok():
+            self.send_error(403, "host not allowed")
+            return
         u = urlparse(self.path)
         p = u.path
         if p == "/api/memimport/preview":
@@ -909,7 +924,7 @@ class Handler(BaseHTTPRequestHandler):
             return
         if p == "/api/note":
             b = self._body()
-            title = (b.get("title") or "").strip()
+            title = (b.get("title") or "").strip().replace("\n", " ").replace("\r", " ")
             if not title:
                 self._json({"error": "title 必填"}, 400)
                 return
@@ -978,8 +993,14 @@ class Handler(BaseHTTPRequestHandler):
                 if b.get("title"):
                     meta["title"] = b["title"].strip().replace("\n", " ")
                 if "tags" in b:
-                    meta["tags"] = "[" + ", ".join(f'"{t.strip()}"' for t in str(b["tags"]).split(",") if t.strip()) + "]"
-                body_new = b.get("body") if "body" in b else d.get("body", "")
+                    # 防 frontmatter 注入：tag 值过滤引号与换行，避免破坏笔记元数据结构
+                    clean_tag = lambda t: t.strip().replace('"', "").replace("\n", " ").replace("\r", " ")
+                    tags_clean = [clean_tag(t) for t in str(b["tags"]).split(",") if clean_tag(t)]
+                    meta["tags"] = "[" + ", ".join(f'"{t}"' for t in tags_clean) + "]"
+                body_old = (mem.parse_note(path) or {}).get("body", "")
+                # 索引瘦身后 docs 不存正文全文（仅 snippet 200 字）；未传 body 时禁止用
+                # d.get("body") 兜底——会拿截断摘要覆盖全文导致笔记内容丢失。改读原文件保留。
+                body_new = b.get("body") if "body" in b else body_old
                 text = "---\n" + "\n".join(f"{k}: {v}" for k, v in meta.items()) + "\n---\n\n" + body_new.strip() + "\n"
                 path.write_text(text, encoding="utf-8")
                 mem.build_index()
@@ -1006,7 +1027,6 @@ class Handler(BaseHTTPRequestHandler):
                 return
             CHUNKS_ROOT.mkdir(parents=True, exist_ok=True)
             tid = _uuid.uuid4().hex[:10]
-            CHUNKS_ROOT.mkdir(parents=True, exist_ok=True)
             _run_task(tid, [SYS_PY, str(BASE / "scripts" / "ingest.py"), "extract", path, "--out-dir", str(CHUNKS_ROOT)])
             self._json({"ok": True, "task_id": tid, "note": "后台提取中，轮询 /api/task/status"})
             return

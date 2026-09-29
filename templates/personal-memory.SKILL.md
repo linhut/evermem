@@ -19,14 +19,14 @@ PY="python3"                          # macOS/Linux
 MEM="$PMEM_HOME/mem.py"
 ```
 
-本机当前值（仅作示例，换机器要改）：
+本机配置示例（占位，换机器必改）：
 
 ```
-PMEM_HOME=C:/Users/Administrator/Documents/个人知识库/.memory
-PY=C:/Users/Administrator/.workbuddy/binaries/python/versions/3.13.12/python.exe
+PMEM_HOME=<数据目录>       # 例如 C:/Users/<you>/Documents/evermem-data/.memory
+PY=<python 路径>           # 或直接用 PMEM_SYS_PY / python
 ```
 
-**不要把上面的绝对路径写进任何要分发的文档或脚本里**——换机器必然失效。
+**不要把真实绝对路径写进任何要分发到网络的文档或脚本里**——换机器必然失效且泄漏本机信息。
 
 ## 强制调用时机
 
