@@ -1,6 +1,7 @@
 # 索引与状态可从笔记/证据重建，不进版本库
 index.json
 harvest_state.json
+.recipe-lock.json
 __pycache__/
 *.pyc
 
