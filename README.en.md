@@ -143,7 +143,15 @@ Core UI designs cover **main views → backup & sync module**, 8 screens in tota
 python desktop.py            # desktop shell (single instance / tray / close = minimize + ask to stop service)
 ```
 
-> Or grab the release artifact (`evermem-gui-<platform>-v*`), or run `python web/server.py` and open the browser.
+> Or grab the release artifact (`evergem-<platform>-v*`, one runnable package per platform):
+
+> - **Windows**: `evergem-windows-v*.exe`, double-click to run
+> - **macOS**: `evergem-macos-v*.app.zip`, unzip → double-click `evergem.app` (unsigned first time: right-click → Open)
+> - **Linux**: `evergem-linux-v*` (extension-less ELF binary). GitHub downloads drop the exec bit, so:
+>
+>   ```bash
+>   chmod +x evergem-linux-v0.2.1 && ./evergem-linux-v0.2.1
+>   ```
 
 ### 1. Launch the Web UI
 
