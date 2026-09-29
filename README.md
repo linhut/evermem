@@ -1,6 +1,6 @@
-# 恒忆 Evermem
+# Evermem (pmem)
 
-> **个人跨会话经验记忆系统** —— 把 AI 会话中的试错过程沉淀为本地可复用知识，下次直接复用，不再从零试起。
+> **A personal cross-session experience memory system** — distill the trial-and-error process of AI conversations into reusable local knowledge, so the next session reuses verified conclusions instead of starting from scratch.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue)]()
@@ -8,338 +8,309 @@
 [![Zero Dependency](https://img.shields.io/badge/Dependencies-Zero-orange)]()
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)]()
 
-**零依赖 · 全本地 · 无云端** —— 经验自动进库、跨会话复用。中文文档 · [English](README.en.md)
+**Zero-dependency · Fully local · No cloud** — experiences are captured automatically and reused across sessions. English · [中文文档](README.zh-CN.md)
 
 ---
 
-## 目录
+## Table of Contents
 
-- [简介](#简介)
-- [特性](#特性)
-- [界面预览](#界面预览--system-diagram)
-- [快速开始](#快速开始)
-- [使用说明](#使用说明)
-- [架构设计](#架构设计)
-- [配置](#配置)
-- [隐私与安全](#隐私与安全)
-- [项目结构](#项目结构)
-- [文档](#文档)
-- [贡献指南](#贡献指南)
-- [许可](#许可)
+- [Introduction](#introduction)
+- [Features](#features)
+- [UI Preview · System Diagram](#ui-preview--system-diagram)
+- [Quick Start](#quick-start)
+- [Usage](#usage)
+- [Architecture](#architecture)
+- [Configuration](#configuration)
+- [Privacy & Security](#privacy--security)
+- [Project Structure](#project-structure)
+- [Documentation](#documentation)
+- [Contributing](#contributing)
+- [License](#license)
 
 ---
 
-## 简介
+## Introduction
 
-恒忆（Evermem，代号 pmem）是一个**个人跨会话经验记忆系统**：它直接读取 AI 宿主（WorkBuddy / DSH / Claude Code 等）的会话落盘记录，无需任何钩子或插件通道，即可自动捕获会话中的**试错过程**——失败的命令、错误的假设、最终验证可行的方案——并沉淀为结构化的本地记忆。下一次会话开始时，这些经验会被自动检索并注入上下文，让 AI 直接复用已验证的结论，而不是靠模型重新"猜"。
+Evermem (pmem) is a **personal cross-session experience memory system**. It reads the on-disk session transcripts of AI hosts (WorkBuddy / DSH / Claude Code, etc.) directly — **without any hooks or plugin channels** — and automatically captures the *trial-and-error process* of each conversation: failed commands, wrong assumptions, and finally-verified solutions. These are distilled into structured local notes. On the next session, this experience is automatically retrieved and injected into context, letting the AI reuse proven conclusions instead of guessing again.
 
-**核心理念**：
+**Core principles**:
 
-- 笔记是本地 Markdown（唯一权威），索引可随时重建；
-- 数据与代码分离：**记忆数据永远不进 Git**，只经加密通道备份；
-- 自动抽取永不直接进正式库：候选必须经过多角色评审或人工终审。
+- Notes are local Markdown (the single source of truth); indexes are rebuildable at any time.
+- Data and code are separated: **memory data never enters Git**, it is only backed up through encrypted channels.
+- Automatic extraction never goes straight into the official store: candidates must pass multi-role review or manual final review.
 
-## 特性
+## Features
 
-| 能力 | 说明 |
+| Capability | Description |
 | --- | --- |
-| 🪝 **无需钩子自动捕获** | `harvest.py` 直接扫描宿主会话落盘，配对调用与结果，识别"失败 / 重试 / 失败后成功"模式 |
-| 🔗 **双通道收割** | **命令级**：命令签名碎片（成功配方 / 失败教训）；**任务级**：识别同一会话"多次失败 → 最终成功"完整任务链，产出含任务意图与最终方案的经验候选 |
-| 🧑⚖️ **多角色评审自动处置** | 六官独立打分（质量 / 技术 / 合规 / 价值 / 新颖 / 实操）→ 加权共识 → 分级处置：高分转正、低质/重复归档、**涉密/危险否决一律留人工** |
-| 🔒 **涉密安全优先** | 合规官检测敏感特征（涉密/身份证/令牌等）、技术官检测危险命令（`rm -rf` 等）；被否决的候选绝不自动归档隐藏，留人工处置 |
-| 🧠 **检索即用** | BM25 + 中文 2/3-gram 词面匹配；三层架构（热层常驻 / 温层召回 / 冷层溯源）保证"最值钱的经验绕过检索直接进上下文" |
-| 📥 **数据导入（双来源）** | 文档导入：存量 docx/xlsx/pdf 切成文本块供 AI 提炼；其他记忆导入：画像导出格式、Markdown、JSON、目录批量收，自动去重后落 `staged` |
-| 🖥️ **完整 Web 界面** | 零依赖（Python 标准库）HTTP 服务：记忆浏览、候选审核、数据导入、统计诊断、数据备份等 7 视图，明亮/暗色双主题、中英双语 |
-| 💾 **多渠道备份同步** | 对象存储（S3 兼容：阿里云 OSS / 腾讯云 COS / AWS / MinIO / 百度 BOS）、SMTP 邮件、本地镜像、全量快照、百度网盘冷备；增量同步 + 加密归档 + 失败告警 |
-| 🌍 **跨平台零依赖** | 纯 Python 标准库实现，Windows / macOS / Linux 通用，无第三方运行时 |
+| 🪝 **Hook-free auto capture** | `harvest.py` scans host session transcripts, pairs tool calls with results, and detects "failure / retry / failure-then-success" patterns |
+| 🔗 **Dual-channel harvesting** | **Command-level**: command-signature fragments (success recipes / failure lessons); **Task-level**: detects complete "multiple failures → final success" task chains and produces experience candidates with task intent and final solution |
+| 🧑⚖️ **Multi-role review with auto disposition** | Six roles score independently (Quality / Tech / Compliance / Value / Novelty / Ops) → weighted consensus → graded disposition: high-score promoted, low-quality/duplicate archived, **sensitive/dangerous vetoes always kept for human review** |
+| 🔒 **Security first** | The Compliance role detects sensitive patterns (classified info, IDs, tokens); the Tech role detects dangerous commands (`rm -rf`, etc.); vetoed candidates are never auto-archived to hide risk — they stay for human handling |
+| 🧠 **Ready-to-use retrieval** | BM25 + Chinese 2/3-gram token matching; three tiers (Hot layer resident / Warm layer recall / Cold layer tracing) so the most valuable experience bypasses retrieval and enters context directly |
+| 📥 **Data import (two sources)** | Document import: split docx/xlsx/pdf into chunks for AI distillation; External memory import: profile-export format, Markdown, JSON, or a whole directory — deduplicated and landed as `staged` |
+| 🖥️ **Full web UI** | Zero-dependency HTTP service (Python stdlib): 7 views including memory browsing, candidate review, data import, stats, and data backup; light/dark themes as peers, Chinese/English switching |
+| 💾 **Multi-channel backup & sync** | Object storage (S3-compatible: Alibaba OSS / Tencent COS / AWS / MinIO / Baidu BOS), SMTP mail, local mirror, full snapshots, Baidu Netdisk cold backup; incremental sync + encrypted archives + failure alerting |
+| 🌍 **Cross-platform, zero dependency** | Pure Python standard library; runs on Windows / macOS / Linux |
 
-## 目录结构
+## Directory Layout
 
 ```
 .
-├── README.md / README.en.md      # 本项目文档（中 / 英）
+├── README.md (EN) / README.zh-CN.md (ZH)   # Project docs (English default)
 ├── CHANGELOG.md / LICENSE / VERSION / .gitignore
-├── mem.py            # CLI 引擎：recall / add / show / gc / hot / candidates / reindex / stats
-├── memimport.py      # 外部记忆导入引擎（画像 / Markdown / JSON / 目录，内容哈希判重）
-├── harvest.py        # 会话收割：命令级 + 任务级经验候选
-├── evermem_mcp.py    # MCP 服务（查记忆 / 存记忆 / 更新 / 核心经验）
-├── backup.py / s3client.py   # 多渠道数据备份（对象存储 / SMTP / 快照/加密）
-├── app.py            # 桌面 GUI（PySide6，窗口自适应）
-├── web/              # 零依赖 Web 界面（server.py 启动，前端内嵌资源）
-├── scripts/          # 开发与运维工具（批量读 / 基准 / 自检 / 空间扫描 / 知识扫描 / 热预览）
-├── templates/        # 技能与提示词模板（唯一事实源）
-├── tests/            # 回归测试
-└── docs/             # 架构 / 备份 / 审计 / 平台文档
+├── mem.py            # CLI engine: recall / add / show / gc / hot / candidates / reindex / stats
+├── memimport.py      # External memory import engine (profile / Markdown / JSON / dir, content-hash dedupe)
+├── harvest.py        # Session harvesting: command-level + task-level candidates
+├── evermem_mcp.py    # MCP server (retrieve / store / update / hot-sync)
+├── backup.py / s3client.py   # Multi-channel backup (object storage / SMTP / snapshot-encrypted)
+├── app.py            # Desktop GUI (PySide6, window-resize adaptive)
+├── web/              # Zero-dependency web UI (run web/server.py, bundled frontend assets)
+├── scripts/          # Dev & ops tools (batch-read / benchmarks / self-check / space & knowledge scan / hot preview)
+├── templates/        # Skill & prompt templates (single source of truth)
+├── tests/            # Regression tests
+└── docs/             # Architecture / backup / audit / platform docs
 ```
 
-## 界面预览 · System Diagram
+## UI Preview · System Diagram
 
-核心界面设计稿覆盖**主要视图 → 备份与同步模块**，共 8 屏，按系统模块顺序排列。界面为内置零依赖 Web 应用（`python web/server.py` 启动），**全部设计均已落地为代码**，明亮 / 暗色双主题对等实现。
+Core UI designs cover **main views → backup & sync module**, 8 screens in total, ordered by system module. The UI is a built-in zero-dependency web app (`python web/server.py`), and **every design has been implemented in code** with light/dark themes as peers.
 
-### 01 · 记忆浏览 · 桌面
+### 01 · Memory Browse · Desktop
 
-> 系统主界面：侧边导航（8 视图）、记忆检索列表、标签 / 类型 / 状态筛选与分页。
+> The main screen: sidebar navigation (8 views), memory search list, tag / type / status filters and pagination.
 
-![01 记忆浏览](docs/ui/01-view-browse.png)
+![01 Memory Browse](docs/ui/01-view-browse.png)
 
-### 02 · 候选审核 · 桌面
+### 02 · Candidate Review · Desktop
 
-> 自动收割候选的评审工作台：AI 多角色评分徽章、正文查看、"多角色评审并自动处理"入口与转正 / 存疑 / 归档操作。
+> The review workbench for auto-harvested candidates: AI multi-role score badges, body viewer, the "multi-role review & auto disposition" entry, and promote / mark-suspect / archive actions.
 
-![02 候选审核](docs/ui/02-view-triage.png)
+![02 Candidate Review](docs/ui/02-view-triage.png)
 
-### 03 · 统计诊断 · 桌面
+### 03 · Stats & Diagnosis · Desktop
 
-> 系统健康度总览：笔记类型 / 状态分布、检索使用统计、收割与索引诊断。
+> System health overview: note type/status distribution, retrieval usage stats, harvest and index diagnostics.
 
-![03 统计诊断](docs/ui/03-view-stats.png)
+![03 Stats & Diagnosis](docs/ui/03-view-stats.png)
 
-### 04 · 数据备份 · 桌面
+### 04 · Data Backup · Desktop
 
-> 备份与同步入口：渠道列表与状态徽标、立即备份 / 恢复、日志查看。
+> The backup & sync entry: channel list with status badges, run backup / restore, and log viewer.
 
-![04 数据备份](docs/ui/04-view-backup.png)
+![04 Data Backup](docs/ui/04-view-backup.png)
 
-### 05 · 系统架构：本地 → 对象存储 → 百度云
+### 05 · System Architecture: Local → Object Storage → Baidu Cloud
 
-> 数据生命周期总览：本地是唯一事实源，经多渠道**单向加密上传**至对象存储（热副本、自动调度）与百度云（冷备、手动上传）。
+> Data lifecycle overview: local is the single source of truth, uploaded **one-way and encrypted** through multiple channels to object storage (hot replica, auto-scheduled) and Baidu Cloud (cold backup, manual upload).
 
-![05 渠道模型 · 系统架构](docs/ui/05-channel-model.png)
+![05 Channel Model · System Architecture](docs/ui/05-channel-model.png)
 
-### 06 · 备份与同步 · 主视图（明亮 / 暗色）
+### 06 · Backup & Sync · Main View (Light / Dark)
 
-> 概览统计卡片、主备份位置、渠道列表与实时状态徽标；明暗主题为对等实现。
+> Overview stat cards, primary backup location, channel list with live status badges; light/dark themes as peers.
 
-![06 备份与同步 · 主视图](docs/ui/06-main-view-light-dark.png)
+![06 Backup & Sync · Main View](docs/ui/06-main-view-light-dark.png)
 
-### 07 · 新增渠道 · 向导（明亮 / 暗色）
+### 07 · Add Channel · Wizard (Light / Dark)
 
-> 四步向导：选择渠道类型 → 连接参数（S3 兼容协议，内置各云预设）→ 加密与策略 → 确认保存；测试连接与密码强度校验内置于流程。
+> A four-step wizard: choose channel type → connection parameters (S3-compatible protocol, with built-in presets for major clouds) → encryption & policy → confirm & save; connection testing and password-strength checks are built in.
 
-![07 新增渠道 · 向导](docs/ui/07-wizard-light-dark.png)
+![07 Add Channel · Wizard](docs/ui/07-wizard-light-dark.png)
 
-### 08 · 渠道状态矩阵（明亮 / 暗色）
+### 08 · Channel Status Matrix (Light / Dark)
 
-> 渠道健康度一目了然：健康 / 警告 / 失败 / 未配置 / 冷备，状态判定来自单一事实源。
+> Channel health at a glance: healthy / warning / failed / not configured / cold backup — status derived from a single source of truth.
 
-![08 渠道状态矩阵](docs/ui/08-status-matrix-light-dark.png)
+![08 Channel Status Matrix](docs/ui/08-status-matrix-light-dark.png)
 
-## 快速开始
+## Quick Start
 
-### 环境要求
+### Requirements
 
-- Python 3.10+（仅标准库，无第三方依赖）
+- Python 3.10+ (standard library only, no third-party dependencies)
 - Windows / macOS / Linux
 
-### 1. 启动 Web 界面（推荐）
+### 1. Launch the Web UI (recommended)
 
 ```bash
 cd web
-python server.py          # 默认端口 8765
-# 打开 http://127.0.0.1:8765
+python server.py          # default port 8765
+# open http://127.0.0.1:8765
 ```
 
-### 2. 使用命令行
+### 2. Use the CLI
 
 ```bash
-export PMEM_HOME="<你的数据目录>"   # Windows: set PMEM_HOME=...
-python mem.py recall "查询词"       # 检索记忆
-python mem.py add --type procedure --title "..." --body "..." --tags a,b   # 沉淀经验
-python harvest.py scan --days 7 --dry-run   # 预览收割（确认后去掉 --dry-run）
-python mem.py hot --apply          # 同步热层到宿主必读文件
+export PMEM_HOME="/path/to/your/data"   # Windows: set PMEM_HOME=...
+python mem.py recall "query terms"       # retrieve memories
+python mem.py add --type procedure --title "..." --body "..." --tags a,b   # distill experience
+python harvest.py scan --days 7 --dry-run   # preview harvesting (drop --dry-run when confirmed)
+python mem.py hot --apply          # sync hot layer to the host's must-read file
 ```
 
-> 未设置 `PMEM_HOME` 时数据目录默认为脚本所在目录；所有路径走 pathlib，代码中不存在写死的绝对路径。
+> When `PMEM_HOME` is unset, the data directory defaults to the script directory; all paths go through pathlib and no absolute paths are hardcoded in the code.
 
-## 使用说明
+## Usage
 
-### 三条命令流水线
+### Three command pipelines
 
-| 想做什么 | 命令 |
+| Goal | Command |
 | --- | --- |
-| 查记忆 | `mem.py recall "查询词" [--limit 5] [--all]` |
-| 存记忆 | 写 Markdown 到 `notes/<type>s/`，然后 `mem.py reindex` |
-| 自动挖候选 | `harvest.py scan --days 7 --dry-run`，确认后去掉 `--dry-run` |
-| 导入外部记忆 | `memimport.py preview --file 画像.md` → `memimport.py import --file 画像.md` |
-| 同步热层 | `mem.py hot --apply --target <项目>/.workbuddy/memory/MEMORY.md` |
-| 清理体检 | `mem.py gc`（默认只体检；`--apply` 执行，`--prune` 才删原文） |
-| 导出画像 | `mem.py profile --limit 5 [--out 画像.md]` |
-| 自检 | `tests/test_recall.py`、`scripts/frontend_smoke.py`、`scripts/check_all.py` |
+| Recall memory | `mem.py recall "query" [--limit 5] [--all]` |
+| Store memory | Write Markdown to `notes/<type>s/`, then `mem.py reindex` |
+| Auto-harvest candidates | `harvest.py scan --days 7 --dry-run`, drop `--dry-run` when confirmed |
+| Import external memory | `memimport.py preview --file profile.md` → `memimport.py import --file profile.md` |
+| Sync hot layer | `mem.py hot --apply --target <project>/.workbuddy/memory/MEMORY.md` |
+| Retention check | `mem.py gc` (read-only); `--apply` runs it, `--prune` also deletes originals |
+| Export usage profile | `mem.py profile --limit 5 [--out profile.md]` |
+| Self-check | `tests/test_recall.py`, `scripts/frontend_smoke.py`, `scripts/check_all.py` |
 
-### 数据导入（主菜单一个模块，内含两个子模块）
+### Data import (one menu module, two sub-modules)
 
-| 子模块 | 用途 | 产物 |
+| Sub-module | Purpose | Output |
 | --- | --- | --- |
-| **文档导入** | 存量 docx / xlsx / pdf / pptx 切块 | 文本块进块库，供 AI 提炼成笔记 |
-| **其他记忆导入** | 别的工具导出的记忆搬进来 | 直接落成笔记（默认 `staged`） |
+| **Document import** | Split docx / xlsx / pdf / pptx into chunks | Text chunks in the chunk store, ready for AI distillation |
+| **External memory import** | Bring memories exported from other tools | Landed as notes (default `staged`) |
 
-**「其他记忆导入」分两步，顺序不能反：**
+**External memory import is two steps, in this order:**
 
-1. **① 导出记忆提示词** —— 页面给一份可直接复制的提示词（唯一事实源在
-   `templates/usage-profile.prompt.md` 的 `COPY:BEGIN/END` 区间，改模板即生效）。
-   粘到任意 AI 工具的新会话，让它按「指令 / 身份 / 职业 / 项目 / 偏好」产出你的使用画像。
-2. **② 粘贴导入记忆** —— 把拿到的画像整段贴回下方导入框，解析成条目后勾选导入。
+1. **① Export-memory prompt** — the page shows a ready-to-copy prompt (single source of truth:
+   the `COPY:BEGIN/END` region of `templates/usage-profile.prompt.md`; edit the template to change it).
+   Paste it into a new session of any AI tool so it produces your usage profile across
+   *instructions / identity / career / projects / preferences*.
+2. **② Paste & import** — paste the profile back into the box below, parse it, tick the entries, import.
 
-支持四种输入，格式自动识别：
-
-```bash
-python memimport.py preview --text "## 偏好
-[2026-09-27] - 输出先给结论再给依据"          # ① 画像导出格式（## 分类 + [日期] - 条目）
-python memimport.py preview --file 导出.json   # ② JSON（items/notes/memories 均可）
-python memimport.py preview --file 笔记.md     # ③ Markdown（带不带 frontmatter 都收）
-python memimport.py import  --dir "F:/另一个记忆库/notes"   # ④ 目录批量收 .md/.json
-```
-
-导入前会给出计划：每条标注 **可导入 / 疑似重复 / 已存在**（按内容哈希判重，重复导入天然幂等），
-默认只勾可导入项，确认后写入正式笔记目录，**状态为 `staged`**——不参与检索召回，
-人工在「记忆浏览」逐条确认后点「转正」才生效。导入只读取源文件，绝不改动或删除原目录。
-
-### 候选审核流程
-
-1. `harvest.py scan` 自动收割 → 候选进入 `notes/candidates/`（`status: staged`）；
-2. Web「候选审核」页执行**多角色评审并自动处理**：高分转正、重复/低质归档、保留观察、**涉密/危险留人工**；
-3. 人工终审：逐条查看正文、转正 / 存疑 / 归档；
-4. `mem.py reindex` 后正式笔记进入检索池。
-
-### 备份与同步
+Accepts four inputs, with auto format detection:
 
 ```bash
-python backup.py status            # 查看各渠道状态
-python backup.py --dry-run         # 预览将同步的内容
-python backup.py                   # 执行增量同步
-python backup.py --restore         # 从渠道恢复
+python memimport.py preview --text "## Preference
+[2026-09-27] - Lead with the conclusion, then the evidence"   # ① profile export format
+python memimport.py preview --file export.json                 # ② JSON (items/notes/memories)
+python memimport.py preview --file note.md                     # ③ Markdown (with or without frontmatter)
+python memimport.py import  --dir "F:/another-vault/notes"     # ④ whole directory of .md/.json
 ```
 
-详见 [docs/BACKUP-DESIGN.md](docs/BACKUP-DESIGN.md)。
+The preview marks every entry as **importable / possible duplicate / already exists** (content-hash
+dedupe makes repeated imports idempotent) and pre-selects only the importable ones. Confirmed entries
+are written to the official notes directory with **`status: staged`** — excluded from recall until you
+promote them one by one in Memory Browse. Import is read-only against the source.
 
-### 分层清理（Retention）
+### Candidate review flow
 
-记忆不是日志——**漏掉一条关键经验的代价，远高于多存 2MB 文本**。所以恒忆不做定时删除，
-只做「分层降级 + 汇总压缩 + 冷存打包」：
+1. `harvest.py scan` auto-harvests → candidates land in `notes/candidates/` (`status: staged`);
+2. In the Web "Candidate Review" view, run **multi-role review & auto disposition**: high scores promoted, duplicates/low-quality archived, kept for observation, **sensitive/dangerous kept for human review**;
+3. Manual final review: inspect each item, then promote / mark suspect / archive;
+4. After `mem.py reindex`, official notes enter the retrieval pool.
 
-| 层 | 内容 | 触发 | 动作 |
-| --- | --- | --- | --- |
-| T1 | 正式笔记 | — | **永不自动删除**，只提示 suspect/superseded 人工复核 |
-| T2 | 候选池 | ≥60 天未处理 | 滚动移入归档区（可逆，文件保留） |
-| T3 | 归档区 | ≥180 天 / ≥1000 条 / ≥200MB | 先写汇总摘要保住可检索性 → 打包冷存 zip |
-| T4 | 证据流 | ≥90 天 | gzip 压缩（压缩 ≠ 删除） |
+### Backup & sync
 
 ```bash
-python mem.py gc                   # 只体检，不动文件（Web「统计诊断」页也有只读报告）
-python mem.py gc --apply           # 执行：滚动归档 + 冷存打包 + 证据压缩
-python mem.py gc --apply --prune   # 连已冷存/压缩的原文一起删（默认只压缩不删）
+python backup.py status            # view channel status
+python backup.py --dry-run         # preview what will be synced
+python backup.py                   # run incremental sync
+python backup.py --restore         # restore from a channel
 ```
 
-四条保障：受保护条目（`hot/keep/protect/pin`）永不清理；冷存前必写摘要；默认只压缩不删；
-正式笔记永不自动删。详见 [docs/RETENTION.md](docs/RETENTION.md)。
+See [docs/BACKUP-DESIGN.md](docs/BACKUP-DESIGN.md) for details.
 
-### 导出使用画像（跨工具一致体验）
+## Architecture
 
-```bash
-python mem.py profile --limit 5 --out 画像.md
-```
+### Three tiers, ordered by certainty of use
 
-本地按分类（指令/身份/职业/项目/偏好）挑候选，输出 `[YYYY-MM-DD] - 条目内容` 并附**覆盖率说明**
-（明确哪些维度本地无依据，杜绝模型编造）。模板见 `templates/usage-profile.prompt.md`，
-方法见 [docs/PROFILE-EXPORT.md](docs/PROFILE-EXPORT.md)。
-
-## 架构设计
-
-### 三层结构：按"被使用的确定性"分层
-
-| 层 | 内容 | 生效方式 |
+| Tier | Content | How it takes effect |
 | --- | --- | --- |
-| **热层** | 人工标 `hot: true` 的 ≤20 条 | 同步进宿主必读文件，会话开始即常驻，**不依赖检索** |
-| **温层** | 全部笔记 | `recall` 检索，靠技能提醒触发 |
-| **冷层** | `events/*.jsonl` 证据 | 只追加，用于溯源与证伪 |
+| **Hot** | ≤20 notes manually marked `hot: true` | Synced into the host's must-read file; resident from session start, **retrieval-independent** |
+| **Warm** | All notes | `recall` retrieval, triggered by skill reminders |
+| **Cold** | `events/*.jsonl` evidence | Append-only; used for tracing and falsification |
 
-### 数据流
+### Data flow
 
 ```
-AI 会话落盘 JSONL
-   ↓ harvest.py（无需钩子）
-候选池 notes/candidates/（staged）
-   ↓ 多角色评审（六官）· 自动处置
-转正(active) / 保留观察 / 归档 / 留人工(涉密危险)
+AI session transcript JSONL
+   ↓ harvest.py (no hooks)
+Candidate pool notes/candidates/ (staged)
+   ↓ Multi-role review (six roles) · auto disposition
+Promoted(active) / kept / archived / kept-for-human (sensitive/dangerous)
    ↓ mem.py reindex
-正式笔记（notes/<type>s/）→ 检索池 / 热层 / 备份
+Official notes (notes/<type>s/) → retrieval pool / hot layer / backup
 ```
 
-### 双轨制
+### Dual-track separation
 
-- **代码** → Git 仓库（GitHub 私人库 `linhut/evermem`），含平台文档；
-- **数据**（notes / events / 索引 / 配置）→ 永不进 Git，只经 `backup.py` 加密备份到对象存储 / 邮件 / 本地镜像 / 网盘冷备。
+- **Code** → Git repository (GitHub private repo `linhut/evermem`), including platform docs;
+- **Data** (notes / events / index / config) → never enters Git; backed up encrypted via `backup.py` to object storage / mail / local mirror / cloud cold backup.
 
-## 配置
+## Configuration
 
-### 环境变量
+### Environment variables
 
-| 变量 | 说明 | 默认 |
+| Variable | Description | Default |
 | --- | --- | --- |
-| `PMEM_HOME` | 数据目录（代码与数据彻底分离） | 脚本所在目录 |
-| `PMEM_WEB_PORT` | Web 服务端口 | 8765 |
-| `PMEM_AUTO_HARVEST_SECONDS` | 自动收割间隔 | 3600 |
-| `PMEM_NO_AUTO_HARVEST` | 设为 `1` 禁用自动收割线程 | 开启 |
+| `PMEM_HOME` | Data directory (code/data fully separated) | script directory |
+| `PMEM_WEB_PORT` | Web server port | 8765 |
+| `PMEM_AUTO_HARVEST_SECONDS` | Auto-harvest interval | 3600 |
+| `PMEM_NO_AUTO_HARVEST` | Set to `1` to disable the auto-harvest thread | enabled |
 
-### 备份渠道（`pmem_backup.json`）
+### Backup channels (`pmem_backup.json`)
 
-- 渠道类型：`local`（增量镜像）/ `archive`（全量快照，保留 N 份）/ `remote`（ssh/scp）/ `mail`（SMTP 附件）/ `s3`（对象存储）/ `baidu-pan`（网盘冷备）
-- 对象存储凭证与**归档加密密码**均为配置项（Web 向导填写），**代码中无任何写死的密钥**；
-- 归档包使用 AES-256-CBC（openssl pbkdf2，20 万次迭代）加密后出本机，明文密钥永不落盘。
+- Channel types: `local` (incremental mirror) / `archive` (full snapshot, keep N) / `remote` (ssh/scp) / `mail` (SMTP attachment) / `s3` (object storage) / `baidu-pan` (cloud cold backup)
+- Object storage credentials and the **archive encryption password** are configuration items (filled in via the Web wizard); **no secrets are hardcoded in the code**;
+- Archive packages are encrypted with AES-256-CBC (openssl pbkdf2, 200k iterations) before leaving the machine; plaintext keys are never persisted.
 
-## 隐私与安全
+## Privacy & Security
 
-- **数据不出本地**：全量记忆数据仅存本机，备份前加密；
-- **涉密免责**：涉及国家秘密、警务、未公开政务项目的信息一律不得写入笔记；合规官会自动检测敏感特征并否决入档；
-- **进 Git 前自查**：正文只留方法论，敏感细节（密钥、内网 IP、身份证号、手机号、涉密文件名全称）一律用占位符；
-- **危险命令拦截**：含 `rm -rf`、`del /s`、`DROP TABLE` 等危险操作的候选自动留人工，绝不归档隐藏。
+- **Data never leaves the machine**: all memory data lives locally and is encrypted before backup;
+- **Confidentiality disclaimer**: information involving state secrets, police operations, or unpublished government projects must never be written into notes; the Compliance role automatically detects sensitive patterns and vetoes them;
+- **Self-check before committing to Git**: notes keep only methodology; sensitive details (keys, intranet IPs, ID numbers, phone numbers, full classified filenames) are always replaced with placeholders;
+- **Dangerous command interception**: candidates containing `rm -rf`, `del /s`, `DROP TABLE`, etc. are automatically kept for human review — never archived to hide them.
 
-## 项目结构
+## Project Structure
 
 ```
 evermem/
-├── mem.py                 核心引擎：检索 / 笔记管理 / 热层同步 / 候选治理
-├── harvest.py             会话收割：命令级碎片 + 任务级经验提炼（无需钩子）
-├── backup.py              数据备份领域层：渠道契约 / 投影 / 状态判定（单一事实源）
-├── s3client.py            零依赖 S3 兼容客户端（AWS SigV4）
-├── web/                   零依赖 Web 界面（server.py / index.js / channel.js）
-├── notes/                 记忆数据（**不进 Git**）：facts / lessons / procedures / candidates
-├── events/                证据层 JSONL（只追加，溯源与证伪）
-├── docs/                  架构 / 备份设计 / 状态流转 / 审计等平台文档
-├── tests/                 回归测试
-├── templates/             skill 模板
-├── LICENSE                MIT 许可
+├── mem.py                 Core engine: retrieval / note management / hot-layer sync / candidate governance
+├── harvest.py             Session harvesting: command-level fragments + task-level distillation (hook-free)
+├── backup.py              Backup domain layer: channel contract / projection / status (single source of truth)
+├── s3client.py            Zero-dependency S3-compatible client (AWS SigV4)
+├── web/                   Zero-dependency web UI (server.py / index.js / channel.js)
+├── notes/                 Memory data (**not in Git**): facts / lessons / procedures / candidates
+├── events/                Evidence-layer JSONL (append-only, for tracing & falsification)
+├── docs/                  Architecture / backup design / status flow / audit docs
+├── tests/                 Regression tests
+├── templates/             Skill templates
+├── LICENSE                MIT license
 └── CHANGELOG.md / VERSION / USAGE.md
 ```
 
-## 文档
+## Documentation
 
-| 文档 | 说明 |
+| Doc | Description |
 | --- | --- |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | 架构设计 |
-| [docs/BACKUP-DESIGN.md](docs/BACKUP-DESIGN.md) | 备份与同步设计规格 |
-| [docs/STATUS-FLOW.md](docs/STATUS-FLOW.md) | 记忆生命周期状态流转 |
-| [docs/MULTI-MACHINE.md](docs/MULTI-MACHINE.md) | 多机部署指南 |
-| [USAGE.md](USAGE.md) | 详细使用手册 |
-| [CHANGELOG.md](CHANGELOG.md) | 变更日志 |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Architecture design |
+| [docs/BACKUP-DESIGN.md](docs/BACKUP-DESIGN.md) | Backup & sync design spec |
+| [docs/STATUS-FLOW.md](docs/STATUS-FLOW.md) | Memory lifecycle status flow |
+| [docs/MULTI-MACHINE.md](docs/MULTI-MACHINE.md) | Multi-machine deployment guide |
+| [USAGE.md](USAGE.md) | Detailed usage manual |
+| [CHANGELOG.md](CHANGELOG.md) | Changelog |
 
-## 贡献指南
+## Contributing
 
-欢迎任何形式的贡献——使用反馈、Issue、功能建议、Pull Request。
+Contributions of any form are welcome — usage feedback, issues, feature suggestions, pull requests.
 
-1. **Fork** 本仓库并创建特性分支：`git checkout -b feat/xxx`
-2. **提交规范**：`type: 中文描述`（如 `fix:` / `feat:` / `docs:` / `chore:`）
-3. **质量门槛**（提交前必须全部通过）：
+1. **Fork** this repo and create a feature branch: `git checkout -b feat/xxx`
+2. **Commit convention**: `type: description` (e.g. `fix:` / `feat:` / `docs:` / `chore:`)
+3. **Quality gates** (must all pass before committing):
    - `python -m py_compile mem.py harvest.py backup.py web/server.py`
    - `node --check web/index.js web/channel.js`
-   - `python scripts/frontend_smoke.py`（契约冒烟 5/5）
-   - `python tests/test_recall.py`（回归）
-4. **纪律**：不得将任何记忆数据、密钥、涉密内容提交入库；新功能需同步更新 README 与 CHANGELOG。
+   - `python scripts/frontend_smoke.py` (contract smoke test 5/5)
+   - `python tests/test_recall.py` (regression)
+4. **Discipline**: never commit memory data, secrets, or confidential content; new features must update README and CHANGELOG.
 
-## 许可
+## License
 
-[MIT](LICENSE) © 2026 Jose-AI · 仓库 [github.com/linhut/evermem](https://github.com/linhut/evermem) · 官网 [linhut.cn](https://www.linhut.cn)
+[MIT](LICENSE) © 2026 Jose-AI · Repo [github.com/linhut/evermem](https://github.com/linhut/evermem) · Website [linhut.cn](https://www.linhut.cn)
 
 ---
 
-*恒忆 Evermem · 经验自动进库 · 跨会话复用 · 全本地零云端*
+*Evermem · Experiences in, reuse across sessions · Fully local, zero cloud*
