@@ -1,31 +1,34 @@
-# 恒忆 Evermem
+<h1 align="center">恒忆 Evermem</h1>
 
-> **个人跨会话经验记忆系统** —— 把 AI 会话中的试错过程沉淀为本地可复用知识，下次直接复用，不再从零试起。
+<p align="center"><em>个人跨会话经验记忆系统 —— 把 AI 会话中的试错过程沉淀为本地可复用知识，下次直接复用，不再从零试起。</em></p>
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/Python-3.10%2B-blue)]()
-[![Version](https://img.shields.io/badge/Version-0.2.0-green)](VERSION)
-[![Zero Dependency](https://img.shields.io/badge/Dependencies-Zero-orange)]()
-[![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)]()
+<p align="center">
+  <img alt="License MIT" src="https://img.shields.io/badge/License-MIT-yellow.svg">
+  <img alt="Python 3.10+" src="https://img.shields.io/badge/Python-3.10%2B-blue">
+  <img alt="Version 0.2.0" src="https://img.shields.io/badge/Version-0.2.0-green">
+  <img alt="Zero Dependency" src="https://img.shields.io/badge/Dependencies-Zero-orange">
+  <img alt="Platform Win/macOS/Linux" src="https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey">
+</p>
 
-**零依赖 · 全本地 · 无云端** —— 经验自动进库、跨会话复用。中文文档 · [English](README.md)
+<p align="center"><b>零依赖 · 全本地 · 无云端。</b><br><a href="README.md">English</a></p>
 
 ---
 
 ## 目录
 
-- [简介](#简介)
-- [特性](#特性)
-- [界面预览](#界面预览--system-diagram)
-- [快速开始](#快速开始)
-- [使用说明](#使用说明)
-- [架构设计](#架构设计)
-- [配置](#配置)
-- [隐私与安全](#隐私与安全)
-- [项目结构](#项目结构)
-- [文档](#文档)
-- [贡献指南](#贡献指南)
-- [许可](#许可)
+<p align="center">
+  <a href="#简介">简介</a> ·
+  <a href="#特性">特性</a> ·
+  <a href="#界面预览--system-diagram">界面预览</a> ·
+  <a href="#快速开始">快速开始</a> ·
+  <a href="#使用说明">使用说明</a> ·
+  <a href="#架构设计">架构设计</a> ·
+  <a href="#配置">配置</a> ·
+  <a href="#隐私与安全">隐私与安全</a> ·
+  <a href="#文档">文档</a> ·
+  <a href="#贡献指南">贡献指南</a> ·
+  <a href="#许可">许可</a>
+</p>
 
 ---
 
