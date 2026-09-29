@@ -68,7 +68,7 @@ Evermem (pmem) is a **personal cross-session experience memory system**. It read
 ├── harvest.py        # Session harvesting: command-level + task-level candidates
 ├── evermem_mcp.py    # MCP server (retrieve / store / update / hot-sync)
 ├── backup.py / s3client.py   # Multi-channel backup (object storage / SMTP / snapshot-encrypted)
-├── app.py            # Desktop GUI (PySide6, window-resize adaptive)
+├── desktop.py        # Desktop shell (embedded Web service + QtWebEngine, cross-platform)
 ├── web/              # Zero-dependency web UI (run web/server.py, bundled frontend assets)
 ├── scripts/          # Dev & ops tools (batch-read / benchmarks / self-check / space & knowledge scan / hot preview)
 ├── templates/        # Skill & prompt templates (single source of truth)
@@ -135,7 +135,17 @@ Core UI designs cover **main views → backup & sync module**, 8 screens in tota
 - Python 3.10+ (standard library only, no third-party dependencies)
 - Windows / macOS / Linux
 
-### 1. Launch the Web UI (recommended)
+### 0. Run as a desktop app (optional, recommended)
+
+> Use the 7-view web UI as a native desktop program — embedded local service + embedded browser, no browser tab needed.
+
+```bash
+python desktop.py            # desktop shell (single instance / tray / close = minimize + ask to stop service)
+```
+
+> Or grab the release artifact (`evermem-gui-<platform>-v*`), or run `python web/server.py` and open the browser.
+
+### 1. Launch the Web UI
 
 ```bash
 cd web

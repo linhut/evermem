@@ -61,8 +61,8 @@ jobs:
         # 单行书写：多行 run 里的 \ 续行在 Windows(Git Bash) 会被当成字面参数，务必不要跨行
         run: pyinstaller --onefile --name evermem-web --add-data "web${{ matrix.sep }}web" --add-data "templates${{ matrix.sep }}templates" web/server.py
 
-      - name: 构建桌面 GUI（PySide6，PyInstaller 内置钩子）
-        run: pyinstaller --onefile --windowed --name evermem app.py
+      - name: 构建桌面壳（PySide6 + QtWebEngine，内嵌 Web 服务）
+        run: pyinstaller --onefile --windowed --name evergem desktop.py
 
       - name: CLI 冒烟（数据目录回退到当前目录）
         run: ./dist/evermem-cli${{ matrix.exe }} stats
