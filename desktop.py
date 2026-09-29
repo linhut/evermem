@@ -34,6 +34,7 @@ for _p in (str(ROOT), str(ROOT / "web")):
         sys.path.insert(0, _p)
 
 SMOKE = "--smoke" in sys.argv
+AUTOSTART = "--autostart" in sys.argv
 
 # 打包为 --windowed 时 stdout/stderr 为 None，print 会崩溃（Windows 尤甚）：先兜底重定向
 if sys.stdout is None or sys.stderr is None:
@@ -101,6 +102,61 @@ class SingleInstance:
             pass
 
 
+# ---------- 开机自启注册（跨平台入口；常用于后台常驻服务随系统启动） ----------
+def _launcher_cmd() -> list[str]:
+    """值得写入自启项的启动命令：本 exe + --autostart。"""
+    import shlex
+    if getattr(sys, "frozen", False):
+        exe = sys.executable
+        return [exe, "--autostart"]
+    return [sys.executable, str(Path(__file__).resolve()), "--autostart"]
+
+
+def set_autostart(enabled: bool) -> None:
+    cmd = " ".join(_launcher_cmd())
+    if sys.platform == "win32":
+        import os
+        key = r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run"
+        from winreg import (HKEY_CURRENT_USER, KEY_SET_VALUE, REG_SZ,
+                            OpenKey, SetValueEx, DeleteValue)
+        with OpenKey(HKEY_CURRENT_USER, key, 0, KEY_SET_VALUE) as k:
+            if enabled:
+                SetValueEx(k, "Evermem", 0, REG_SZ, cmd)
+            else:
+                try:
+                    DeleteValue(k, "Evermem")
+                except OSError:
+                    pass
+        return
+    # Linux / macOS：XDG autostart
+    adir = Path.home() / ".config" / "autostart"
+    app = adir / "evermem.desktop"
+    if enabled:
+        adir.mkdir(parents=True, exist_ok=True)
+        app.write_text(
+            "[Desktop Entry]\nType=Application\nName=Evermem\n"
+            f"Exec={cmd}\nX-GNOME-Autostart-enabled=true\n",
+            encoding="utf-8")
+    else:
+        try:
+            app.unlink()
+        except OSError:
+            pass
+
+
+def autostart_enabled() -> bool:
+    if sys.platform == "win32":
+        try:
+            from winreg import (HKEY_CURRENT_USER, KEY_READ, OpenKey, QueryValueEx)
+            with OpenKey(HKEY_CURRENT_USER,
+                         r"Software\Microsoft\Windows\CurrentVersion\Run", 0, KEY_READ) as k:
+                QueryValueEx(k, "Evermem")
+                return True
+        except OSError:
+            return False
+    return (Path.home() / ".config" / "autostart" / "evermem.desktop").exists()
+
+
 # ---------- 内嵌 Web 服务（持有句柄便于干净退出；规避冻结态用 sys.executable 起子进程的陷阱） ----------
 class EmbeddedServer:
     def __init__(self, port: int):
@@ -152,7 +208,8 @@ def run_gui(url: str, server: EmbeddedServer) -> int:
     from PySide6.QtCore import Qt, QUrl, QTimer
     from PySide6.QtGui import QKeySequence, QShortcut
     from PySide6.QtWidgets import (QApplication, QMainWindow, QMenu, QMessageBox, QStyle, QSystemTrayIcon)
-    from PySide6.QtWebEngineWidgets import QWebEngineView, QWebEngineSettings
+    from PySide6.QtWebEngineWidgets import QWebEngineView  # noqa: F401
+    from PySide6.QtWebEngineCore import QWebEnginePage, QWebEngineSettings
 
     QApplication.setAttribute(Qt.AA_ShareOpenGLContexts, True)
     app = QApplication(sys.argv)
@@ -184,6 +241,10 @@ def run_gui(url: str, server: EmbeddedServer) -> int:
             m.addAction("English", lambda: self._js("pmem-lang", "en"))
             m.addSeparator()
             m.addAction("开发者工具", self._toggle_dev)
+            a_auto = m.addAction("开机自启")
+            a_auto.setCheckable(True)
+            a_auto.setChecked(autostart_enabled())
+            a_auto.toggled.connect(set_autostart)
             QShortcut(QKeySequence(Qt.Key_F12), self, activated=self._toggle_dev)
             QShortcut(QKeySequence(Qt.Key_F5), self, activated=self.web.reload)
 
@@ -239,7 +300,12 @@ def run_gui(url: str, server: EmbeddedServer) -> int:
                 e.ignore()
 
     w = Win()
-    w.show()
+    if AUTOSTART:
+        # 开机自启：直接进托盘常驻，不弹主窗
+        w.hide()
+        w._tray.show()
+    else:
+        w.show()
     app.aboutToQuit.connect(server.stop)
     if SMOKE:
         QTimer.singleShot(6000, app.quit)
@@ -247,6 +313,15 @@ def run_gui(url: str, server: EmbeddedServer) -> int:
 
 
 def main() -> int:
+    if "--register-autostart" in sys.argv:
+        set_autostart(True)
+        print("[autostart] 已注册开机自启")
+        return 0
+    if "--unregister-autostart" in sys.argv:
+        set_autostart(False)
+        print("[autostart] 已取消开机自启")
+        return 0
+
     inst = SingleInstance()
     if not inst.acquire():
         print("[main] 恒忆已在运行（单实例），请切换至已打开的窗口。", file=sys.stderr)
