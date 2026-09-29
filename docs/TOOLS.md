@@ -2,7 +2,7 @@
 
 > 平台总览：引擎、Web、注入、数据、文档、Git。维护入口 = 本文档 + PLATFORM.md。
 
-## 一、引擎（CLI，`.memory/`，零依赖 Python）
+## 一、引擎（CLI，仓库根，零依赖 Python）
 
 | 文件 | 职责 | 入口示例 |
 |------|------|---------|
@@ -20,7 +20,7 @@
 | scripts/fluent_preview.py | 前端热预览（开发模式） | 配合 launcher `PMEM_DEV=1` |
 | app.py | 旧 PySide6 桌面版（**已弃用**，由 Web+pywebview 替代，保留可删） | — |
 
-## 二、Web（`.memory/web/`）
+## 二、Web（`web/`）
 
 | 文件 | 职责 |
 |------|------|
@@ -50,7 +50,7 @@
 | F 盘块库 | F:/知识库数据/chunks/ | 9 空间 9500+ 块 |
 | 检索基线 | docs/bench-search-baseline-*.json | 20 组查询 20/20 |
 
-## 五、文档（`.memory/docs/` + 根）
+## 五、文档（`docs/`）
 
 README / USAGE / PLATFORM v2（平台总纲）/ ARCHITECTURE（早期桌面设想）/ REVIEW-2026-09（全景复盘）/ MONTHLY-TEMPLATE + MONTHLY-2026-09（月度回顾）/ bench 基线 / TOOLS（本文档）
 
