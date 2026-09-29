@@ -1,0 +1,41 @@
+# 索引与状态可从笔记/证据重建，不进版本库
+index.json
+harvest_state.json
+__pycache__/
+*.pyc
+
+# 临时产物与宿主残留（不进版本库）
+tmp_ui/
+tmp_chk/
+nul
+*.log
+.lock
+
+# ===== 数据（知识/证据/索引）——与代码分离，绝不同步到 GitHub =====
+# 数据与知识只经云端备份同步（backup.py / PMEM_BACKUP_TARGET），代码仓库仅含代码与平台文档
+notes/
+events/
+corpus_spaces.json
+kb.json
+knowledge-base.md
+pmem_config.json
+*.db
+*.db-shm
+*.db-wal
+.pmem-backup-last.json
+
+# ===== 备份渠道配置与产物（含混淆后的 AK/SK/密码，勿进版本库） =====
+pmem_backup.json
+tools/
+*.tar.aes
+*.tar.aes.sha256
+.pmem-*
+evermem-*.zip
+evermem-*.tar.aes
+
+# ===== 打包构建中间产物（PyInstaller 本地 / CI 均不入仓） =====
+build/
+dist/
+*.spec
+.venv/
+venv/

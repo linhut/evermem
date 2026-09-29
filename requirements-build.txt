@@ -1,0 +1,5 @@
+# 构建期依赖（仅 GitHub Actions 打包用；运行时产物不依赖这些）
+# 桌面包 app.py 只用 PySide6（qfluentwidgets 仅出现于独立的 fluent_preview.py 预览脚本，不打进产品）
+# CI 固定 Python 3.12，三平台均有 wheel
+pyinstaller>=6.6
+PySide6>=6.6
