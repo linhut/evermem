@@ -62,26 +62,32 @@ jobs:
         run: pyinstaller --onefile --name evermem-web --add-data "web${{ matrix.sep }}web" --add-data "templates${{ matrix.sep }}templates" web/server.py
 
       - name: 构建桌面壳（PySide6 + QtWebEngine，内嵌 Web 服务）
-        run: pyinstaller --onefile --windowed --name evermem desktop.py
+        # 单行书写（Windows Git Bash 不吃 \ 续行）；--paths web 让分析器找到 import server；
+        # add-data 打包前端资源与模板（冻结态定位见 server.py / desktop.py）
+        run: pyinstaller --onefile --windowed --name evermem --paths web --add-data "web${{ matrix.sep }}web" --add-data "templates${{ matrix.sep }}templates" desktop.py
 
       - name: CLI 冒烟（数据目录回退到当前目录）
         run: ./dist/evermem-cli${{ matrix.exe }} stats
 
-      - name: GUI 启动冒烟（无头，仅验不崩溃）
+      - name: GUI 冒烟（--smoke 自退并断言退出码 0）
         shell: bash
         run: |
-          # 不用 timeout（macOS 无 GNU coreutils），统一后台启动 + 存活探测
-          if [ "${{ matrix.os }}" != "windows-latest" ]; then export QT_QPA_PLATFORM=offscreen; fi
-          ./dist/evermem${{ matrix.exe }} &
-          PID=$!
-          sleep 8
-          if kill -0 "$PID" 2>/dev/null; then
-            echo "GUI 启动正常（进程存活）"
-            kill "$PID" 2>/dev/null || true
-          else
-            echo "GUI 提前退出或启动崩溃"
-            exit 1
+          # 桌面壳带 --smoke：内嵌服务就绪 + 窗口加载 6s 后自动退出，退出码 0 才算通过
+          if [ "${{ matrix.os }}" != "windows-latest" ]; then
+            export QT_QPA_PLATFORM=offscreen
+            export QTWEBENGINE_CHROMIUM_FLAGS="--no-sandbox --disable-gpu --disable-dev-shm-usage"
           fi
+          ./dist/evermem${{ matrix.exe }} --smoke &
+          PID=$!
+          rc=""
+          i=0
+          while [ $i -lt 90 ]; do
+            if ! kill -0 "$PID" 2>/dev/null; then wait "$PID"; rc=$?; break; fi
+            i=$((i+1)); sleep 1
+          done
+          if [ -z "$rc" ]; then echo "GUI 超时未退出"; kill "$PID" 2>/dev/null; exit 1; fi
+          if [ "$rc" -ne 0 ]; then echo "GUI 冒烟失败 rc=$rc"; exit 1; fi
+          echo "GUI 冒烟通过（服务就绪并正常退出）"
 
       - name: 产物重命名（带平台与版本；macOS 打包 .app）
         shell: bash
