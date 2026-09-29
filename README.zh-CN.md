@@ -328,7 +328,7 @@ evermem/
 欢迎任何形式的贡献——使用反馈、Issue、功能建议、Pull Request。
 
 1. **Fork** 本仓库并创建特性分支：`git checkout -b feat/xxx`
-2. **提交规范**：`type: 中文描述`（如 `fix:` / `feat:` / `docs:` / `chore:`）
+2. **提交规范（中英双语）**：标题用 `type(scope): English summary — 中文摘要`（如 `fix(web): fix promote 404 — 修复转正假成功`）；重要变更在 body 里分中/英各写一段说明。
 3. **质量门槛**（提交前必须全部通过）：
    - `python -m py_compile mem.py harvest.py backup.py web/server.py`
    - `node --check web/index.js web/channel.js`
