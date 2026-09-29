@@ -35,6 +35,15 @@ for _p in (str(ROOT), str(ROOT / "web")):
 
 SMOKE = "--smoke" in sys.argv
 
+# 打包为 --windowed 时 stdout/stderr 为 None，print 会崩溃（Windows 尤甚）：先兜底重定向
+if sys.stdout is None or sys.stderr is None:
+    try:
+        _devnull = open(os.devnull, "w", encoding="utf-8")
+    except OSError:
+        import io as _io
+        _devnull = _io.StringIO()
+    sys.stdout = sys.stderr = _devnull
+
 
 def pick_free_port(preferred: int = 8765) -> int:
     import socket
