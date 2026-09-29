@@ -1,31 +1,35 @@
-# Evermem (pmem)
+<h1 align="center">Evermem (pmem)</h1>
 
-> **A personal cross-session experience memory system** — distill the trial-and-error process of AI conversations into reusable local knowledge, so the next session reuses verified conclusions instead of starting from scratch.
+<p align="center"><em>A personal cross-session experience memory system — distill the trial-and-error from AI conversations into reusable local knowledge, so the next session reuses verified conclusions instead of starting from scratch.</em></p>
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/Python-3.10%2B-blue)]()
-[![Version](https://img.shields.io/badge/Version-0.2.0-green)](VERSION)
-[![Zero Dependency](https://img.shields.io/badge/Dependencies-Zero-orange)]()
-[![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)]()
+<p align="center">
+  <img alt="License MIT" src="https://img.shields.io/badge/License-MIT-yellow.svg">
+  <img alt="Python 3.10+" src="https://img.shields.io/badge/Python-3.10%2B-blue">
+  <img alt="Version 0.2.0" src="https://img.shields.io/badge/Version-0.2.0-green">
+  <img alt="Zero Dependency" src="https://img.shields.io/badge/Dependencies-Zero-orange">
+  <img alt="Platform Win/macOS/Linux" src="https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey">
+</p>
 
-**Zero-dependency · Fully local · No cloud** — experiences are captured automatically and reused across sessions. English · [中文文档](README.zh-CN.md)
+<p align="center"><b>Zero-dependency · Fully local · No cloud.</b><br><a href="README.zh-CN.md">中文文档</a></p>
 
 ---
 
 ## Table of Contents
 
-- [Introduction](#introduction)
-- [Features](#features)
-- [UI Preview · System Diagram](#ui-preview--system-diagram)
-- [Quick Start](#quick-start)
-- [Usage](#usage)
-- [Architecture](#architecture)
-- [Configuration](#configuration)
-- [Privacy & Security](#privacy--security)
-- [Project Structure](#project-structure)
-- [Documentation](#documentation)
-- [Contributing](#contributing)
-- [License](#license)
+<p align="center">
+  <a href="#introduction">Introduction</a> ·
+  <a href="#features">Features</a> ·
+  <a href="#directory-layout">Layout</a> ·
+  <a href="#ui-preview--system-diagram">UI Preview</a> ·
+  <a href="#quick-start">Quick Start</a> ·
+  <a href="#usage">Usage</a> ·
+  <a href="#architecture">Architecture</a> ·
+  <a href="#configuration">Configuration</a> ·
+  <a href="#privacy--security">Privacy</a> ·
+  <a href="#documentation">Docs</a> ·
+  <a href="#contributing">Contributing</a> ·
+  <a href="#license">License</a>
+</p>
 
 ---
 
