@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+## [0.2.1] - 2026-09-29
+
+### 桌面壳（Web 版直接作为桌面程序）
+
+- **desktop.py**：QtWebEngine 内嵌本地 Web 服务，把 7 视图 Web 版直接作为桌面程序；
+  单实例锁、系统托盘、明暗主题/中英语言菜单、F12 开发者工具、空闲端口、`PMEM_HOME` 数据目录。
+- **关闭行为**：点关闭默认「最小化到托盘继续运行」，弹窗询问是否停止服务（涉及 MCP/后台钩子）；真正退出走托盘「停止服务并退出」。
+- **开机自启**：`--register-autostart / --unregister-autostart`（Windows Run 键 / XDG autostart），菜单「开机自启」勾选项，`--autostart` 托盘静默常驻。
+- **无头兜底**：Qt/WebEngine 不可用时自动回退「起服务 + 系统默认浏览器」。
+- **打包**：CI 每平台只产出一个桌面运行包（`evergem-<平台>-v*`，Windows exe / macOS .app.zip / Linux 二进制），替代原 cli/web/gui 三件套；GUI 冒烟以 `--smoke` 自退并断言退出码 0。
+
+
 ## [0.2.0] - 2026-09-29
 
 ### 候选审核批量操作与筛选 / 核心经验详情 / 文档导入指引（2026-09-29）

@@ -5,7 +5,7 @@
 <p align="center">
   <img alt="License MIT" src="https://img.shields.io/badge/License-MIT-yellow.svg">
   <img alt="Python 3.10+" src="https://img.shields.io/badge/Python-3.10%2B-blue">
-  <img alt="Version 0.2.0" src="https://img.shields.io/badge/Version-0.2.0-green">
+  <img alt="Version 0.2.0" src="https://img.shields.io/badge/Version-0.2.1-green">
   <img alt="Zero Dependency" src="https://img.shields.io/badge/Dependencies-Zero-orange">
   <img alt="Platform Win/macOS/Linux" src="https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey">
 </p>
