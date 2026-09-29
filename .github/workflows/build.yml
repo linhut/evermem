@@ -62,7 +62,7 @@ jobs:
         run: pyinstaller --onefile --name evermem-web --add-data "web${{ matrix.sep }}web" --add-data "templates${{ matrix.sep }}templates" web/server.py
 
       - name: 构建桌面壳（PySide6 + QtWebEngine，内嵌 Web 服务）
-        run: pyinstaller --onefile --windowed --name evergem desktop.py
+        run: pyinstaller --onefile --windowed --name evermem desktop.py
 
       - name: CLI 冒烟（数据目录回退到当前目录）
         run: ./dist/evermem-cli${{ matrix.exe }} stats
