@@ -18,7 +18,8 @@
 | **evermem_mcp.py** | MCP stdio 桥：mem_read / mem_record / mem_update / mem_hot | 配置进各宿主 MCP |
 | **backup.py** | **数据多渠道备份 v3**：local 增量镜像 / archive 快照保留 N 份 / remote ssh-scp / mail SMTP；每渠道频率/保留/失败计数、自动定时+告警+校验+日志。规格 docs/BACKUP-DESIGN.md | `python backup.py status` / `--channel X` / `--restore` |
 | scripts/fluent_preview.py | 前端热预览（开发模式） | 配合 launcher `PMEM_DEV=1` |
-| app.py | 旧 PySide6 桌面版（**已弃用**，由 Web+pywebview 替代，保留可删） | — |
+| **desktop.py** | **桌面壳**：内嵌 Web 服务 + QtWebEngine 把 Web 版直接当桌面程序；单实例/托盘/明暗·中英/关闭=最小化并询问是否停服；无 WebEngine 回退默认浏览器 | `python desktop.py`（或打包 `evergem-<平台>-v*`） |
+| app.py | 旧 PySide6 原生控件版（**已弃用**，由 desktop.py 取代，保留可删） | — |
 
 ## 二、Web（`web/`）
 

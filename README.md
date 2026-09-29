@@ -67,7 +67,7 @@
 ├── harvest.py        # 会话收割：命令级 + 任务级经验候选
 ├── evermem_mcp.py    # MCP 服务（查记忆 / 存记忆 / 更新 / 核心经验）
 ├── backup.py / s3client.py   # 多渠道数据备份（对象存储 / SMTP / 快照/加密）
-├── app.py            # 桌面 GUI（PySide6，窗口自适应）
+├── desktop.py        # 桌面壳（内嵌 Web 服务 + QtWebEngine，跨平台）
 ├── web/              # 零依赖 Web 界面（server.py 启动，前端内嵌资源）
 ├── scripts/          # 开发与运维工具（批量读 / 基准 / 自检 / 空间扫描 / 知识扫描 / 热预览）
 ├── templates/        # 技能与提示词模板（唯一事实源）
@@ -134,7 +134,17 @@
 - Python 3.10+（仅标准库，无第三方依赖）
 - Windows / macOS / Linux
 
-### 1. 启动 Web 界面（推荐）
+### 0. 直接作为桌面程序运行（可选，推荐）
+
+> 把 7 视图 Web 版原样作为桌面应用：内嵌本地服务 + 内嵌浏览器，无需打开浏览器标签页。
+
+```bash
+python desktop.py            # 桌面壳（单实例 / 托盘 / 关闭即最小化并询问是否停服）
+```
+
+> 也可直接用发布产物（GitHub Release 的 `evermem-gui-<平台>-v*`），或 `python web/server.py` 后浏览器打开。
+
+### 1. 启动 Web 界面
 
 ```bash
 cd web
