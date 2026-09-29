@@ -1,6 +1,35 @@
 # 变更日志
 
-## Unreleased
+## [0.2.2] - 2026-09-30
+
+### 配方管理（作用域隔离与跨项目共享）
+
+- **docs/RECIPES.md**：配方治理规范——四层作用域（core/org/project/session）、`scope/name@version` 命名、semver + 不可变基线、引用/播种双形态、禁止隐式覆盖、六类冲突仲裁流程。
+- **recipes.py**（新增，零依赖）：`scan`（分层盘点 + 同命名空间同名 P0 + 隐式覆盖 P1 检测）/ `resolve`（就近优先求值链，主 scope + 归属组织）/ `lock`（生成 `.recipe-lock.json` 依赖锁）。
+- 存量笔记兼容：frontmatter 扩展字段对 `mem.py` 解析零破坏；未标 scope 默认归项目层。
+
+### 全项目审计与加固（2026-09-29）
+
+- **修复数据丢失隐患**：Web API `edit` 未传正文时不再用截断摘要覆盖全文，改读原文件保留。
+- **去除硬编码本机路径**：`app.py`（SYS_PY/CHUNKS/SPACES 默认值）、`scripts/check_all.py`/`bench_verify.py`/`bench_search.py`/`knowledge_scan.py`、`templates/personal-memory.SKILL.md`、USAGE/TOOLS 文档中的用户路径全部参数化或占位化（`PMEM_SYS_PY`/`PMEM_TEST_DIR` 等环境变量）。
+- **Web 服务加固**：Host 白名单校验（防 DNS rebinding / 恶意网页调用本地 API）；笔记标题/标签 frontmatter 注入防护。
+- **测试补强**：新增 `tests/test_recipes.py`（16 项）；`check_all.py` Web API 自启 server（消除"未起服务→14 项假失败"）、extract 用例支持 `PMEM_TEST_DIR` 跳过。
+
+### 桌面版稳定性（白屏修复）
+
+- **白屏修复**：GPU 受限环境（远程桌面/虚拟机/沙箱）QtWebEngine 默认无法创建 GL 上下文导致页面加载失败；`desktop.py` 默认启用软件渲染（`--no-sandbox --disable-gpu --disable-dev-shm-usage`，可用 `QTWEBENGINE_CHROMIUM_FLAGS` 覆盖）。
+- **冒烟真实化**：`--smoke` 现在校验 `loadFinished`（页面真实加载成功才退出码 0），不再"服务就绪即通过"；无 Qt 回退路径同样支持冒烟自退。
+- **修复自启注册**：`--register-autostart` 的 winreg 子键路径改为相对形式（原 `HKCU\` 缩写前缀不被 winreg 支持，导致 FileNotFoundError）。
+- **tasklist 子进程解码加固**：单实例检测加 `errors="ignore"`，避免非 UTF-8 系统输出崩掉读取线程。
+
+### 检索修复
+
+- **强信号规则误杀修复**：查询含拉丁/标识符词元（如 `GUI`）且仅出现在笔记标题时被误判"零命中"返回空；现在同时检查标题索引。新增回归用例 2c。
+
+### 发布准备
+
+- 仓库内本机路径/示例盘符全面清理复核（`git grep` 零泄漏）；开发临时脚本统一放入 git 忽略目录并清理。
+
 
 ## [0.2.1] - 2026-09-29
 

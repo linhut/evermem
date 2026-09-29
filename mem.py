@@ -284,8 +284,10 @@ def _search_impl(idx: dict, query: str, limit: int, include_all: bool) -> list[d
 
     # 强信号规则：查询含拉丁/标识符词元（SQLite、xyzqwerty、gongwen…）时，
     # 若该词在语料中零命中 → 直接判定无命中。拉丁词区分度远高于中文常用字。
+    # 注意必须同时检查标题索引：词仅出现在标题（正文未提及）时不得误杀（曾导致 GUI 等
+    # 标题标识词搜索返回空）。大写归一在 tokenize 完成，postings 键为小写。
     latins = [t for t in qterms if not is_cjk(ord(t[0]))]
-    if latins and all(len(postings.get(t, {})) == 0 for t in latins):
+    if latins and all(len(postings.get(t, {})) == 0 and len(tpostings.get(t, {})) == 0 for t in latins):
         return []
 
     # 召回门槛：只统计"特异性词元"——非中文单字（≥2 字或拉丁/标识符）且

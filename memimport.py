@@ -15,7 +15,7 @@
 # 用法：
 #   python memimport.py preview --file 画像.md
 #   python memimport.py preview --text "## 指令\n[2026-09-27] - 先用结论后给依据"
-#   python memimport.py import  --dir  "F:/另一个记忆库/notes" --status staged
+#   python memimport.py import  --dir  "<其他记忆库目录>/notes" --status staged
 #   python memimport.py import  --file 导出.json --dry-run
 
 from __future__ import annotations

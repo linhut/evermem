@@ -18,8 +18,13 @@ BASE = Path(__file__).resolve().parents[1]  # 项目根（scripts/ 的上一级�
 if str(BASE) not in sys.path:
     sys.path.insert(0, str(BASE))
 import mem  # noqa: E402
-PY = r"C:/Users/Administrator/.workbuddy/binaries/python/versions/3.13.12/python.exe"
-SYS = r"python"
+# 解释器与测试目录走环境变量，勿写死用户机器路径（发布约定）：
+#   PMEM_SYS_PY     指定解释器（缺省用运行本脚本的 python）
+#   PMEM_TEST_DIR   指向含可提取文档的样本目录（缺省跳过 extract 用例）
+import os as _os
+PY = _os.environ.get("PMEM_SYS_PY", "") or sys.executable
+SYS = _os.environ.get("PMEM_SYS_PY", "") or sys.executable
+SAMPLE_DIR = Path(_os.environ.get("PMEM_TEST_DIR", "")) if _os.environ.get("PMEM_TEST_DIR") else None
 
 RESULTS = []  # (功能, 状态, 说明)
 
@@ -66,12 +71,16 @@ check("signals（统计）", ok and "执行记录" in out)
 
 print()
 print("三、提取（scripts/ingest.py）")
-ok, out, ms = run([PY, "scripts/ingest.py", "list", "F:/机房搬迁"])
+ok, out, ms = run([PY, "scripts/ingest.py", "list", str(BASE)])
 check("list（正常目录）", ok)
-ok, out, ms = run([PY, "scripts/ingest.py", "list", "F:/不存在的目录xyz"])
+ok, out, ms = run([PY, "scripts/ingest.py", "list", str(BASE / "tmp_chk" / "不存在目录xyz")])
 check("list（不存在目录→不崩溃）", ok)
-ok, out, ms = run([PY, "scripts/ingest.py", "extract", "F:/机房搬迁", "--out-dir", str(BASE / "tmp_chk"), "--show-failed"])
-check("extract（正常，含失败统计）", ok and "成功" in out)
+if SAMPLE_DIR:
+    ok, out, ms = run([PY, "scripts/ingest.py", "extract", str(SAMPLE_DIR), "--out-dir", str(BASE / "tmp_chk"), "--show-failed"])
+    check("extract（正常，含失败统计）", ok and "成功" in out)
+else:
+    print("[SKIP] extract（未设置 PMEM_TEST_DIR 指向真实文档目录，跳过）")
+    check("extract（SKIP）", True, "PMEM_TEST_DIR 未设置")
 
 print()
 print("四、MCP 桥（evermem_mcp.py）—— 正常 + 边界")
@@ -109,6 +118,17 @@ check("mcp 空标题→错误", "title 必填" in out)
 print()
 print("五、Web API —— 正常 + 边界")
 import http.client as _hc
+import os as _os2, time as _time2
+# 自启本地 server（先起再测，结束自动关闭）：避免"未起服务→14 项假失败"
+_srv = subprocess.Popen([PY, "web/server.py"], cwd=str(BASE),
+                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                        env={**_os2.environ, "PMEM_NO_AUTO_HARVEST": "1"})
+for _i in range(40):  # 最多等 10 秒就绪
+    try:
+        _hc.HTTPConnection("127.0.0.1", 8765, timeout=2).close()
+        break
+    except Exception:
+        _time2.sleep(0.25)
 def api(path, method="GET", body=None):
     c = _hc.HTTPConnection("127.0.0.1", 8765, timeout=15)
     try:
@@ -164,6 +184,11 @@ if st == 200:
         if test_path.exists():
             test_path.unlink()
             mem.build_index()
+# 关闭自启 server（若端口被外部 server 占用，_srv 会绑定失败提前退出，terminate 幂等无害）
+try:
+    _srv.terminate()
+except Exception:
+    pass
 
 print()
 print("六、前端与数据健康")

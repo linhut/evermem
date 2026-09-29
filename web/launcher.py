@@ -14,7 +14,7 @@
 #   前端文件改动 → 窗口自动刷新；server.py 改动 → 服务自动重启。
 # 生产模式：PMEM_DEV 未设，无 watch 开销。
 #
-# 运行：C:/Users/Administrator/.workbuddy/binaries/python/versions/3.13.12/python.exe launcher.py
+# 运行：python launcher.py            （解释器用 PMEM_SYS_PY 指定或当前 python）
 #       PMEM_DEV=1 ... launcher.py   ← 开发热预览
 
 from __future__ import annotations

@@ -98,9 +98,9 @@ backup.py    领域层：字段契约、from_request（留空保留 + 混淆）�
   "auto": true,
   "alert_email": "me@example.com",
   "channels": [
-    {"type": "local", "name": "坚果云", "enabled": true, "target": "D:/坚果云/evermem-backup",
+    {"type": "local", "name": "本地网盘", "enabled": true, "target": "<网盘同步目录>/evermem-backup",
      "scope": ["notes","events","index","meta"], "frequency_hours": 24},
-    {"type": "archive", "name": "本机快照", "enabled": true, "target": "F:/evermem-snapshots", "retention": 7},
+    {"type": "archive", "name": "本机快照", "enabled": true, "target": "<快照目录>", "retention": 7},
     {"type": "remote", "name": "阿里云服务器", "enabled": false, "target": "user@1.2.3.4:/backup/evermem",
      "ssh_port": 22, "frequency_hours": 48},
     {"type": "mail", "name": "邮箱副本", "enabled": false,
@@ -109,10 +109,10 @@ backup.py    领域层：字段契约、from_request（留空保留 + 混淆）�
     {"type": "s3", "name": "对象存储主副本", "enabled": false,
      "endpoint": "https://oss-cn-hangzhou.aliyuncs.com", "region": "oss-cn-hangzhou",
      "bucket": "evermem-backup", "prefix": "archive",
-     "access_key": "AK...", "secret_key": "ob1:...", "archive_password": "ob1:...",
+     "access_key": "AK...", "secret_key": "<混淆密钥>", "archive_password": "<混淆密码>",
      "frequency_hours": 24, "retention": 30},
     {"type": "baidu-pan", "name": "网盘冷备", "enabled": false,
-     "target": "F:/evermem-cold", "archive_password": "ob1:...", "frequency_hours": 168, "retention": 12}
+     "target": "<网盘目录>", "archive_password": "<混淆密码>", "frequency_hours": 168, "retention": 12}
   ]
 }
 ```

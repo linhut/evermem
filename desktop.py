@@ -69,8 +69,10 @@ class SingleInstance:
         if sys.platform == "win32":
             try:
                 import subprocess
+                # tasklist 输出含本地化字符（俄/日/中系统）可能非 utf-8，加 errors 防解码崩线程
                 out = subprocess.run(["tasklist", "/FI", f"PID eq {pid}"],
-                                     capture_output=True, text=True).stdout
+                                     capture_output=True, text=True,
+                                     encoding="utf-8", errors="ignore").stdout
                 return f"PID {pid}" in out
             except Exception:
                 return False
@@ -116,7 +118,9 @@ def set_autostart(enabled: bool) -> None:
     cmd = " ".join(_launcher_cmd())
     if sys.platform == "win32":
         import os
-        key = r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run"
+        # 相对子键路径（与 autostart_enabled 一致）；winreg 不支持 "HKCU\" 缩写前缀，
+        # 曾因此 FileNotFoundError[WinError 2] 导致 --register-autostart 失败
+        key = r"Software\Microsoft\Windows\CurrentVersion\Run"
         from winreg import (HKEY_CURRENT_USER, KEY_SET_VALUE, REG_SZ,
                             OpenKey, SetValueEx, DeleteValue)
         with OpenKey(HKEY_CURRENT_USER, key, 0, KEY_SET_VALUE) as k:
@@ -205,6 +209,12 @@ def _wait_health(port: int, timeout: float = 6.0) -> bool:
 
 # ---------- Qt 桌面壳（惰性导入；无 Qt 时走浏览器回退） ----------
 def run_gui(url: str, server: EmbeddedServer) -> int:
+    # 白屏修复：GPU 受限环境（远程桌面/虚拟机/沙箱会话）QtWebEngine 默认无法创建
+    # GL 上下文，页面加载必失败。统一走软件渲染（--disable-gpu + 禁沙箱），换取稳定；
+    # 用户可用 QTWEBENGINE_CHROMIUM_FLAGS 覆盖自定义（须在 QApplication 创建前生效）。
+    if not os.environ.get("QTWEBENGINE_CHROMIUM_FLAGS"):
+        os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--no-sandbox --disable-gpu --disable-dev-shm-usage"
+
     from PySide6.QtCore import Qt, QUrl, QTimer
     from PySide6.QtGui import QKeySequence, QShortcut
     from PySide6.QtWidgets import (QApplication, QMainWindow, QMenu, QMessageBox, QStyle, QSystemTrayIcon)
@@ -224,13 +234,18 @@ def run_gui(url: str, server: EmbeddedServer) -> int:
         def __init__(self):
             super().__init__()
             self.allow_quit = False
+            self.smoke_loaded = False  # 冒烟真实校验：页面 loadFinished 是否成功（防"空心冒烟"）
             self.web = QWebEngineView(self)
             self.web.setUrl(QUrl(url))
+            self.web.loadFinished.connect(self._on_loaded)
             s = self.web.settings()
             s.setAttribute(QWebEngineSettings.WebAttribute.JavascriptCanOpenWindows, False)
             self.setCentralWidget(self.web)
             self.resize(1280, 800)
             self.setWindowTitle("恒忆 Evermem")
+
+        def _on_loaded(self, ok: bool):
+            self.smoke_loaded = ok
 
             mb = self.menuBar()
             m = mb.addMenu("视图")
@@ -308,8 +323,13 @@ def run_gui(url: str, server: EmbeddedServer) -> int:
         w.show()
     app.aboutToQuit.connect(server.stop)
     if SMOKE:
-        # 冒烟：6s 后直接结束进程（Qt 的 app.quit 在部分平台/无头环境下不返回，os._exit 最可靠）
-        QTimer.singleShot(6000, lambda: os._exit(0))
+        # 冒烟：6s 后按「页面是否成功加载」判定退出码（0=渲染通过），os._exit 最可靠
+        def _smoke_exit():
+            rc = 0 if getattr(w, "smoke_loaded", False) else 1
+            if rc:
+                print("[smoke] 页面加载失败（loadFinished=False，疑似白屏）", file=sys.stderr)
+            os._exit(rc)
+        QTimer.singleShot(6000, _smoke_exit)
     return app.exec()
 
 
@@ -357,6 +377,9 @@ def main() -> int:
         else:
             print("[main] 当前环境无 Qt/WebEngine，改用系统默认浏览器打开。")
             webbrowser.open(url)
+            if SMOKE:
+                # 回退路径（无 QtWebEngine）同样需要冒烟自退：否则 CI/无头环境挂起
+                threading.Timer(6.0, lambda: os._exit(0)).start()
             while True:
                 time.sleep(1)
     except KeyboardInterrupt:

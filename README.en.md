@@ -5,7 +5,7 @@
 <p align="center">
   <img alt="License MIT" src="https://img.shields.io/badge/License-MIT-yellow.svg">
   <img alt="Python 3.10+" src="https://img.shields.io/badge/Python-3.10%2B-blue">
-  <img alt="Version 0.2.0" src="https://img.shields.io/badge/Version-0.2.1-green">
+  <img alt="Version 0.2.2" src="https://img.shields.io/badge/Version-0.2.2-green">
   <img alt="Zero Dependency" src="https://img.shields.io/badge/Dependencies-Zero-orange">
   <img alt="Platform Win/macOS/Linux" src="https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey">
 </p>
@@ -150,7 +150,7 @@ python desktop.py            # desktop shell (single instance / tray / close = m
 > - **Linux**: `evergem-linux-v*` (extension-less ELF binary). GitHub downloads drop the exec bit, so:
 >
 >   ```bash
->   chmod +x evergem-linux-v0.2.1 && ./evergem-linux-v0.2.1
+>   chmod +x evergem-linux-v0.2.2 && ./evergem-linux-v0.2.2
 >   ```
 
 ### 1. Launch the Web UI
@@ -210,7 +210,7 @@ python memimport.py preview --text "## Preference
 [2026-09-27] - Lead with the conclusion, then the evidence"   # ① profile export format
 python memimport.py preview --file export.json                 # ② JSON (items/notes/memories)
 python memimport.py preview --file note.md                     # ③ Markdown (with or without frontmatter)
-python memimport.py import  --dir "F:/another-vault/notes"     # ④ whole directory of .md/.json
+python memimport.py import  --dir "<other-vault>/notes"     # ④ whole directory of .md/.json
 ```
 
 The preview marks every entry as **importable / possible duplicate / already exists** (content-hash

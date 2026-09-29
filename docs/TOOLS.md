@@ -8,7 +8,7 @@
 |------|------|---------|
 | **mem.py** | 核心引擎：recall / add / hot / candidates / reindex / stats / show；索引、LRU 缓存、新近度、token 预算、候选 AI 评分 | `python mem.py recall "机房 搬迁"` |
 | **harvest.py** | 会话收割（WorkBuddy jsonl / DSH zstd / atomcode → 候选，无钩子） | `python harvest.py signals --days 3` |
-| **scripts/ingest.py** | 文档提取（docx/xlsx 等 → F:/知识库数据/chunks/ 块库） | `python scripts/ingest.py F:/机房搬迁`（用系统 Python） |
+| **scripts/ingest.py** | 文档提取（docx/xlsx 等 → PMEM_CHUNKS 块库） | `python scripts/ingest.py <数据目录>` |
 | scripts/scan_spaces.py | F 盘知识空间扫描，产出 corpus_spaces.json | `python scripts/scan_spaces.py` |
 | scripts/knowledge_scan.py | 跨会话主题/失败模式扫描 → kb.json / knowledge-base.md | `python scripts/knowledge_scan.py` |
 | scripts/batch_read_docs.py | .doc 老格式批量读取（走 editor_sdk） | `python scripts/batch_read_docs.py` |
@@ -48,7 +48,7 @@
 | 候选/归档 | notes/candidates/ + archive/ | 候选 0 / 归档 8（证据保留） |
 | 索引 | index.json（派生，可重建） | ~1.3MB |
 | 证据 | events/（JSONL） | 会话事件日志 |
-| F 盘块库 | F:/知识库数据/chunks/ | 9 空间 9500+ 块 |
+| 块库 | PMEM_CHUNKS 指定（默认 <仓库根>/chunks） | 空间数随数据增长 |
 | 检索基线 | docs/bench-search-baseline-*.json | 20 组查询 20/20 |
 
 ## 五、文档（`docs/`）
@@ -57,8 +57,8 @@ README / USAGE / PLATFORM v2（平台总纲）/ ARCHITECTURE（早期桌面设�
 
 ## 六、Git
 
-- 仓库根：`C:/Users/Administrator/Documents/<工作区>`（.memory 为子目录）
-- 5 个提交，纯本地无远程；.gitignore 排除 index.json/harvest_state.json/tmp_ui/ 等派生与临时物
+- 仓库根 = 项目根（数据目录用 PMEM_HOME 指定，数据与代码分离）
+- 远程 GitHub linhut/evermem；.gitignore 排除 index.json/harvest_state.json/tmp_ui/ 等派生与临时物
 
 ## 七、性能基线（修复后实测，2026-09-27）
 

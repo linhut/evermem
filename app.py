@@ -19,10 +19,11 @@ from pathlib import Path
 
 QT_MODE = False  # main() 里按 PMEM_THEME 设置
 
-# 导入功能配置（可被 PMEM_* 环境变量覆盖）
-SYS_PY = os.environ.get("PMEM_SYS_PY", r"python")
-CHUNKS_ROOT = Path(os.environ.get("PMEM_CHUNKS", "F:/知识库数据/chunks"))
-SPACES_ROOT = Path(os.environ.get("PMEM_SPACES", "F:/"))
+# 导入功能配置（env > 通用默认；勿写死用户盘符——发布约定，见 docs/PLATFORM.md）
+# PMEM_CHUNKS / PMEM_SPACES 缺省落在项目内相对路径，本机实际位置可用环境变量或 pmem_config.json 指定
+SYS_PY = os.environ.get("PMEM_SYS_PY") or sys.executable
+CHUNKS_ROOT = Path(os.environ.get("PMEM_CHUNKS") or (BASE / "chunks"))
+SPACES_ROOT = Path(os.environ.get("PMEM_SPACES") or BASE)
 EXCLUDE_DIRS = {
     "$RECYCLE.BIN", "System Volume Information", "CPM_ENCRYPTED_FOLDER",
     "Game", "WeGameApps", "Wondershare", "Wondershare UniConverter 15",
@@ -758,7 +759,7 @@ class MainWindow(QMainWindow):
         name = space_name or self.imp_space.currentText().split("（")[0]
         d = CHUNKS_ROOT / name
         if not d.exists():
-            # 块库可能按子目录分散（如某省级部门/<项目目录>），列出可用块库目录
+            # 块库可能按子目录分散（按项目/主题组织），列出可用块库目录
             avail = sorted(x.name for x in CHUNKS_ROOT.iterdir() if x.is_dir()) if CHUNKS_ROOT.exists() else []
             hit = [x for x in avail if name in x or x in name]
             self.status.showMessage(
