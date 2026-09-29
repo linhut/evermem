@@ -299,7 +299,7 @@ evermem/
 Contributions of any form are welcome — usage feedback, issues, feature suggestions, pull requests.
 
 1. **Fork** this repo and create a feature branch: `git checkout -b feat/xxx`
-2. **Commit convention**: `type: description` (e.g. `fix:` / `feat:` / `docs:` / `chore:`)
+2. **Commit convention (bilingual)**: title as `type(scope): English summary — 中文摘要` (e.g. `fix(web): fix promote 404 — 修复转正假成功`); for notable changes, add a brief EN and ZH paragraph in the body.
 3. **Quality gates** (must all pass before committing):
    - `python -m py_compile mem.py harvest.py backup.py web/server.py`
    - `node --check web/index.js web/channel.js`
