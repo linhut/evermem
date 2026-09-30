@@ -27,7 +27,14 @@ import time
 from collections import defaultdict
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
+# 数据目录必须与 mem.py 同源（env > 持久化配置 > 可移植默认），
+# 否则打包后候选会写进临时解包目录，界面与检索看不到。
+if str(Path(__file__).resolve().parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+import paths as _paths  # noqa: E402
+
+ROOT = _paths.data_root()
 NOTES = ROOT / "notes"
 CANDIDATES = NOTES / "candidates"
 EVENTS = ROOT / "events"
@@ -248,7 +255,16 @@ def load_state() -> dict:
 
 def save_state(state: dict) -> None:
     state["last_run"] = time.strftime("%Y-%m-%d %H:%M:%S")
-    STATE_PATH.write_text(json.dumps(state, ensure_ascii=False, indent=1), encoding="utf-8")
+    # 原子写：收割常驻后台线程，直接覆盖中断会留下截断游标（下次重复收割）
+    tmp = STATE_PATH.with_name(STATE_PATH.name + f".tmp-{os.getpid()}")
+    try:
+        tmp.write_text(json.dumps(state, ensure_ascii=False, indent=1), encoding="utf-8")
+        os.replace(tmp, STATE_PATH)
+    finally:
+        try:
+            tmp.unlink(missing_ok=True)
+        except OSError:
+            pass
 
 def write_events(events: list[dict]) -> int:
     EVENTS.mkdir(parents=True, exist_ok=True)

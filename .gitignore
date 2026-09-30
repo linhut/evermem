@@ -12,6 +12,14 @@ nul
 *.log
 .lock
 
+# 代码索引缓存（codegraph 本地索引，可由 codegraph init/index 重建）
+.codegraph/
+
+# 待删除区：过期 / 可再生 / 非必要文件集中放置，确认一个版本周期后统一删除
+_trash/
+# 调试数据区（与正式数据分离，见 docs/AUDIT-2026-10.md 第五节）
+.debug-data/
+
 # ===== 数据（知识/证据/索引）——与代码分离，绝不同步到 GitHub =====
 # 数据与知识只经云端备份同步（backup.py / PMEM_BACKUP_TARGET），代码仓库仅含代码与平台文档
 notes/
@@ -38,5 +46,27 @@ evermem-*.tar.aes
 build/
 dist/
 *.spec
+# 构建描述属构建清单性质，单独放行；其余 *.spec 仍忽略
+!Evermem.spec
+# CI 从 VERSION 生成，不入库
+assets/version_info.txt
 .venv/
 venv/
+
+# ===== 更新检查：运行期状态与用户源配置（含本机路径，不进仓） =====
+# update.json 是用户可编辑的更新源配置（数据目录内），update_state.json 是检查缓存
+update.json
+update_state.json
+update.log
+# CI 阶段产物：清单片段不入库；合成后的 update-manifest.json 由 Release 附件分发，
+# 需要自建源时由维护者上传到自己的静态服务器（不进版本库，避免仓库里躺着过期版本）
+update-fragment.json
+update-manifest.json
+
+# ===== 文档：一次性快照与可再生成产物不进仓（判定依据见 docs/REPO-RELEASE-CHECKLIST.md 第四节） =====
+docs/archive/
+docs/bench-*.json
+docs/AUDIT-*.md
+docs/REVIEW-*.md
+docs/MONTHLY-20*.md
+docs/*-research-*.md

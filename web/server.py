@@ -26,12 +26,26 @@ if getattr(sys, "frozen", False):
     WEB = Path(getattr(sys, "_MEIPASS", Path(__file__).parent)) / "web"
 else:
     WEB = Path(__file__).resolve().parent
-BASE = WEB.parent  # .memory
+BASE = WEB.parent  # 代码目录（模板 / 脚本 / 前端资源）
+# 数据目录与代码目录必须分开：冻结态下 BASE 落在临时解包目录，
+# 把配置/备份/导入写到这里会在重启后消失，且与 mem.py 的核心检索不是同一个目录。
+_ROOT = Path(__file__).resolve().parent.parent
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
+import paths as _paths  # noqa: E402
+DATA_ROOT = _paths.data_root()
+CODE_ROOT = _paths.code_root()
 if str(BASE) not in sys.path:
     sys.path.insert(0, str(BASE))
+if str(CODE_ROOT) not in sys.path:
+    sys.path.insert(0, str(CODE_ROOT))
 
 import mem  # noqa: E402
 import backup  # noqa: E402
+try:  # 更新检查是可选能力：模块缺失时接口报不可用，但服务照常启动
+    import update
+except Exception:  # noqa: BLE001
+    update = None  # type: ignore
 try:  # 导入模块依赖 harvest.redact；缺了也要能起服务，接口里另有兜底
     import memimport  # noqa: E402
 except Exception:  # noqa: BLE001
@@ -41,23 +55,18 @@ PORT = int(os.environ.get("PMEM_WEB_PORT", "8765"))
 INDEX_FILE = WEB / "index.html"
 
 # ---------- 数据位置配置（可自由选择，env > 配置文件 > 默认） ----------
-CONFIG_FILE = BASE / "pmem_config.json"
+# 配置写在数据目录：界面保存的位置必须就是 mem.py / backup.py 读取的位置
+CONFIG_FILE = _paths.config_file()
 # 数据位置配置（env > pmem_config.json > 默认）：发布可移植，勿写死机器路径；
-# 本机实际位置请写入 pmem_config.json（已在 .gitignore，数据与代码分离）
+# 本机实际位置请在界面「数据位置」设置，或设 PMEM_HOME（配置已在 .gitignore，数据与代码分离）
 _DEFAULTS = {
-    "home": str(BASE),
-    "chunks": os.environ.get("PMEM_CHUNKS", str(BASE / "chunks")),
-    "spaces": os.environ.get("PMEM_SPACES", str(BASE)),
+    "home": str(DATA_ROOT),
+    "chunks": os.environ.get("PMEM_CHUNKS", str(DATA_ROOT / "chunks")),
+    "spaces": os.environ.get("PMEM_SPACES", str(DATA_ROOT)),
 }
 
 def load_pmem_config() -> dict:
-    try:
-        c = json.loads(CONFIG_FILE.read_text(encoding="utf-8", errors="ignore"))
-        if isinstance(c, dict):
-            return c
-    except (OSError, json.JSONDecodeError):
-        pass
-    return {}
+    return _paths.load_config()
 
 _PMEM_CFG = load_pmem_config()
 CHUNKS_ROOT = Path(os.environ.get("PMEM_CHUNKS", _PMEM_CFG.get("chunks") or _DEFAULTS["chunks"]))
@@ -86,6 +95,36 @@ def path_check(p: str) -> dict:
     return {"exists": False, "writable": False, "ok": parent_ok, "creatable": True,
             "note": "不存在，" + ("父目录可写可创建" if parent_ok else "父目录不可写")}
 
+def _import_desktop_module():
+    """仅在桌面壳内导入 desktop（它带 GUI 依赖，独立 server 模式不该 import）。
+
+    desktop.py 顶层只做惰性导入与常量定义，import 本身不会起窗口，可以安全调用。
+    """
+    if os.environ.get("PMEM_DESKTOP", "").strip() != "1":
+        return None
+    try:
+        import desktop  # noqa: PLC0415
+    except Exception:  # noqa: BLE001
+        return None
+    return desktop
+
+
+def _autostart_info() -> dict:
+    """开机自启能力探测：桌面壳 + 平台支持才算可用。"""
+    d = _import_desktop_module()
+    if d is None:
+        return {"supported": False, "enabled": False, "platform": sys.platform,
+                "reason": "当前不是桌面壳运行（浏览器模式无系统自启权限）"}
+    if not (sys.platform == "win32" or sys.platform == "darwin" or sys.platform.startswith("linux")):
+        return {"supported": False, "enabled": False, "platform": sys.platform,
+                "reason": f"当前平台不支持开机自启：{sys.platform}"}
+    try:
+        return {"supported": True, "enabled": bool(d.autostart_enabled()), "platform": sys.platform}
+    except Exception as exc:  # noqa: BLE001
+        return {"supported": False, "enabled": False, "platform": sys.platform,
+                "reason": f"读取自启状态失败：{exc}"}
+
+
 def save_pmem_config(patch: dict) -> tuple[bool, str]:
     """保存数据位置配置（跨会话一致：写 pmem_config.json，所有进程读同一文件）。"""
     cfg = load_pmem_config()
@@ -93,7 +132,7 @@ def save_pmem_config(patch: dict) -> tuple[bool, str]:
         if k in patch and patch[k] is not None:
             cfg[k] = str(patch[k]).strip()
     try:
-        CONFIG_FILE.write_text(json.dumps(cfg, ensure_ascii=False, indent=2), encoding="utf-8")
+        _atomic_write(CONFIG_FILE, json.dumps(cfg, ensure_ascii=False, indent=2), encoding="utf-8")
         return True, str(CONFIG_FILE)
     except OSError as exc:
         return False, str(exc)
@@ -112,7 +151,7 @@ HOSTS = [
     ("CodeBuddy", str(Path.home() / ".codebuddy" / "skills" / "personal-memory" / "SKILL.md")),
     ("DSH (DeepSeek Harness)", str(Path.home() / ".dsh" / "skills" / "personal-memory" / "SKILL.md")),
 ]
-SKILL_TEMPLATE = BASE / "templates" / "personal-memory.SKILL.md"
+SKILL_TEMPLATE = CODE_ROOT / "templates" / "personal-memory.SKILL.md"
 
 # ---------- MCP 一键安装配置（各宿主） ----------
 def _default_py() -> str:
@@ -124,7 +163,7 @@ def _default_py() -> str:
     return "python"
 
 PY_ABS = _default_py()
-MCP_SCRIPT = str(BASE / "evermem_mcp.py")
+MCP_SCRIPT = str(CODE_ROOT / "evermem_mcp.py")
 MCP_SERVER_NAME = "evermem"
 
 MCP_TARGETS = [
@@ -168,7 +207,7 @@ def mcp_install_json(file_path: str) -> tuple[bool, str]:
         servers[MCP_SERVER_NAME] = mcp_entry()[MCP_SERVER_NAME]
         d["mcpServers"] = servers
         p.parent.mkdir(parents=True, exist_ok=True)
-        p.write_text(json.dumps(d, ensure_ascii=False, indent=2), encoding="utf-8")
+        _atomic_write(p, json.dumps(d, ensure_ascii=False, indent=2), encoding="utf-8")
         return True, str(p)
     except (OSError, json.JSONDecodeError) as exc:
         return False, str(exc)
@@ -188,7 +227,7 @@ def mcp_install_yaml(file_path: str) -> tuple[bool, str]:
             f"      args:\n        - {MCP_SCRIPT}\n"
         )
         p.parent.mkdir(parents=True, exist_ok=True)
-        p.write_text(raw.rstrip() + "\n" + block, encoding="utf-8")
+        _atomic_write(p, raw.rstrip() + "\n" + block, encoding="utf-8")
         return True, str(p)
     except OSError as exc:
         return False, str(exc)
@@ -198,6 +237,23 @@ import threading as _threading
 import uuid as _uuid
 
 _TASKS: dict[str, dict] = {}
+
+def _atomic_write(path: Path, text: str, encoding: str = "utf-8") -> None:
+    """原子写：先写临时文件再 os.replace。
+
+    服务是 ThreadingHTTPServer 多线程，且可能和 MCP 常驻、CLI、后台任务并发写同一批文件；
+    直接 write_text 中途被打断会留下截断的 JSON/Markdown（表现为"记忆无声消失"）。
+    """
+    tmp = path.with_name(path.name + f".tmp-{os.getpid()}")
+    try:
+        tmp.write_text(text, encoding=encoding)
+        os.replace(tmp, path)
+    finally:
+        try:
+            tmp.unlink(missing_ok=True)
+        except OSError:
+            pass
+
 
 def _run_task(task_id: str, fn, retries: int = 1) -> None:
     import subprocess as _sp
@@ -392,10 +448,34 @@ class Handler(BaseHTTPRequestHandler):
         if not host:
             return False
         h = host.split(":", 1)[0].strip().strip("[]").lower()
-        return h in ("127.0.0.1", "localhost", "::1")
+        if h not in ("127.0.0.1", "localhost", "::1"):
+            return False
+        # CSRF 第二道闸：跨站简单请求（text/plain 等不触发预检）Host 天然就是
+        # 127.0.0.1:PORT，Host 校验拦不住，必须再核 Origin。
+        #   · 无 Origin（curl / CLI / 同源 GET）：放行
+        #   · Origin 与本服务同源（http://127.0.0.1:PORT / localhost）：放行
+        #   · 其余（跨站、Origin:null 的 no-cors 探测）：拒绝
+        origin = self.headers.get("Origin", "").strip().rstrip("/")
+        if origin:
+            port = self.server.server_address[1]
+            allowed = {f"http://127.0.0.1:{port}", f"http://localhost:{port}",
+                       "http://127.0.0.1", "http://localhost"}
+            if origin not in allowed:
+                return False
+        return True
 
     # ---------- GET ----------
     def do_GET(self):
+        """GET 入口：异常兜底，任何路由抛错都不打挂服务。"""
+        try:
+            self._do_GET()
+        except Exception as exc:  # noqa: BLE001 - 未知异常不能打死服务
+            try:
+                self._json({"ok": False, "error": f"内部错误：{type(exc).__name__}"}, 500)
+            except Exception:
+                pass
+
+    def _do_GET(self):
         if not self._host_ok():
             self.send_error(403, "host not allowed")
             return
@@ -609,6 +689,14 @@ class Handler(BaseHTTPRequestHandler):
             if not root.exists() or not root.is_dir():
                 self._json({"error": "路径不存在"}, 404)
                 return
+            # 只扫描用户声明的知识空间（SPACES_ROOT）内的目录，拒绝任意路径探测
+            try:
+                if not root.resolve().is_relative_to(SPACES_ROOT.resolve()):
+                    self._json({"error": "越界：只能扫描知识空间目录"}, 403)
+                    return
+            except OSError:
+                self._json({"error": "路径不可解析"}, 400)
+                return
             by_ext: dict[str, int] = {}
             total = 0
             size = 0
@@ -630,12 +718,23 @@ class Handler(BaseHTTPRequestHandler):
             return
         if p == "/api/block":
             path = parse_qs(u.query).get("path", [""])[0]
+            full = Path(path)
             try:
-                text = Path(path).read_text(encoding="utf-8", errors="ignore")
+                full = full.resolve()
+            except OSError:
+                self._json({"error": "路径不可解析"}, 400)
+                return
+            # 只允许读块库或知识空间内的文件，拒绝任意路径读取（曾可读 C:\Users\...\id_rsa 等）
+            if not (full.is_file()
+                    and (full.is_relative_to(CHUNKS_ROOT.resolve()) or full.is_relative_to(SPACES_ROOT.resolve()))):
+                self._json({"error": "越界或非文件"}, 403)
+                return
+            try:
+                text = full.read_text(encoding="utf-8", errors="ignore")
             except OSError:
                 self._json({"error": "read failed"}, 404)
                 return
-            self._json({"path": path, "text": text[:5000]})
+            self._json({"path": str(full), "text": text[:5000]})
             return
         if p == "/api/hosts":
             hosts = []
@@ -664,11 +763,48 @@ class Handler(BaseHTTPRequestHandler):
             return
         if p == "/api/config":
             """数据位置配置：当前值 + 权限/空间检查（供 UI 显示与修改）。"""
-            cur = {"home": str(BASE), "chunks": str(CHUNKS_ROOT), "spaces": str(SPACES_ROOT),
+            cur = {"home": str(DATA_ROOT), "chunks": str(CHUNKS_ROOT), "spaces": str(SPACES_ROOT),
                    "config_file": str(CONFIG_FILE)}
             self._json({"current": cur,
                         "checks": {k: path_check(str(Path(v))) for k, v in cur.items()},
                         "note": "配置优先级：环境变量 > pmem_config.json > 默认；修改后重启 server/launcher 生效。跨会话一致：所有进程读同一配置文件。"})
+            return
+        if p == "/api/autostart":
+            """开机自启状态：只在桌面壳内可用（PMEM_DESKTOP=1），
+            纯浏览器/独立 server 模式必须如实报 unsupported，前端据此禁用开关。"""
+            info = _autostart_info()
+            self._json(info)
+            return
+        if p == "/api/version":
+            """读取 VERSION 文件，返回当前版本和官方发布页，供「检查更新」入口使用。"""
+            version = "unknown"
+            try:
+                version = (CODE_ROOT / "VERSION").read_text(encoding="utf-8").strip()
+            except Exception:
+                pass
+            self._json({
+                "version": version,
+                "releases_url": "https://github.com/linhut/evermem/releases/latest",
+            })
+            return
+        if p == "/api/update/check":
+            """多源更新检查：自建清单 → GitHub 直连/镜像。
+            全部源不可用必须返回 ok=False + attempts，由前端明确提示，不允许静默说"已是最新"。"""
+            if update is None:
+                self._json({"ok": False, "error": "更新模块不可用"}, 500)
+                return
+            q = parse_qs(u.query)
+            force = str(q.get("force", ["0"])[0]).strip() in ("1", "true", "yes")
+            try:
+                self._json(update.check(force=force))
+            except Exception as exc:  # noqa: BLE001 - 网络异常不能打挂服务
+                self._json({"ok": False, "error": f"检查失败：{exc}"}, 500)
+            return
+        if p == "/api/update/sources":
+            if update is None:
+                self._json({"error": "更新模块不可用"}, 500)
+                return
+            self._json(update.sources_info())
             return
         if p == "/api/profile/prompt":
             # 「其他记忆导入」页的「导出记忆提示词」卡片数据源：直接读模板里的 COPY 区间。
@@ -688,6 +824,16 @@ class Handler(BaseHTTPRequestHandler):
 
     # ---------- POST ----------
     def do_POST(self):
+        """POST 入口：异常兜底（曾因 SYS_PY 未定义直接 NameError 断连，前端只看到"处理中"）。"""
+        try:
+            self._do_POST()
+        except Exception as exc:  # noqa: BLE001 - 未知异常不能打死服务
+            try:
+                self._json({"ok": False, "error": f"内部错误：{type(exc).__name__}"}, 500)
+            except Exception:
+                pass
+
+    def _do_POST(self):
         if not self._host_ok():
             self.send_error(403, "host not allowed")
             return
@@ -869,16 +1015,17 @@ class Handler(BaseHTTPRequestHandler):
             archive_dir.mkdir(parents=True, exist_ok=True)
             body = self._body()
             ids = set(body.get("ids") or []) if isinstance(body, dict) else set()
+            if not ids:
+                # 拒绝空 ids：无明确目标时绝不批量移动。
+                # 旧实现存在"空 ids 自动归档全部≥60天候选"的隐蔽分支，正是 CSRF 的攻击面
+                # （跨站 text/plain POST 会解析成 {} → ids 为空 → 批量归档）。已移除。
+                self._json({"error": "ids 必填"}, 400)
+                return
             moved = []
             if cand_dir.exists():
-                now = time.time()
                 for f in sorted(cand_dir.glob("cand-*.md")):
                     d = mem.parse_note(f) or {}
-                    if ids:
-                        if str(d.get("id")) in ids:
-                            f.rename(archive_dir / f.name)
-                            moved.append(f.stem)
-                    elif mem.cand_age_days(str(d.get("created", "")), now) >= 60:
+                    if str(d.get("id")) in ids:
                         f.rename(archive_dir / f.name)
                         moved.append(f.stem)
             mem.build_index()
@@ -913,7 +1060,7 @@ class Handler(BaseHTTPRequestHandler):
                             raw = _re.sub(r"^status:\s*\S+", f"status: {status}", raw, count=1, flags=_re.M)
                         else:
                             raw = raw.replace("---\n", f"---\nstatus: {status}\n", 1)
-                        f.write_text(raw, encoding="utf-8")
+                        _atomic_write(f, raw)
                         updated.append(nid)
                     except OSError:
                         failed.append(nid)
@@ -933,10 +1080,17 @@ class Handler(BaseHTTPRequestHandler):
             status = b.get("status") if b.get("status") in ("active", "staged", "suspect", "superseded") else "staged"
             tags_raw = (b.get("tags") or "").strip()
             tags = [t.strip() for t in tags_raw.replace("，", ",").split(",") if t.strip()] or ["手动", "待整理"]
-            nid = time.strftime("%Y%m%d-%H%M%S") + "-web"
+            # 毫秒级 id：原来只到秒，同秒新建会生成同名文件互相覆盖（曾实际发生）
+            nid = time.strftime("%Y%m%d-%H%M%S") + f"-{int(time.time() * 1000) % 1000:03d}-web"
+            # 按类型落目录（procedure/procedures、fact/facts、lesson/lessons），原来一律写 lessons/
+            ntype_dir = {"procedure": "procedures", "fact": "facts", "lesson": "lessons"}.get(ntype, "lessons")
             note = (f"---\nid: {nid}\ntype: {ntype}\nstatus: {status}\ntitle: {title}\n"
                     f"tags: [{', '.join(tags)}]\ncreated: {time.strftime('%Y-%m-%d')}\n---\n\n{body}\n")
-            (BASE / "notes" / "lessons" / f"web-{nid}.md").write_text(note, encoding="utf-8")
+            target = mem.NOTES / ntype_dir / f"web-{nid}.md"
+            if target.exists():
+                self._json({"error": "id 冲突，请重试"}, 409)
+                return
+            _atomic_write(target, note)
             mem.build_index()
             self._json({"ok": True, "id": nid, "status": status})
             return
@@ -963,7 +1117,7 @@ class Handler(BaseHTTPRequestHandler):
                     raw = _re.sub(r"^status:\s*\S+", f"status: {status}", raw, count=1, flags=_re.M)
                 else:
                     raw = raw.replace("---\n", f"---\nstatus: {status}\n", 1)
-                path.write_text(raw, encoding="utf-8")
+                _atomic_write(path, raw)
                 mem.build_index()
                 self._json({"ok": True, "status": status})
                 return
@@ -972,7 +1126,7 @@ class Handler(BaseHTTPRequestHandler):
                 raw = path.read_text(encoding="utf-8")
                 new = _re.sub(r"^hot:\s*(true|1|yes)\s*\n", "", raw, flags=_re.M)
                 if new != raw:
-                    path.write_text(new, encoding="utf-8")
+                    _atomic_write(path, new)
                     mem.build_index()
                 self._json({"ok": True})
                 return
@@ -987,8 +1141,14 @@ class Handler(BaseHTTPRequestHandler):
                         k, v = line.split(":", 1)
                         meta[k.strip()] = v.strip()
                 if b.get("type"):
+                    if b["type"] not in ("procedure", "lesson", "fact"):
+                        self._json({"error": "bad type"}, 400)
+                        return
                     meta["type"] = b["type"]
                 if b.get("status"):
+                    if b["status"] not in ("active", "staged", "suspect", "superseded"):
+                        self._json({"error": "bad status"}, 400)
+                        return
                     meta["status"] = b["status"]
                 if b.get("title"):
                     meta["title"] = b["title"].strip().replace("\n", " ")
@@ -1002,7 +1162,7 @@ class Handler(BaseHTTPRequestHandler):
                 # d.get("body") 兜底——会拿截断摘要覆盖全文导致笔记内容丢失。改读原文件保留。
                 body_new = b.get("body") if "body" in b else body_old
                 text = "---\n" + "\n".join(f"{k}: {v}" for k, v in meta.items()) + "\n---\n\n" + body_new.strip() + "\n"
-                path.write_text(text, encoding="utf-8")
+                _atomic_write(path, text)
                 mem.build_index()
                 self._json({"ok": True})
                 return
@@ -1013,7 +1173,7 @@ class Handler(BaseHTTPRequestHandler):
                     raw = raw.replace("---\n", "---\nhot: true\n", 1)
                 else:
                     raw = _re.sub(r"^hot:\s*\S+", "hot: true", raw, count=1, flags=_re.M)
-                path.write_text(raw, encoding="utf-8")
+                _atomic_write(path, raw)
                 mem.build_index()
                 self._json({"ok": True})
                 return
@@ -1027,12 +1187,12 @@ class Handler(BaseHTTPRequestHandler):
                 return
             CHUNKS_ROOT.mkdir(parents=True, exist_ok=True)
             tid = _uuid.uuid4().hex[:10]
-            _run_task(tid, [SYS_PY, str(BASE / "scripts" / "ingest.py"), "extract", path, "--out-dir", str(CHUNKS_ROOT)])
+            _run_task(tid, [PY_ABS, str(CODE_ROOT / "scripts" / "ingest.py"), "extract", path, "--out-dir", str(CHUNKS_ROOT)])
             self._json({"ok": True, "task_id": tid, "note": "后台提取中，轮询 /api/task/status"})
             return
         if p == "/api/harvest":
             tid = _uuid.uuid4().hex[:10]
-            _run_task(tid, [sys.executable, str(BASE / "harvest.py"), "scan", "--days", "3"])
+            _run_task(tid, [sys.executable, str(CODE_ROOT / "harvest.py"), "scan", "--days", "3"])
             self._json({"ok": True, "task_id": tid, "note": "后台收割中，轮询 /api/task/status"})
             return
         # /api/task/status 只在 do_GET 定义：任务进度是只读查询，POST 版是历史复制残留
@@ -1058,7 +1218,7 @@ class Handler(BaseHTTPRequestHandler):
             dpath = Path(dest)
             try:
                 dpath.parent.mkdir(parents=True, exist_ok=True)
-                dpath.write_text(SKILL_TEMPLATE.read_text(encoding="utf-8"), encoding="utf-8")
+                _atomic_write(dpath, SKILL_TEMPLATE.read_text(encoding="utf-8"), encoding="utf-8")
             except OSError as exc:
                 self._json({"error": str(exc)}, 500)
                 return
@@ -1078,6 +1238,42 @@ class Handler(BaseHTTPRequestHandler):
                 results.append({"path": f, "ok": ok, "msg": msg})
             self._json({"ok": True, "host": label, "results": results,
                         "note": "WorkBuddy/DSH 需重启宿主或新会话生效；WorkBuddy 还需在连接器管理页对新增 MCP 点 Trust。"})
+            return
+        if p == "/api/update/sources/save":
+            """保存更新源配置：写完回读真实值，界面显示的就是实际生效的配置。"""
+            if update is None:
+                self._json({"ok": False, "error": "更新模块不可用"}, 500)
+                return
+            b = self._body()
+            try:
+                cfg = update.save_config(b if isinstance(b, dict) else {})
+            except Exception as exc:  # noqa: BLE001
+                self._json({"ok": False, "error": f"保存失败：{exc}"}, 500)
+                return
+            self._json({"ok": True, "config": cfg, "file": str(update.config_file())})
+            return
+        if p == "/api/autostart/save":
+            """设置开机自启：写完立刻回读系统真实状态，不一致就报失败，
+            绝不直接返回 ok（否则界面开关与系统状态脱节，属于假成功）。"""
+            b = self._body()
+            wanted = bool(b.get("enabled"))
+            info = _autostart_info()
+            if not info.get("supported"):
+                self._json({"ok": False, "error": info.get("reason") or "当前环境不支持开机自启"}, 400)
+                return
+            try:
+                _import_desktop_module().set_autostart(wanted)
+            except Exception as exc:  # noqa: BLE001
+                self._json({"ok": False, "error": f"设置失败：{exc}"}, 500)
+                return
+            after = _autostart_info()
+            real = bool(after.get("enabled"))
+            if real != wanted:
+                self._json({"ok": False, "error": "系统未接受该设置（可能被安全策略拦截）",
+                            "enabled": real}, 500)
+                return
+            self._json({"ok": True, "enabled": real,
+                        "note": "已写入系统自启项，下次登录后生效。"})
             return
         if p == "/api/config/save":
             b = self._body()
@@ -1115,27 +1311,30 @@ def main() -> int:
             while True:
                 try:
                     subprocess.run(
-                        [sys.executable, str(BASE / "harvest.py"), "scan", "--days", "1"],
-                        capture_output=True, text=True, timeout=300, cwd=str(BASE))
+                        [sys.executable, str(CODE_ROOT / "harvest.py"), "scan", "--days", "1"],
+                        capture_output=True, text=True, timeout=300, cwd=str(CODE_ROOT))
                     # 扫描后自动评审：多角色转正（仅 lesson）+ 否决项归档，防止候选池随收割爆满
                     subprocess.run(
-                        [sys.executable, str(BASE / "mem.py"), "candidates", "auto", "--purge"],
-                        capture_output=True, text=True, timeout=300, cwd=str(BASE))
+                        [sys.executable, str(CODE_ROOT / "mem.py"), "candidates", "auto", "--purge"],
+                        capture_output=True, text=True, timeout=300, cwd=str(CODE_ROOT))
                 except Exception as exc:  # noqa: BLE001
                     print(f"[auto-harvest] 失败：{exc}", file=sys.stderr)
                 time.sleep(harvest_secs)
 
         _threading.Thread(target=_harvest_loop, daemon=True, name="pmem-auto-harvest").start()
 
-    # 引擎变更检测：mem.py 等改动后提示重启（进程是启动时代码快照）
-    _engine_mtimes = {name: (BASE / name).stat().st_mtime
-                      for name in ("mem.py", "backup.py", "harvest.py", "server.py") if (BASE / name).exists()}
+    # 引擎变更检测：mem.py 等改动后提示重启（进程是启动时代码快照）。
+    # server.py 在 web/ 子目录，原用 CODE_ROOT/name 构造路径导致它永远匹配不到，已改为按实际位置。
+    _engine_files = {"mem.py": CODE_ROOT / "mem.py", "backup.py": CODE_ROOT / "backup.py",
+                     "harvest.py": CODE_ROOT / "harvest.py", "server.py": WEB / "server.py"}
+    _engine_mtimes = {name: p.stat().st_mtime
+                      for name, p in _engine_files.items() if p.exists()}
 
     def _engine_watch():
         while True:
             try:
                 for name, m in _engine_mtimes.items():
-                    p = BASE / name
+                    p = _engine_files[name]
                     if p.exists() and p.stat().st_mtime > m:
                         print(f"[引擎变更] {name} 已在启动后被修改——当前进程仍是旧代码快照，"
                               f"请重启 server 使改动生效", file=sys.stderr)

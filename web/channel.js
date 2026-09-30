@@ -156,13 +156,13 @@ const BK = (function () {
 
   /** 行内编辑面板：与向导共用同一套字段卡渲染 */
   function editorHTML(c) {
-    const t = c.type;
-    const conn = layoutOf(t).map(r => fieldCardPrimary(t, r, c)).join('');
-    const policy = stepFields(t, 'policy').map(f =>
+    const ty = c.type;
+    const conn = layoutOf(ty).map(r => fieldCardPrimary(ty, r, c)).join('');
+    const policy = stepFields(ty, 'policy').map(f =>
       `<div class="bkfield"><span class="bkflabel">${f.label}${f.required ? ' <em>*</em>' : ''}</span>
-        <div class="bkfrow">${input(t, f, c)}</div>
+        <div class="bkfrow">${input(ty, f, c)}</div>
         ${f.hint ? `<span class="bkfhint">${f.hint}</span>` : ''}</div>`).join('');
-    const smtp = t === 'mail' ? `<div class="bkfield"><span class="bkflabel">SMTP 服务器 · 端口</span>
+    const smtp = ty === 'mail' ? `<div class="bkfield"><span class="bkflabel">SMTP 服务器 · 端口</span>
         <div class="bkfrow"><input data-k="smtp_host" value="${((c.smtp || {}).host) || ''}" placeholder="smtp.example.com" />
         <input data-k="smtp_port" type="number" value="${((c.smtp || {}).port) || 465}" style="flex:0 0 30%" /></div></div>
       <div class="bkfield"><span class="bkflabel">SMTP 用户 · 密码</span>
@@ -186,8 +186,8 @@ const BK = (function () {
         </div>
       </div>
       ${dsc.tone === 'danger' ? `<div class="bkline danger">${dsc.note} · <a data-bk="log" style="cursor:pointer;text-decoration:underline">查看日志</a></div>` : ''}
-      ${t === 'baidu-pan' ? '<div class="bkline warning">百度网盘官方接口不稳定、自动化涉违规风险——本渠道只生成加密归档包与上传清单（UPLOAD.md），请按清单手动拖入网盘。</div>' : ''}
-      ${t === 's3' && missingCreds(c) ? '<div class="bkline warning">凭证与归档密码可后填：留空＝沿用已存值，不影响其他字段保存。</div>' : ''}
+      ${ty === 'baidu-pan' ? '<div class="bkline warning">百度网盘官方接口不稳定、自动化涉违规风险——本渠道只生成加密归档包与上传清单（UPLOAD.md），请按清单手动拖入网盘。</div>' : ''}
+      ${ty === 's3' && missingCreds(c) ? '<div class="bkline warning">凭证与归档密码可后填：留空＝沿用已存值，不影响其他字段保存。</div>' : ''}
     </div>`;
   }
 
@@ -456,11 +456,11 @@ const BK = (function () {
   const closeWizard = () => { const m = $('#bkWizard'); if (m) m.classList.remove('show'); };
 
   function wizardBody() {
-    const t = S.type, sp = spec(t);
+    const ty = S.type, sp = spec(ty);
     const stepper = `<div class="bkstepper">${STEP_TITLES.map((s, i) =>
       `<span class="bkstep${S.step === i + 1 ? ' on' : ''}${S.step > i + 1 ? ' done' : ''}">${i + 1} ${s}</span>`).join('<i></i>')}</div>`;
     const sub = S.step === 1 ? '步骤 1 / 4 · 选择渠道类型'
-      : S.step === 2 ? (t === 's3' ? '步骤 2 / 4 · 连接参数（对象存储统一走 S3 兼容协议）'
+      : S.step === 2 ? (ty === 's3' ? '步骤 2 / 4 · 连接参数（对象存储统一走 S3 兼容协议）'
         : `步骤 2 / 4 · ${((sp && sp.label) || '').replace(/（.*/, '')}连接参数`)
         : S.step === 3 ? '步骤 3 / 4 · 加密与策略' : '步骤 4 / 4 · 确认并保存';
     return `${stepper}
@@ -506,30 +506,30 @@ const BK = (function () {
       return `<div style="display:flex;flex-direction:column;gap:8px">${Object.entries(S.schema).map(([k, p]) =>
         `<div class="pane bkpick" data-bk="wiz-type" data-t="${k}"><div style="font-weight:500">${p.label}</div><div class="sub">${p.desc}</div></div>`).join('')}</div>`;
     }
-    const t = S.type;
+    const ty = S.type;
     if (S.step === 2) {
-      const chips = t === 's3'
+      const chips = ty === 's3'
         ? `<div class="sub" style="margin-bottom:6px">服务商（对象存储统一走 S3 兼容协议，选后自动填充 Endpoint / Region）</div>
            <div class="bkchips">${S3_PRESETS.map(p =>
           `<button type="button" class="bkchip${S.preset === p.id ? ' active' : ''}" data-bk="wiz-preset" data-p="${p.id}">${p.label}</button>`).join('')}
            <button type="button" class="bkchip${S.preset === 'custom' ? ' active' : ''}" data-bk="wiz-preset" data-p="custom">自定义</button></div>`
         : '';
-      const conn = layoutOf(t).map(r => fieldCardPrimary(t, r, S.draft)).join('');
-      const tip = t === 's3'
+      const conn = layoutOf(ty).map(r => fieldCardPrimary(ty, r, S.draft)).join('');
+      const tip = ty === 's3'
         ? '<div class="bktip">密钥只写入本机配置文件，不随备份上传 · 建议在 Bucket 上开启版本控制</div>' : '';
       return chips + `<div class="bkgrid">${conn}</div>` + tip;
     }
     if (S.step === 3) {
-      const policy = stepFields(t, 'policy').filter(f => f.k !== 'frequency_hours' && f.k !== 'retention');
-      const freq = stepFields(t, 'policy').filter(f => ['frequency_hours', 'retention'].includes(f.k));
-      const pw = stepFields(t, 'policy').find(f => f.type === 'password');
+      const policy = stepFields(ty, 'policy').filter(f => f.k !== 'frequency_hours' && f.k !== 'retention');
+      const freq = stepFields(ty, 'policy').filter(f => ['frequency_hours', 'retention'].includes(f.k));
+      const pw = stepFields(ty, 'policy').find(f => f.type === 'password');
       return `<div class="bkgrid">
           <div class="bkfield"><span class="bkflabel">渠道名称</span><div class="bkfrow">
-            <input data-k="name" value="${String(S.draft.name || defaultName(t)).replace(/"/g, '&quot;')}" /></div></div>
+            <input data-k="name" value="${String(S.draft.name || defaultName(ty)).replace(/"/g, '&quot;')}" /></div></div>
           ${policy.map(f => `<div class="bkfield"><span class="bkflabel">${f.label}${f.required ? ' <em>*</em>' : ''}</span>
-            <div class="bkfrow">${input(t, f, S.draft)}</div>${f.hint ? `<span class="bkfhint">${f.hint}</span>` : ''}</div>`).join('')}
+            <div class="bkfrow">${input(ty, f, S.draft)}</div>${f.hint ? `<span class="bkfhint">${f.hint}</span>` : ''}</div>`).join('')}
           ${freq.map(f => `<div class="bkfield"><span class="bkflabel">${f.label}</span>
-            <div class="bkfrow">${input(t, f, S.draft)}</div></div>`).join('')}
+            <div class="bkfrow">${input(ty, f, S.draft)}</div></div>`).join('')}
         </div>
         ${pw ? '<div class="bktip warn">归档加密密码在<b>出本机前</b>生效：丢失将无法解密，请自行离线备份一份。</div>' : ''}
         <div class="bkfield" style="margin-top:10px"><span class="bkflabel">备份范围</span>
@@ -540,7 +540,7 @@ const BK = (function () {
     /* 步骤 4：确认，摘要用人类可读的字段标签而非原始键名 */
     const labelOf = k => k === 'name' ? '渠道名称'
       : k === 'scope' ? '备份范围'
-        : ((field(t, k) || {}).label || k);
+        : ((field(ty, k) || {}).label || k);
     const rows = Object.entries(S.draft)
       .filter(([k, v]) => !['secret_key', 'archive_password'].includes(k) && String(v).trim() !== '')
       .map(([k, v]) => {
@@ -551,8 +551,8 @@ const BK = (function () {
     const hasPw = !!S.draft.archive_password || !!S.draft.secret_key;
     return `<div class="pane">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-        <span class="badge" style="color:var(--accent);background:var(--accent-bg)">${TYPE_TAG[t] || t}</span>
-        <b>${S.draft.name || ((spec(t) || {}).label) || t}</b><span style="flex:1"></span>
+        <span class="badge" style="color:var(--accent);background:var(--accent-bg)">${TYPE_TAG[ty] || ty}</span>
+        <b>${S.draft.name || ((spec(ty) || {}).label) || ty}</b><span style="flex:1"></span>
         ${S.tested ? '<span class="badge" style="color:var(--success);background:var(--success-bg)">● 连接已验证</span>'
           : '<span class="badge" style="color:var(--text2);background:var(--surface2)">○ 未测试</span>'}
       </div>
@@ -592,8 +592,8 @@ const BK = (function () {
   }
 
   function draftMissing() {
-    const t = S.type;
-    const need = fieldsOf(t).filter(f => f.required && (f.step || 'conn') === 'conn').map(f => f.k)
+    const ty = S.type;
+    const need = fieldsOf(ty).filter(f => f.required && (f.step || 'conn') === 'conn').map(f => f.k)
       .filter(k => !String(S.draft[k] || '').trim());
     return need;
   }

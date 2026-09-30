@@ -9,13 +9,13 @@
 
 | 入口 | 启动 | 适合 |
 |---|---|---|
-| **桌面端**（推荐） | `web/launcher.py`（pywebview 原生窗口 + Web UI） | 日常浏览/治理/导入 |
+| **桌面端**（推荐） | `desktop.py`（PySide6/QtWebEngine 内嵌 Web UI）或发布产物 `Evermem-<平台>-v*` | 日常浏览/治理/导入 |
 | **浏览器** | `web/server.py` → http://127.0.0.1:8765 | 临时查看 |
 | **CLI / Agent** | `mem.py` · `evermem_mcp.py`（MCP 工具） | 会话中 recall、编写脚本、DSH/Claude 调用 |
 
 ```bash
-# 桌面端（开发热预览：PMEM_DEV=1 改前端自动刷新）
-python web/launcher.py
+# 桌面端
+python desktop.py
 ```
 
 ---
@@ -113,7 +113,7 @@ PY=python                                   # 解释器：PMEM_SYS_PY 指定或�
 ```
 <仓库根>（= 项目根）            核心（进 Git）
 ├── mem.py / harvest.py / scripts/ingest.py / evermem_mcp.py / scripts/knowledge_scan.py / scripts/check_all.py
-├── web/  server.py + launcher.py + index.html/js（桌面封装）
+├── web/  server.py + index.html/js（内嵌界面；桌面封装走 desktop.py）
 ├── notes/{procedures,lessons,facts}/ + candidates/（数量以 mem.py stats 为准）
 ├── index.json（派生，不进 Git）· events/ · kb.json + knowledge-base.md
 ├── tests/test_recall.py + test_recipes.py（回归）

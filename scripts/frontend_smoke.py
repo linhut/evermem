@@ -66,7 +66,21 @@ def main() -> int:
     missing_util = util - util_declared
     check("跨模块工具均可访问", not missing_util, f"缺: {sorted(missing_util)}")
 
-    print(f"\n共 5 项，通过 {5 - len(FAILS)}，失败 {len(FAILS)}")
+    print("六、视图路由一致性（侧栏入口 ↔ VIEWS ↔ render 分支 ↔ 模板函数）")
+    nav_views = set(re.findall(r'data-view="([a-z]+)"', html))
+    m = re.search(r"const VIEWS = \{([^}]*)\}", js)
+    view_keys = set(re.findall(r"([a-z]+):\s*'", m.group(1))) if m else set()
+    routed = set(re.findall(r"VIEW === '([a-z]+)'", js))
+    # 侧栏有入口却没有路由 = 点了白页；有路由却没有入口 = 只能靠深链进的孤儿视图
+    check("侧栏入口与 VIEWS 一一对应", nav_views == view_keys,
+          f"差集: 侧栏独有 {sorted(nav_views - view_keys)} / VIEWS 独有 {sorted(view_keys - nav_views)}")
+    check("每个视图都有 render 分支", view_keys <= routed, f"无分支: {sorted(view_keys - routed)}")
+    fns = set(re.findall(r"c\.innerHTML = (\w+HTML)\(\)", js))
+    fns_defined = set(re.findall(r"const (\w+HTML) =", js))
+    check("模板函数均已定义", fns <= fns_defined, f"缺定义: {sorted(fns - fns_defined)}")
+
+    total = 6
+    print(f"\n共 {total} 项，通过 {total - len(FAILS)}，失败 {len(FAILS)}")
     return 1 if FAILS and "--list" not in sys.argv else 0
 
 if __name__ == "__main__":

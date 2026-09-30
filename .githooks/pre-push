@@ -1,0 +1,34 @@
+#!/bin/sh
+# 恒忆 Evermem · 推送前增量更新代码索引（codegraph）
+#
+# 为什么要挂在 push 流程：
+#   代码索引是本地派生物，不进版本库（.gitignore 已忽略 .codegraph/）。
+#   只有推送时同步一次，才能保证「远端有什么，本地索引就有什么」，
+#   下次会话用 codegraph 检索代码时不会拿到过期的符号位置。
+#
+# 三条铁律：
+#   1. 绝不阻断推送 —— codegraph 缺失、未初始化、同步失败一律静默放行（exit 0）。
+#   2. 只用 sync（增量），不用 index（全量）；全量重建留给 `codegraph index`。
+#   3. 后台噪音不外泄：--quiet + 重定向，避免污染 git 输出。
+
+set -u
+
+# 只在推送到远端时执行（pre-push 的 stdin 是 <local ref> <local sha> <remote ref> <remote sha> 行）
+command -v codegraph >/dev/null 2>&1 || exit 0
+
+ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
+[ -d "$ROOT/.codegraph" ] || exit 0
+
+# 后台执行，超时即放弃：索引再重要也不能让人等推送
+codegraph sync --quiet "$ROOT" >/dev/null 2>&1 &
+SYNC_PID=$!
+
+# 最多等 20 秒，超时就让它自己在后台跑完（进程会随父 shell 退出而结束，不做 kill 以免半途损坏 db）
+i=0
+while [ $i -lt 20 ]; do
+  kill -0 "$SYNC_PID" 2>/dev/null || break
+  i=$((i + 1))
+  sleep 1
+done
+
+exit 0

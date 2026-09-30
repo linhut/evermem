@@ -106,59 +106,123 @@ class SingleInstance:
 
 # ---------- 开机自启注册（跨平台入口；常用于后台常驻服务随系统启动） ----------
 def _launcher_cmd() -> list[str]:
-    """值得写入自启项的启动命令：本 exe + --autostart。"""
-    import shlex
+    """值得写入自启项的启动命令：本程序 + --autostart。"""
     if getattr(sys, "frozen", False):
-        exe = sys.executable
-        return [exe, "--autostart"]
+        return [sys.executable, "--autostart"]
     return [sys.executable, str(Path(__file__).resolve()), "--autostart"]
 
 
-def set_autostart(enabled: bool) -> None:
-    cmd = " ".join(_launcher_cmd())
-    if sys.platform == "win32":
-        import os
-        # 相对子键路径（与 autostart_enabled 一致）；winreg 不支持 "HKCU\" 缩写前缀，
-        # 曾因此 FileNotFoundError[WinError 2] 导致 --register-autostart 失败
-        key = r"Software\Microsoft\Windows\CurrentVersion\Run"
-        from winreg import (HKEY_CURRENT_USER, KEY_SET_VALUE, REG_SZ,
-                            OpenKey, SetValueEx, DeleteValue)
-        with OpenKey(HKEY_CURRENT_USER, key, 0, KEY_SET_VALUE) as k:
-            if enabled:
-                SetValueEx(k, "Evermem", 0, REG_SZ, cmd)
-            else:
-                try:
-                    DeleteValue(k, "Evermem")
-                except OSError:
-                    pass
+def _win_autostart(enabled: bool) -> None:
+    # 相对子键路径（与读取一致）；winreg 不支持 "HKCU\" 缩写前缀，
+    # 曾因此 FileNotFoundError[WinError 2] 导致 --register-autostart 失败
+    key = r"Software\Microsoft\Windows\CurrentVersion\Run"
+    from winreg import (HKEY_CURRENT_USER, KEY_SET_VALUE, REG_SZ,
+                        OpenKey, SetValueEx, DeleteValue)
+    with OpenKey(HKEY_CURRENT_USER, key, 0, KEY_SET_VALUE) as k:
+        if enabled:
+            SetValueEx(k, "Evermem", 0, REG_SZ, " ".join(_launcher_cmd()))
+        else:
+            try:
+                DeleteValue(k, "Evermem")
+            except OSError:
+                pass
+
+
+def _win_autostart_enabled() -> bool:
+    from winreg import (HKEY_CURRENT_USER, KEY_READ, OpenKey, QueryValueEx)
+    try:
+        with OpenKey(HKEY_CURRENT_USER,
+                     r"Software\Microsoft\Windows\CurrentVersion\Run", 0, KEY_READ) as k:
+            QueryValueEx(k, "Evermem")
+            return True
+    except OSError:
+        return False
+
+
+def _plist_argv() -> str:
+    import shlex
+    return "".join(f"<string>{shlex.quote(a)}</string>" for a in _launcher_cmd())
+
+
+def _mac_autostart(enabled: bool) -> None:
+    # macOS 不支持 ~/.config/autostart/*.desktop（那是 Linux XDG 规范），
+    # 必须写 launchd 用户代理：~/Library/LaunchAgents/<label>.plist。
+    adir = Path.home() / "Library" / "LaunchAgents"
+    plist = adir / "cn.linhut.evermem.plist"
+    if not enabled:
+        try:
+            plist.unlink()
+        except OSError:
+            pass
         return
-    # Linux / macOS：XDG autostart
+    adir.mkdir(parents=True, exist_ok=True)
+    plist.write_text(
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" '
+        '"http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n'
+        '<plist version="1.0"><dict>\n'
+        '  <key>Label</key><string>cn.linhut.evermem</string>\n'
+        '  <key>ProgramArguments</key><array>' + _plist_argv() + '</array>\n'
+        '  <key>RunAtLoad</key><true/>\n'
+        '  <key>ProcessType</key><string>Interactive</string>\n'
+        '</dict></plist>\n', encoding="utf-8")
+
+
+def _mac_autostart_enabled() -> bool:
+    return (Path.home() / "Library" / "LaunchAgents" / "cn.linhut.evermem.plist").exists()
+
+
+def _linux_autostart(enabled: bool) -> None:
+    # Linux：XDG 自启规范（~/.config/autostart/*.desktop）
     adir = Path.home() / ".config" / "autostart"
     app = adir / "evermem.desktop"
-    if enabled:
-        adir.mkdir(parents=True, exist_ok=True)
-        app.write_text(
-            "[Desktop Entry]\nType=Application\nName=Evermem\n"
-            f"Exec={cmd}\nX-GNOME-Autostart-enabled=true\n",
-            encoding="utf-8")
-    else:
+    if not enabled:
         try:
             app.unlink()
         except OSError:
             pass
+        return
+    adir.mkdir(parents=True, exist_ok=True)
+    import shlex
+    exec_cmd = " ".join(shlex.quote(a) for a in _launcher_cmd())
+    app.write_text(
+        "[Desktop Entry]\n"
+        "Type=Application\n"
+        "Version=1.0\n"
+        "Name=Evermem\n"
+        "Comment=恒忆 Evermem 个人记忆库\n"
+        f"Exec={exec_cmd}\n"
+        "Terminal=false\n"
+        "X-GNOME-Autostart-enabled=true\n", encoding="utf-8")
+
+
+def _linux_autostart_enabled() -> bool:
+    return (Path.home() / ".config" / "autostart" / "evermem.desktop").exists()
+
+
+def set_autostart(enabled: bool) -> None:
+    """开机自启开关：按平台写入系统自启项，失败抛异常（调用方须如实反馈）。"""
+    if sys.platform == "win32":
+        _win_autostart(enabled)
+        return
+    if sys.platform == "darwin":
+        _mac_autostart(enabled)
+        return
+    if sys.platform.startswith("linux"):
+        _linux_autostart(enabled)
+        return
+    raise RuntimeError(f"当前平台不支持开机自启：{sys.platform}")
 
 
 def autostart_enabled() -> bool:
+    """读取系统真实自启状态（不是界面缓存；开关初始值与保存后校验都靠它）。"""
     if sys.platform == "win32":
-        try:
-            from winreg import (HKEY_CURRENT_USER, KEY_READ, OpenKey, QueryValueEx)
-            with OpenKey(HKEY_CURRENT_USER,
-                         r"Software\Microsoft\Windows\CurrentVersion\Run", 0, KEY_READ) as k:
-                QueryValueEx(k, "Evermem")
-                return True
-        except OSError:
-            return False
-    return (Path.home() / ".config" / "autostart" / "evermem.desktop").exists()
+        return _win_autostart_enabled()
+    if sys.platform == "darwin":
+        return _mac_autostart_enabled()
+    if sys.platform.startswith("linux"):
+        return _linux_autostart_enabled()
+    return False
 
 
 # ---------- 内嵌 Web 服务（持有句柄便于干净退出；规避冻结态用 sys.executable 起子进程的陷阱） ----------
@@ -185,6 +249,31 @@ class EmbeddedServer:
                 time.sleep(secs)
 
         threading.Thread(target=_auto_loop, daemon=True, name="pmem-auto-backup").start()
+
+        # 自动收割：桌面常驻必须与 server.py 对齐（README 声明了 PMEM_AUTO_HARVEST_SECONDS）。
+        # 注意不能用 subprocess 拉 [sys.executable, harvest.py] —— 冻结态下 sys.executable
+        # 是 Evermem 自己，会把参数当 GUI 启动参数；必须同进程调用 cmd_scan。
+        if not os.environ.get("PMEM_NO_AUTO_HARVEST"):
+            import time as _t
+            harvest_secs = int(os.environ.get("PMEM_AUTO_HARVEST_SECONDS", "3600"))
+
+            def _auto_harvest():
+                while True:
+                    try:
+                        import harvest
+                        from argparse import Namespace
+                        harvest.cmd_scan(Namespace(days=1, min_failures=2, limit=20,
+                                                   dry_run=False, include_pure_failure=False,
+                                                   no_task_level=False))
+                        import mem as _mem
+                        _mem.cmd_candidates(Namespace(action="auto", cap=None, ids=None,
+                                                      purge=False, no_purge=False, reindex=False))
+                    except Exception as exc:  # noqa: BLE001
+                        print(f"[auto-harvest] 失败：{exc}", file=sys.stderr)
+                    _t.sleep(harvest_secs)
+
+            threading.Thread(target=_auto_harvest, daemon=True, name="pmem-auto-harvest").start()
+
         self._thread.start()
 
     def stop(self) -> None:
@@ -235,6 +324,7 @@ def run_gui(url: str, server: EmbeddedServer) -> int:
             super().__init__()
             self.allow_quit = False
             self.smoke_loaded = False  # 冒烟真实校验：页面 loadFinished 是否成功（防"空心冒烟"）
+            self._dev = None  # 开发者工具窗口
             self.web = QWebEngineView(self)
             self.web.setUrl(QUrl(url))
             self.web.loadFinished.connect(self._on_loaded)
@@ -243,10 +333,14 @@ def run_gui(url: str, server: EmbeddedServer) -> int:
             self.setCentralWidget(self.web)
             self.resize(1280, 800)
             self.setWindowTitle("恒忆 Evermem")
+            # 菜单/托盘在构造时即创建，不依赖页面加载回调：
+            # 原实现放在 _on_loaded 里，页面加载异常时 --autostart 访问 w._tray 会 AttributeError 崩溃。
+            self._build_chrome()
 
         def _on_loaded(self, ok: bool):
             self.smoke_loaded = ok
 
+        def _build_chrome(self):
             mb = self.menuBar()
             m = mb.addMenu("视图")
             m.addAction("浅色主题", lambda: self._js("pmem-theme", "light"))
@@ -259,7 +353,20 @@ def run_gui(url: str, server: EmbeddedServer) -> int:
             a_auto = m.addAction("开机自启")
             a_auto.setCheckable(True)
             a_auto.setChecked(autostart_enabled())
-            a_auto.toggled.connect(set_autostart)
+
+            def _on_autostart(on: bool):
+                # 写入可能失败（权限/策略）；失败必须把勾选态拉回系统真实状态，
+                # 否则菜单显示「已开启」而系统里没注册，就是假成功。
+                try:
+                    set_autostart(on)
+                except Exception as exc:  # noqa: BLE001
+                    QMessageBox.warning(self, "开机自启", f"设置失败：{exc}")
+                real = autostart_enabled()
+                a_auto.blockSignals(True)
+                a_auto.setChecked(real)
+                a_auto.blockSignals(False)
+
+            a_auto.toggled.connect(_on_autostart)
             QShortcut(QKeySequence(Qt.Key_F12), self, activated=self._toggle_dev)
             QShortcut(QKeySequence(Qt.Key_F5), self, activated=self.web.reload)
 
@@ -281,9 +388,21 @@ def run_gui(url: str, server: EmbeddedServer) -> int:
             self.web.page().runJavaScript(f"localStorage.setItem('{key}','{val}'); location.reload();")
 
         def _toggle_dev(self):
+            # 真实开发者工具：原实现只 setEnabled(True)+setDevicesPixelRatio，是空操作桩
             self._dev_open = not self._dev_open
-            self.web.setEnabled(True)  # 占位，避免空操作
-            self.web.page().setDevicesPixelRatio(self.web.page().devicePixelRatio())
+            if self._dev_open:
+                page = self.web.page()
+                dv = QWebEngineView(self)
+                page.setDevToolsPage(dv.page())
+                dv.setWindowTitle("恒忆 Evermem · 开发者工具")
+                dv.resize(900, 620)
+                dv.show()
+                self._dev = dv
+            else:
+                if self._dev is not None:
+                    self.web.page().setDevToolsPage(None)
+                    self._dev.close()
+                    self._dev = None
 
         def show_and_raise(self):
             self.showNormal(); self.raise_(); self.activateWindow()
@@ -347,6 +466,10 @@ def main() -> int:
     if not inst.acquire():
         print("[main] 恒忆已在运行（单实例），请切换至已打开的窗口。", file=sys.stderr)
         return 2
+
+    # 桌面壳标识：内嵌 Web 服务据此暴露「桌面常驻」类能力（开机自启等）。
+    # 不加标识的话，纯浏览器/独立 server 模式也会显示系统自启开关，点了不会有反应。
+    os.environ["PMEM_DESKTOP"] = "1"
 
     port = pick_free_port()
     if not port:

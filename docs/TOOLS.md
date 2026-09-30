@@ -17,17 +17,14 @@
 | scripts/check_all.py | 全功能健康检查（35 项冒烟） | `python scripts/check_all.py` |
 | **evermem_mcp.py** | MCP stdio 桥：mem_read / mem_record / mem_update / mem_hot | 配置进各宿主 MCP |
 | **backup.py** | **数据多渠道备份 v3**：local 增量镜像 / archive 快照保留 N 份 / remote ssh-scp / mail SMTP；每渠道频率/保留/失败计数、自动定时+告警+校验+日志。规格 docs/BACKUP-DESIGN.md | `python backup.py status` / `--channel X` / `--restore` |
-| scripts/fluent_preview.py | 前端热预览（开发模式） | 配合 launcher `PMEM_DEV=1` |
-| **desktop.py** | **桌面壳**：内嵌 Web 服务 + QtWebEngine 把 Web 版直接当桌面程序；单实例/托盘/明暗·中英/关闭=最小化并询问是否停服；无 WebEngine 回退默认浏览器 | `python desktop.py`（或打包 `evergem-<平台>-v*`） |
-| app.py | 旧 PySide6 原生控件版（**已弃用**，由 desktop.py 取代，保留可删） | — |
+| **desktop.py** | **桌面壳**：内嵌 Web 服务 + QtWebEngine 把 Web 版直接当桌面程序；单实例/托盘/明暗·中英/关闭=最小化并询问是否停服；无 WebEngine 回退默认浏览器 | `python desktop.py`（或打包 `Evermem-<平台>-v*`） |
 
 ## 二、Web（`web/`）
 
 | 文件 | 职责 |
 |------|------|
 | server.py | 零依赖 HTTP 服务 + 18+ API（notes/search/note/hot/stats/spaces/blocks/candidates/**backup(状态/保存/执行/恢复)**/…status/unhot/mcp…），三层缓存（索引/spaces/blocks） |
-| index.html + index.js | 七视图：记忆浏览 / 候选审核（AI 徽章）/ **数据导入**（子模块：文档导入 · 其他记忆导入）/ 核心经验 / 统计诊断 / 接入设置 / **数据备份** |
-| launcher.py | pywebview 桌面封装（跨 Win/macOS/Linux），`PMEM_DEV=1` 热预览 |
+| index.html + index.js | 9 个一级模块：记忆浏览 / 候选审核（AI 徽章）/ **数据导入**（子模块：文档导入 · 其他记忆导入）/ 核心经验 / 统计诊断 / 接入设置 / 数据与维护 / **数据备份** / 版本与更新 |
 
 ## 三、注入 & 联动
 

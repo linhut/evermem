@@ -20,15 +20,29 @@ import os
 import sys
 from pathlib import Path
 
-BASE = Path(os.environ.get("PMEM_HOME", Path(__file__).resolve().parent.parent))
-if str(BASE) not in sys.path:
-    sys.path.insert(0, str(BASE))
+# 数据目录走唯一解析入口（env > 持久化配置 > 可移植默认），
+# 与 mem.py / server.py / backup.py 同源，避免 MCP 写入另一个目录。
+import sys as _sys
+if str(Path(__file__).resolve().parent) not in _sys.path:
+    _sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+import paths as _paths  # noqa: E402
+
+BASE = _paths.data_root()
+CODE_BASE = _paths.code_root()
+if str(CODE_BASE) not in sys.path:
+    sys.path.insert(0, str(CODE_BASE))
 
 import mem  # noqa: E402
 
 PROTOCOL_VERSION = "2024-11-05"
 SERVER_NAME = "evermem"
-SERVER_VERSION = "0.1.0"
+# 与项目 VERSION 对齐（此前写死 0.1.0，宿主排障会被误导）；打包态需保证 VERSION 随资源分发
+try:
+    _ver = (_paths.code_root() / "VERSION").read_text(encoding="utf-8").strip()
+    SERVER_VERSION = _ver or "0.1.0"
+except OSError:
+    SERVER_VERSION = "0.1.0"
 
 TYPE_OPTIONS = ["procedure", "lesson", "fact"]
 

@@ -28,7 +28,14 @@ import sys
 import time
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
+# 数据目录走唯一解析入口（env > 持久化配置 > 可移植默认），
+# 否则 PyInstaller 单文件包会把导入写进临时解包目录。
+if str(Path(__file__).resolve().parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+import paths as _paths  # noqa: E402
+
+ROOT = _paths.data_root()
 NOTES = ROOT / "notes"
 EVENTS = ROOT / "events"
 IMPORT_LOG = "events/import.jsonl"

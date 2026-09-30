@@ -41,7 +41,7 @@
 
 - [ ] `mem.py stats` 笔记数与主机一致
 - [ ] `mem.py recall "任意主机上的经验"` 能命中
-- [ ] Web 七视图均可打开、无 JS 报错（`scripts/frontend_smoke.py` 通过）
+- [ ] Web 9 个一级模块均可打开、无 JS 报错（`scripts/frontend_smoke.py` 通过）
 - [ ] 新机 `backup.py` 能增量同步回云端（主机可看到新机新增）
 - [ ] `git pull` 能更新代码且不触碰数据（.gitignore 隔离生效）
 
