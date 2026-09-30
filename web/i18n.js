@@ -17,10 +17,18 @@
   const STORE_KEY = 'pmem-lang';
 
   const EN = {
+    /* 缺失键补齐（2026-10-01 复核审计；此前英文界面回退中文） */
+    '个渠道': 'channels', '主位置': 'primary location',
+    '保存并立即备份': 'Save & back up now', '已配置': 'configured',
+    '仅桌面版可设置': 'desktop only', '复制块内容': 'Copy block content',
+    '点击块预览': 'Click block to preview', '已移出核心经验': 'Removed from hot layer',
+    '核心经验为空': 'No hot entries yet',
+    '在记忆详情里点「★ 核心经验」，它就会随每次会话自动携带':
+        'Star a note as ★ hot layer in its detail view; it will be carried into every session',
     /* 侧栏 */
     '记忆': 'Memory', '系统': 'System',
-    '记忆浏览': 'Browse', '候选审核': 'Triage', '数据导入': 'Import Data',
-    '核心经验': 'Hot', '统计诊断': 'Stats', '接入设置': 'Integrate', '数据备份': 'Backup',
+    '记忆浏览': 'Browse', '数据导入': 'Import Data',
+    '核心经验': 'Hot', '接入设置': 'Integrate', '数据备份': 'Backup',
     '深色模式': 'Dark mode', '浅色模式': 'Light mode',
     '索引读取中…': 'Loading index…',
     '本地 · 零云端': 'Local · No cloud',
@@ -57,7 +65,7 @@
     '服务未响应，请确认服务运行中': 'Server not responding — is the service running?',
     '评审请求失败，请重试': 'Review request failed, please retry',
     '已归档': 'Archived',
-    '评审': 'Reviewed', '转正': 'Promoted', '保留': 'Kept', '重复/低质归档': 'Dup/low-quality archived',
+    '评审': 'Reviewed', '已转正': 'Promoted', '保留': 'Kept', '重复/低质归档': 'Dup/low-quality archived',
     '条涉密/危险留人工': 'sensitive/dangerous kept for human', '转正失败': 'promote failed',
     '低质已归档': 'archived', '条否决留人工（敏感/危险）': ' vetoed & kept for human (sensitive/dangerous)',
     '无正文': 'No body',
@@ -158,8 +166,44 @@
     '还没有解析出条目': 'No items parsed', '粘贴记忆导出内容后点「解析」': 'Paste an export and click Parse',
     '（staged）': '(staged)',
     /* 接入设置 */
-    '① 技能安装': '① Skill install', '② MCP 工具接入': '② MCP tools', '③ 数据位置（可自由选择）': '③ Data location',
-    '④ 核心经验同步': '④ Hot layer sync', '⑤ 经验沉淀': '⑤ Harvest', '⑥ 兼容说明': '⑥ Compatibility',
+    /* 接入设置（只留对外接入 + 本机运行方式） */
+    '① 技能安装': '① Skill install', '② MCP 工具接入': '② MCP tools',
+    '③ 开机启动': '③ Launch at login', '④ 兼容说明': '④ Compatibility',
+    /* 数据与维护（一级模块） */
+    '数据与维护': 'Data & Maintenance',
+    '① 数据位置（可自由选择）': '① Data location',
+    '② 核心经验同步': '② Hot layer sync', '③ 经验沉淀': '③ Harvest',
+    '数据位置改完需重启生效；同步与沉淀都是本地动作，不上传任何内容。':
+      'Data location changes take effect after restart; sync and harvest run locally, nothing is uploaded.',
+    /* 版本与更新（一级模块） */
+    '版本与更新': 'Version & Update',
+    '① 更新检查': '① Update check', '② 更新源': '② Update sources',
+    '检查走 GitHub 直连 + 加速镜像并发取最快的一个；下载走外链在浏览器完成，程序不会静默改动你的文件。':
+      'Checks GitHub direct + mirrors in parallel and takes the fastest; downloads open in your browser — the app never silently replaces your files.',
+    '仅桌面版': 'Desktop only', '开机自启动': 'Launch at login',
+    '当前版本：': 'Version: ', '查看最新版本': 'Check latest',     '版本号未知': 'Unknown version',
+    '检查更新': 'Check for updates', '检查中…': 'Checking…', '已是最新版本': 'Up to date',
+    '发现新版本：': 'New version: ', '当前：': 'current: ', '下载更新': 'Download',
+    '镜像加速下载': 'Mirror (faster)',
+    '自动检查更新': 'Check automatically',
+    '打开设置页时自动检查一次，结果缓存 24 小时': 'Check once when settings open; result cached for 24h',
+    '自建清单地址（可选，留空则不使用）': 'Self-hosted manifest URL (optional, blank = unused)',
+    '留空即可：默认走 GitHub 直连 + 镜像，不需要自己托管任何文件': 'Leave blank: uses GitHub direct + mirrors, no hosting needed',
+    '留空': 'blank',
+    '加速镜像（一行一个，用于版本检查与下载）': 'Acceleration mirrors (one per line, for check and download)',
+    '恢复默认': 'Restore defaults',
+    '下载时额外追加': 'Added for download:',
+    '只通文件、不通接口': 'files only, not API',
+    '个候选': 'candidates',
+    '更新源配置读取失败': 'Failed to read update source config',
+    '保存失败：': 'Save failed: ',
+    '更新检查失败：': 'Update check failed: ', '已尝试：': 'Tried: ', '缓存结果': 'cached',
+    '手动下载': 'Manual download',
+    '当前版本仍可正常使用，可稍后重试或手动下载。': 'The current version keeps working; retry later or download manually.',
+    '发布页打开失败': 'Failed to open release page',
+    '有新版本时，下载新文件覆盖原文件即可；数据不会丢失。': 'Download the new release and overwrite the old file; your data will stay safe.',
+    '已开启': 'On', '未开启': 'Off', '不支持：': 'Not supported: ', '设置失败：': 'Failed: ',
+    '系统登录后自动启动恒忆，并静默驻留系统托盘。': 'Starts Evermem after login and stays in the system tray.',
     '记忆库': 'Memory root', '块库': 'Chunk store', '扫描根': 'Scan root',
     '读取配置中…': 'Loading config…',
     '记忆库目录（笔记/index）': 'memory dir (notes/index)',

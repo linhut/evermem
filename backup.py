@@ -36,6 +36,7 @@ import smtplib
 import subprocess
 import sys
 import tarfile
+import tempfile
 import time
 import zipfile
 from email.mime.application import MIMEApplication
@@ -43,7 +44,17 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from pathlib import Path
 
-BASE = Path(__file__).resolve().parent
+import sys as _sys
+if str(Path(__file__).resolve().parent) not in _sys.path:
+    _sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+import paths as _paths  # noqa: E402
+
+# 数据根目录：备份/恢复读写的是用户数据，必须走唯一解析入口
+# （env > 持久化配置 > 可移植默认），否则打包后会备份/恢复到临时解包目录。
+BASE = _paths.data_root()
+# 代码根目录：只用于定位 openssl、快照打包等随程序分发的资源。
+CODE_ROOT = _paths.code_root()
 CONFIG_FILE = BASE / "pmem_backup.json"
 MANIFEST = ".pmem-backup-last.json"
 LOG_FILE = "backup.log"
@@ -54,11 +65,27 @@ SCOPE_GROUPS = {
     "notes": ["notes"],
     "events": ["events"],
     "index": ["index.json"],
-    "meta": ["harvest_state.json", "corpus_spaces.json", "kb.json", "knowledge-base.md", "pmem_config.json"],
+    "meta": ["harvest_state.json", "corpus_spaces.json", "kb.json", "knowledge-base.md",
+            "pmem_config.json", "update.json", "update_state.json"],
+    # 块库：路径取自 pmem_config.json 的 chunks 字段（可能不在数据根，data_items 单独解析）
+    "chunks": ["chunks"],
 }
 ALL_SCOPES = list(SCOPE_GROUPS)
 
 # ---------------- 配置 ----------------
+
+def _atomic_write(path: Path, text: str, encoding: str = "utf-8") -> None:
+    """原子写：tmp + os.replace，避免并发/中断留下截断 JSON。"""
+    tmp = path.with_name(path.name + f".tmp-{os.getpid()}")
+    try:
+        tmp.write_text(text, encoding=encoding)
+        os.replace(tmp, path)
+    finally:
+        try:
+            tmp.unlink(missing_ok=True)
+        except OSError:
+            pass
+
 
 def load_cfg() -> dict:
     cfg = {}
@@ -113,7 +140,7 @@ def load_cfg() -> dict:
     return {"auto": auto, "alert_email": alert, "channels": out}
 
 def save_cfg(cfg: dict) -> None:
-    CONFIG_FILE.write_text(json.dumps(cfg, ensure_ascii=False, indent=1), encoding="utf-8")
+    _atomic_write(CONFIG_FILE, json.dumps(cfg, ensure_ascii=False, indent=1))
 
 # ---------------- 数据收集与校验 ----------------
 
@@ -123,11 +150,23 @@ def scope_paths(scope: list[str] | None = None) -> list[str]:
         out += SCOPE_GROUPS.get(s, [])
     return out
 
+def _resolve_scope(name: str) -> Path | None:
+    """scope 条目 → 真实路径：chunks 读 pmem_config.json 的 chunks 字段；其余支持绝对路径。"""
+    if name == "chunks":
+        try:
+            c = str(_paths.load_config().get("chunks") or "").strip()
+            return Path(c).expanduser() if c else None
+        except (OSError, ValueError):
+            return None
+    p = Path(name)
+    return p if p.is_absolute() else BASE / p
+
+
 def data_items(scope: list[str] | None = None) -> list[dict]:
     items = []
     for name in scope_paths(scope):
-        p = BASE / name
-        if p.exists():
+        p = _resolve_scope(name)
+        if p and p.exists():
             collect(p, name, items)
     return items
 
@@ -137,7 +176,11 @@ def collect(src: Path, rel: str, items: list[dict]) -> None:
         items.append({"rel": rel, "mtime": st.st_mtime, "size": st.st_size})
     else:
         for f in sorted(src.rglob("*")):
-            if f.is_file() and not f.name.startswith(".pmem-"):
+            if (f.is_file() and not f.name.startswith(".pmem-")
+                    and not f.name.startswith("evermem-")
+                    and not f.name.endswith(".tar.aes")
+                    and not f.name.endswith(".sha256")
+                    and f.name != "UPLOAD.md"):
                 st = f.stat()
                 items.append({"rel": str(Path(rel) / f.relative_to(src)), "mtime": st.st_mtime, "size": st.st_size})
 
@@ -191,7 +234,7 @@ def mark_channel(name: str, ok: bool, error: str = "", verified=None, extra: dic
                        "synced": (extra or {}).get("synced", 0),
                        "verified": verified})
     m["history"] = history[:20]
-    (BASE / MANIFEST).write_text(json.dumps(m, ensure_ascii=False, indent=1), encoding="utf-8")
+    _atomic_write(BASE / MANIFEST, json.dumps(m, ensure_ascii=False, indent=1))
 
 def log_line(text: str) -> None:
     try:
@@ -236,7 +279,7 @@ def run_local(ch: dict) -> dict:
         d.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(s, d)
         synced += 1
-    state_p.write_text(json.dumps({"items": items}, ensure_ascii=False), encoding="utf-8")
+    _atomic_write(state_p, json.dumps({"items": items}, ensure_ascii=False))
     ver = verify_target(dst, items)
     return {"synced": synced, "skipped": skipped, "files": len(items), "verified": ver["ok"],
             "missing": ver["missing"]}
@@ -300,7 +343,7 @@ def run_remote(ch: dict) -> dict:
         if r.returncode != 0:
             raise RuntimeError(f"scp 失败：{i['rel']} {r.stderr[:150]}")
         synced += 1
-    tmp_state.write_text(json.dumps({"items": items}, ensure_ascii=False), encoding="utf-8")
+    _atomic_write(tmp_state, json.dumps({"items": items}, ensure_ascii=False))
     subprocess.run(["scp", "-P", str(port), "-q", str(tmp_state), f"{base}/.pmem-state.json"],
                    capture_output=True, text=True, timeout=30)
     tmp_state.unlink(missing_ok=True)
@@ -372,7 +415,7 @@ def make_archive_package(ch: dict, items: list[dict], out_dir: Path | None = Non
     加密在出本机前完成：云端/网盘永远只有密文。密码不落盘（除配置混淆字段/环境变量）。
     """
     pw = _archive_password(ch)
-    out_dir = out_dir or BASE
+    out_dir = out_dir or Path(tempfile.mkdtemp(prefix="pmem-arch-"))
     out_dir.mkdir(parents=True, exist_ok=True)
     stamp = time.strftime("%Y%m%d-%H%M%S")
     plain_tar = out_dir / f".pmem-tmp-{stamp}.tar"
@@ -390,7 +433,7 @@ def make_archive_package(ch: dict, items: list[dict], out_dir: Path | None = Non
         if r.returncode != 0:
             raise RuntimeError(f"openssl 加密失败：{(r.stderr or '')[:200]}")
         sha = hashlib.sha256(enc.read_bytes()).hexdigest()
-        (out_dir / f"{enc.name}.sha256").write_text(f"{sha}  {enc.name}\n", encoding="utf-8")
+        _atomic_write(out_dir / f"{enc.name}.sha256", f"{sha}  {enc.name}\n")
         return {"package": enc.name, "bytes": enc.stat().st_size, "sha256": sha, "stamp": stamp}
     finally:
         plain_tar.unlink(missing_ok=True)
@@ -421,7 +464,7 @@ def run_s3(ch: dict) -> dict:
     all_keys = [k for k in client.list_objects() if k.endswith(".tar.aes")]
     removed = []
     for old in sorted(all_keys)[:-max(1, int(ch.get("retention", 30) or 30))]:
-        client.delete_object(old)
+        client.delete_object(old, raw=True)  # list_objects 的 key 已含 prefix
         removed.append(old.split("/")[-1])
     (BASE / pkg["package"]).unlink(missing_ok=True)
     (BASE / f"{pkg['package']}.sha256").unlink(missing_ok=True)
@@ -488,15 +531,23 @@ def restore_archive_package(ch: dict, enc_path: Path) -> dict:
                            capture_output=True, text=True, timeout=900)
         if r.returncode != 0:
             raise RuntimeError(f"解密失败（密码错误？）：{(r.stderr or '')[:200]}")
+        base = BASE.resolve()
         with tarfile.open(dec, "r") as t:
             names = t.getnames()
             for m in t.getmembers():
-                target = BASE / m.name
+                name = m.name.replace("\\", "/")
+                if name.startswith("/") or ".." in name.split("/"):
+                    raise RuntimeError(f"归档包含越界路径，已中止恢复：{m.name}")
+                if m.issym() or m.islnk():
+                    raise RuntimeError(f"归档包含链接，已中止恢复：{m.name}")
+                target = base / name
+                if not target.is_relative_to(base):
+                    raise RuntimeError(f"归档路径越界：{m.name}")
                 if m.isdir():
                     target.mkdir(parents=True, exist_ok=True)
                 elif m.isfile():
                     target.parent.mkdir(parents=True, exist_ok=True)
-                    t.extract(m, BASE, set_attrs=False)
+                    t.extract(m, base, set_attrs=False)
         return {"ok": True, "count": len(names), "package": enc_path.name}
     finally:
         dec.unlink(missing_ok=True)
@@ -911,7 +962,7 @@ def _send_alert(cfg: dict, ch: dict, res: dict) -> None:
         if mail_ch:
             smtp = mail_ch.get("smtp") or {}
             user = smtp.get("user", "")
-            passwd = smtp.get("pass") or os.environ.get("PMEM_SMTP_PASS", "")
+            passwd = deobscure(str(smtp.get("pass") or "")) or os.environ.get("PMEM_SMTP_PASS", "")
             host, port = smtp.get("host", ""), int(smtp.get("port", 465) or 465)
             if host and user and passwd:
                 s = smtplib.SMTP_SSL(host, port) if port == 465 else smtplib.SMTP(host, port)
@@ -936,22 +987,45 @@ def restore_channel(ch: dict) -> dict:
         if not src.is_dir():
             return {"ok": False, "error": f"目标目录不可用：{ch['target']}"}
         restored = []
-        for i in data_items(ch["scope"]):
-            p = src / i["rel"]
+        # 关键：待恢复清单不能只用本机 data_items() 枚举。
+        # 本机为空（新机首迁）时本机枚举是空集，恢复会「成功」但一个文件都没拷，
+        # 属于典型假成功。这里取「本机清单 ∪ 渠道根实际存在的文件」。
+        rels = {i["rel"] for i in data_items(ch["scope"])}
+        for name in scope_paths(ch["scope"]):
+            s = src / name
+            if not s.exists():
+                continue
+            if s.is_file():
+                rels.add(name)
+                continue
+            for f in s.rglob("*"):
+                if (f.is_file() and not f.name.startswith(".pmem-")
+                    and not f.name.startswith("evermem-")
+                    and not f.name.endswith(".tar.aes")
+                    and not f.name.endswith(".sha256")
+                    and f.name != "UPLOAD.md"):
+                    rels.add(str(Path(name) / f.relative_to(s)))
+        for rel in sorted(rels):
+            p = src / rel
             if not p.exists():
                 continue
-            d = BASE / i["rel"]
+            d = BASE / rel
             d.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(p, d)
-            restored.append(i["rel"])
+            restored.append(rel)
         return {"ok": True, "count": len(restored), "channel": ch["name"]}
     if ch["type"] == "archive":
         snap_dir = Path(ch["target"]) / "snapshots"
         snaps = sorted(snap_dir.glob("evermem-*.zip")) if snap_dir.exists() else []
         if not snaps:
             return {"ok": False, "error": "无可用快照"}
+        base = BASE.resolve()
         with zipfile.ZipFile(snaps[-1], "r") as z:
-            z.extractall(BASE)
+            for m in z.infolist():
+                name = m.filename.replace("\\", "/")
+                if name.startswith("/") or ".." in name.split("/"):
+                    raise RuntimeError(f"快照包含越界路径，已中止恢复：{m.filename}")
+            z.extractall(base)
         return {"ok": True, "count": len(snaps[-1].namelist()), "channel": ch["name"], "snapshot": snaps[-1].name}
     if ch["type"] == "s3":
         r = restore_s3(ch)
@@ -1006,7 +1080,7 @@ def main() -> int:
 
     if "--dry-run" in sys.argv:
         for ch in cfg["channels"]:
-            items = data_items(ch["scope"])
+            items = data_items(scope or ch["scope"])
             print(f"[{ch['type']}/{ch['name']}] → {ch['target']} | 范围 {','.join(ch['scope'])} | "
                   f"{len(items)} 文件 / {total_size(items)/1048576:.2f} MB | 频率 {ch['frequency_hours']}h | "
                   f"{'开' if ch['enabled'] else '关'}")
@@ -1049,6 +1123,8 @@ def main() -> int:
         return 1
     for ch in targets:
         if ch_name or ch["enabled"]:
+            if scope:
+                ch = dict(ch, scope=scope)  # 命令行 --scope 覆盖渠道自身范围
             res = run_channel(ch)
             flag = "✅" if res["ok"] else "❌"
             print(f"{flag} [{ch['type']}/{ch['name']}] → {ch['target']} | 同步 {res.get('synced',0)} 跳过 "

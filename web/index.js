@@ -83,7 +83,13 @@ const originIco = o => ORIGIN_ICON[o] ? `<span title="${t(ORIGIN_TIP[o])}" style
 /* 状态中文显示（内部仍用英文，界面展示本地语言） */
 const STATUS_LABEL = { active: '使用中', staged: '候选', suspect: '存疑', superseded: '已替代' };
 const S = s => t(STATUS_LABEL[s] || s);
-const post = (u, b) => fetch(u, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: b ? JSON.stringify(b) : '{}' }).then(r => r.json());
+const post = (u, b) => fetch(u, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: b ? JSON.stringify(b) : '{}' })
+  .then(async r => {
+    // 统一把 HTTP 状态并入返回对象：调用方用 r.ok 判断真实结果，禁止"404 也提示成功"
+    let body = {};
+    try { body = await r.json(); } catch (e) { /* 非 JSON 响应 */ }
+    return Object.assign({ ok: r.ok, status: r.status }, body);
+  });
 
 /* 主题（浅/深为对等的双实现，不是补丁式反色） */
 function applyTheme(tm) {
@@ -100,7 +106,7 @@ $('#themeBtn').onclick = () => applyTheme(document.documentElement.dataset.theme
 
 /* 视图 */
 let VIEW = 'browse', CURRENT = null, EDIT_ID = null;
-const VIEWS = { browse: '记忆浏览', triage: '候选审核', import: '数据导入', hot: '核心经验', stats: '统计诊断', integ: '接入设置', backup: '数据备份' };
+const VIEWS = { browse: '记忆浏览', triage: '候选审核', import: '数据导入', hot: '核心经验', stats: '统计诊断', integ: '接入设置', maint: '数据与维护', backup: '数据备份', update: '版本与更新' };
 // URL 直达视图（?view=backup），便于分享/深链与自动化验证
 (function () {
   const qv = new URLSearchParams(location.search).get('view');
@@ -136,6 +142,8 @@ async function render() {
   else if (VIEW === 'integ') { c.innerHTML = integHTML(); loadInteg(); }
   // 备份视图：全权交给渠道模块 channel.js，本文件只做路由，不再内联备份实现
   else if (VIEW === 'backup') { c.innerHTML = BK.viewHTML(); BK.load(); }
+  else if (VIEW === 'update') { c.innerHTML = updateHTML(); loadUpdateView(); }
+  else if (VIEW === 'maint') { c.innerHTML = maintHTML(); loadMaint(); }
 }
 
 const browseHTML = () => `<div class="col list-col">
@@ -235,7 +243,22 @@ const importHTML = () => `<div style="width:100%">
 const integHTML = () => `<div style="width:100%">
   <div class="pane"><h3>${t('① 技能安装')}</h3><div class="sub" style="margin-bottom:8px">选中 AI 助手 → 安装记忆技能，让每个新会话「开始查记忆、行动前查记忆、收尾存记忆」</div><div id="hostList"></div></div>
   <div class="pane"><h3>${t('② MCP 工具接入')}</h3><div class="sub" style="margin-bottom:8px">把恒忆标准 MCP 工具（查记忆/存记忆/更新/核心经验）写入各助手配置——DSH/WorkBuddy/Claude 均可原生调用。WorkBuddy/DSH 需重启或新会话生效；WorkBuddy 还须在连接器页点 Trust。</div><div id="mcpList"></div></div>
-  <div class="pane"><h3>${t('③ 数据位置（可自由选择）')}</h3><div class="sub" style="margin-bottom:8px">记忆库 / 块库 / 扫描根目录可指向任意本机路径（含权限与空间检查）。配置存 pmem_config.json，所有会话共享；修改后重启生效。</div>
+  <div class="pane"><h3>${t('③ 开机启动')}</h3>
+    <div class="btnrow" style="align-items:center">
+      <span class="badge" style="color:var(--accent);background:var(--accent-bg)">${t('仅桌面版')}</span>
+      <span style="flex:1"></span>
+      <label class="ck" style="font-size:13px;color:var(--text)" for="autoStart"><input type="checkbox" id="autoStart" disabled><span>${t('开机自启动')}</span></label>
+    </div>
+    <div class="sub" id="autoStartInfo" style="margin-top:6px">${t('读取中…')}</div></div>
+  <div class="pane"><h3>${t('④ 兼容说明')}</h3><div class="sub">· WorkBuddy 桌面端禁用第三方插件钩子（宿主信任模型），自建能力走技能 + MCP。<br>· DSH：从 $DSH_HOME/skills（用户级）发现技能文件，目录被监视、热刷新。<br>· MCP 工具：evermem_mcp.py 标准 stdio，4 个工具，多助手通用。<br>· 核心经验注入：MEMORY.md 核心经验区 → 新会话上下文（上限 20，有进有出）。</div></div>
+</div>`;
+
+/* 数据与维护（一级模块）：从「接入设置」分出来的三张卡——数据位置是本机设置、
+   同步与沉淀是本地维护动作，跟"接入别的 AI 工具"不是一回事。
+   ① 数据位置 ② 核心经验同步 ③ 经验沉淀 */
+const maintHTML = () => `<div style="width:100%;max-width:820px">
+  <div class="sub" style="margin-bottom:12px">${t('数据位置改完需重启生效；同步与沉淀都是本地动作，不上传任何内容。')}</div>
+  <div class="pane"><h3>${t('① 数据位置（可自由选择）')}</h3><div class="sub" style="margin-bottom:8px">记忆库 / 块库 / 扫描根目录可指向任意本机路径（含权限与空间检查）。配置存 pmem_config.json，所有会话共享；修改后重启生效。</div>
     <div class="btnrow" style="margin-bottom:6px">
       <label style="min-width:52px;font-size:12px;color:var(--text2);align-self:center">${t('记忆库')}</label><input id="cfgHome" placeholder="${t('记忆库目录（笔记/index）')}" style="flex:2;min-width:140px">
       <label style="min-width:52px;font-size:12px;color:var(--text2);align-self:center">${t('块库')}</label><input id="cfgChunks" placeholder="${t('文本块目录')}" style="flex:2;min-width:140px">
@@ -243,9 +266,194 @@ const integHTML = () => `<div style="width:100%">
       <button class="btn primary" id="cfgSave">${t('保存')}</button>
     </div>
     <div class="sub" id="cfgInfo">${t('读取配置中…')}</div></div>
-  <div class="pane"><h3>${t('④ 核心经验同步')}</h3><div class="sub" id="hotSyncInfo"></div><div class="btnrow" style="margin-top:8px"><button class="btn primary" id="hotSyncBtn">${t('同步核心经验 → 宿主必读文件')}</button></div></div>
-  <div class="pane"><h3>${t('⑤ 经验沉淀')}</h3><div class="sub" id="harvInfo"></div><div class="btnrow" style="margin-top:8px"><button class="btn primary" id="harvBtn">${t('提取近 3 天会话经验')}</button></div></div>
-  <div class="pane"><h3>${t('⑥ 兼容说明')}</h3><div class="sub">· WorkBuddy 桌面端禁用第三方插件钩子（宿主信任模型），自建能力走技能 + MCP。<br>· DSH：从 $DSH_HOME/skills（用户级）发现技能文件，目录被监视、热刷新。<br>· MCP 工具：evermem_mcp.py 标准 stdio，4 个工具，多助手通用。<br>· 核心经验注入：MEMORY.md 核心经验区 → 新会话上下文（上限 20，有进有出）。</div></div></div>`;
+  <div class="pane"><h3>${t('② 核心经验同步')}</h3><div class="sub" id="hotSyncInfo"></div><div class="btnrow" style="margin-top:8px"><button class="btn primary" id="hotSyncBtn">${t('同步核心经验 → 宿主必读文件')}</button></div></div>
+  <div class="pane"><h3>${t('③ 经验沉淀')}</h3><div class="sub" id="harvInfo"></div><div class="btnrow" style="margin-top:8px"><button class="btn primary" id="harvBtn">${t('提取近 3 天会话经验')}</button></div></div>
+</div>`;
+
+/* 版本与更新（一级模块）：页头已是「版本与更新」，内容只分两张卡，不再套一张同名父卡——
+   父模块降级成与子卡并列的容器会多出一层嵌套（这个坑在「数据导入」上踩过）。
+   ① 更新检查：当前版本 / 检查更新 / 结果（新版本·已是最新·失败含各源耗时）
+   ② 更新源：自动检查开关 / 自建清单 / 加速镜像，全部回读真实生效配置 */
+const updateHTML = () => `<div style="width:100%;max-width:820px">
+  <div class="sub" style="margin-bottom:12px">${t('检查走 GitHub 直连 + 加速镜像并发取最快的一个；下载走外链在浏览器完成，程序不会静默改动你的文件。')}</div>
+  <div class="pane"><h3>${t('① 更新检查')}</h3>
+    <div class="btnrow" style="align-items:center">
+      <span>${t('当前版本：')}<b id="verCurrent">${t('读取中…')}</b></span>
+      <span style="flex:1"></span>
+      <button class="btn ghost small" id="verCheck">${t('查看最新版本')}</button>
+      <button class="btn primary small" id="updCheck">${t('检查更新')}</button>
+    </div>
+    <div class="sub" id="verInfo" style="margin-top:6px"></div>
+    <div class="sub" id="updInfo" style="margin-top:6px"></div>
+  </div>
+  <div class="pane"><h3>${t('② 更新源')}</h3>
+    <label class="ck" style="font-size:13px;color:var(--text)" for="updAuto"><input type="checkbox" id="updAuto"><span>${t('自动检查更新')}</span></label>
+    <div class="sub">${t('打开设置页时自动检查一次，结果缓存 24 小时')}</div>
+    <div style="border-top:1px solid var(--line);margin-top:10px;padding-top:10px">
+      <div class="sub" style="margin-bottom:4px">${t('自建清单地址（可选，留空则不使用）')}</div>
+      <div class="btnrow">
+        <input id="updManifest" type="text" placeholder="${t('留空')}" style="flex:1;min-width:180px">
+        <button class="btn small" id="updManifestSave">${t('保存')}</button>
+      </div>
+      <div class="sub">${t('留空即可：默认走 GitHub 直连 + 镜像，不需要自己托管任何文件')}</div>
+    </div>
+    <div style="margin-top:10px">
+      <div class="sub" style="margin-bottom:4px">${t('加速镜像（一行一个，用于版本检查与下载）')}</div>
+      <textarea id="updMirrors" rows="4" style="width:100%;font-family:var(--mono,monospace);font-size:12px"></textarea>
+      <div class="btnrow" style="margin-top:6px">
+        <button class="btn primary small" id="updSave">${t('保存')}</button>
+        <button class="btn ghost small" id="updReset">${t('恢复默认')}</button>
+      </div>
+      <div class="sub" id="updSrcInfo"></div>
+    </div>
+  </div>
+</div>`;
+
+async function loadAutostart() {
+  const box = $('#autoStart'); if (!box) return;
+  let d = { supported: false };
+  try { d = await (await fetch('/api/autostart')).json(); } catch (e) { d = { supported: false, reason: '服务未响应' }; }
+  // 状态取自系统真实值，不是界面缓存；不支持时禁用并说明原因，避免点了没反应
+  box.checked = !!d.enabled;
+  box.disabled = !d.supported;
+  const sub = $('#autoStartInfo');
+  if (!d.supported) {
+    sub.textContent = t('不支持：') + (d.reason || t('仅桌面版可设置'));
+  } else {
+    sub.textContent = (d.enabled ? t('已开启') : t('未开启')) + ' · ' + t('系统登录后自动启动恒忆，并静默驻留系统托盘。');
+  }
+  box.onchange = async () => {
+    const want = box.checked;
+    box.disabled = true;
+    let r = { ok: false, error: '服务未响应' };
+    try { r = await post('/api/autostart/save', { enabled: want }); } catch (e) { r = { ok: false, error: String(e) }; }
+    // 失败必须把开关拉回系统真实状态：以接口返回值与重新读取的系统状态为准，
+    // 只看请求是否发出去属于假成功。
+    // 失败后重新读取系统状态：开关与说明文案都以系统真实值为准
+    const real = r.ok ? !!r.enabled : null;
+    box.checked = real === null ? !want : real;
+    if (!r.ok) {
+      toast(t('设置失败：') + (r.error || ''));
+      await loadAutostart();
+      return;
+    }
+    toast(want ? t('已开启') : t('未开启'), 'success');
+    $('#autoStartInfo').textContent = (want ? t('已开启') : t('未开启')) + ' · ' + t('系统登录后自动启动恒忆，并静默驻留系统托盘。');
+    box.disabled = false;
+  };
+}
+
+// ---------- 更新源设置（自动检查 / 自建清单 / 加速镜像） ----------
+async function loadUpdateSources() {
+  const box = $('#updAuto'), man = $('#updManifest'), mir = $('#updMirrors'), info = $('#updSrcInfo');
+  if (!box || !mir) return;
+  let d = null;
+  try { d = await (await fetch('/api/update/sources')).json(); } catch (e) { d = null; }
+  if (!d || !d.config) {
+    if (info) info.textContent = t('更新源配置读取失败');
+    return;
+  }
+  const cfg = d.config;
+  // 初值取真实生效配置，不是界面残留
+  box.checked = !!cfg.auto_check;
+  if (man) man.value = cfg.manifest_url || '';
+  mir.value = (cfg.mirrors || []).join('\n');
+  const extra = d.download_only_mirrors || [];
+  const total = (cfg.mirrors || []).length + extra.length + 1;
+  if (info) {
+    info.textContent = extra.length
+      ? `${t('下载时额外追加')} ${extra.join('、')}（${t('只通文件、不通接口')}），${t('共')} ${total} ${t('个候选')}`
+      : `${t('共')} ${total} ${t('个候选')}`;
+  }
+  box.onchange = () => saveUpdateConfig({ auto_check: box.checked }, true);
+  const b1 = $('#updManifestSave');
+  if (b1) b1.onclick = () => saveUpdateConfig({ manifest_url: (man ? man.value : '').trim() });
+  const b2 = $('#updSave');
+  if (b2) b2.onclick = () => saveUpdateConfig({
+    mirrors: mir.value.split('\n').map(s => s.trim()).filter(Boolean)
+  });
+  const b3 = $('#updReset');
+  if (b3) b3.onclick = () => saveUpdateConfig({
+    mirrors: (d.defaults || {}).mirrors || [], manifest_url: '', auto_check: true
+  });
+}
+
+async function saveUpdateConfig(patch, quiet) {
+  let d = { ok: false };
+  try {
+    const r = await fetch('/api/update/sources/save', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch)
+    });
+    d = await r.json();
+  } catch (e) { d = { ok: false, error: String(e) }; }
+  if (!d.ok) {
+    toast(`${t('保存失败：')}${d.error || ''}`);
+    await loadUpdateSources();  // 保存失败要把界面拉回真实值，不能停在用户以为生效的样子
+    return;
+  }
+  await loadUpdateSources();    // 回读真实值：界面显示的就是实际生效的配置
+  if (!quiet) toast(t('已保存'));
+}
+
+async function loadVersion() {
+  const cur = $('#verCurrent');
+  const info = $('#verInfo');
+  const btn = $('#verCheck');
+  if (!cur) return;
+  try {
+    const d = await (await fetch('/api/version')).json();
+    cur.textContent = d.version || t('版本号未知');
+    btn.onclick = () => {
+      try { window.open(d.releases_url || 'https://github.com/linhut/evermem/releases/latest', '_blank'); }
+      catch (e) { toast(t('发布页打开失败')); }
+    };
+    info.textContent = d.releases_url ? t('有新版本时，下载新文件覆盖原文件即可；数据不会丢失。') : '';
+  } catch (e) {
+    cur.textContent = t('版本号未知');
+    info.textContent = String(e);
+  }
+}
+
+async function loadUpdate(force) {
+  const info = $('#updInfo');
+  const btn = $('#updCheck');
+  if (!info || !btn) return;
+  btn.disabled = true;
+  info.textContent = t('检查中…');
+  let d = { ok: false, error: '服务未响应' };
+  try { d = await (await fetch('/api/update/check' + (force ? '?force=1' : ''))).json(); }
+  catch (e) { d = { ok: false, error: String(e) }; }
+  btn.disabled = false;
+  btn.onclick = () => loadUpdate(true);
+  // 全部源不可用必须明确报出来：静默显示"已是最新"属于假成功
+  if (!d.ok) {
+    // 耗时一起显示：哪一跳慢、哪一跳挂了一眼可见
+    const tried = (d.attempts || []).map(a => {
+      const ms = Number(a.elapsed_ms || 0);
+      const dur = ms >= 1000 ? (ms / 1000).toFixed(1) + 's' : Math.round(ms) + 'ms';
+      return `${a.source}(${a.error || t('失败')} ${dur})`;
+    }).join('、');
+    info.innerHTML = `<span style="color:var(--danger,#c0392b)">${t('更新检查失败：')}${esc(d.error || '')}</span>` +
+      (tried ? `<br>${t('已尝试：')}${esc(tried)}` : '') +
+      `<br>${t('当前版本仍可正常使用，可稍后重试或手动下载。')}` +
+      ` <a href="${esc(d.manual_url || 'https://github.com/linhut/evermem/releases/latest')}" target="_blank">${t('手动下载')}</a>`;
+    return;
+  }
+  if (d.has_update) {
+    const asset = d.asset || {};
+    const urls = asset.urls || [];
+    const url = urls[0] || d.manual_url;
+    // 直连之外再给一个镜像加速入口：大文件走镜像通常更快
+    const fast = urls.find(u => u && u !== url && !u.startsWith('https://github.com/'));
+    const notes = (d.notes || '').split('\n').filter(x => x.trim()).slice(0, 3).join('<br>');
+    info.innerHTML = `<b>${t('发现新版本：')}v${esc(d.latest || '')}</b>（${t('当前：')}v${esc(d.current || '')}）` +
+      ` <a href="${esc(url)}" target="_blank"><button class="btn primary small">${t('下载更新')}</button></a>` +
+      (fast ? ` <a href="${esc(fast)}" target="_blank"><button class="btn small">${t('镜像加速下载')}</button></a>` : '') +
+      (notes ? `<br>${notes}` : '');
+  } else {
+    info.textContent = `${t('已是最新版本')}（v${d.latest || d.current || ''}）` + (d.cached ? ` · ${t('缓存结果')}` : '');
+  }
+}
 
 function bindBrowse() {
   $('#noteList').onclick = e => {
@@ -457,10 +665,18 @@ function filterBlocks(q) {
 let deb = null;
 /* 异步任务轮询（extract/harvest 后台运行不阻塞 UI） */
 function pollTask(taskId, onDone) {
+  // 加了超时与异常兜底：任务卡死时不再无限轮询（此前 interval 永不清除、fetch 抛错即 unhandled）
+  let n = 0;
   const iv = setInterval(async () => {
-    const d = await (await fetch('/api/task/status?task=' + encodeURIComponent(taskId))).json();
-    if (d.state === 'done') { clearInterval(iv); onDone(d.output || ''); }
-    else if (d.state === 'error') { clearInterval(iv); toast('任务失败：' + (d.output || '').slice(0, 80)); }
+    n += 1;
+    try {
+      const d = await (await fetch('/api/task/status?task=' + encodeURIComponent(taskId))).json();
+      if (d.state === 'done') { clearInterval(iv); onDone(d.output || ''); }
+      else if (d.state === 'error') { clearInterval(iv); toast('任务失败：' + (d.output || '').slice(0, 80)); }
+      else if (n >= 120) { clearInterval(iv); toast('任务超时（约 3 分钟），请查看服务日志', 'warning'); }
+    } catch (e) {
+      if (n >= 60) { clearInterval(iv); toast('任务状态查询失败，已停止轮询', 'warning'); }
+    }
   }, 1500);
 }
 $('#search').addEventListener('input', e => { clearTimeout(deb); deb = setTimeout(() => loadNotes(), 250); });
@@ -549,12 +765,14 @@ function md(s) {
 }
 async function act(n, action, extra) {
   if (!n) return;
-  await post('/api/note/' + encodeURIComponent(n.id) + '/' + action, extra ? { status: extra } : {});
-  toast('已更新'); loadNotes();
+  // 假成功修复：必须看响应，404/500 一律如实提示，不再"点了就算成功"
+  const r = await post('/api/note/' + encodeURIComponent(n.id) + '/' + action, extra ? { status: extra } : {});
+  if (r.ok) { toast('已更新'); loadNotes(); }
+  else toast('操作失败：' + (r.error || ('HTTP ' + r.status)), 'danger');
 }
 
 /* 候选 */
-const AI_COLOR = { promote: 'var(--success)', keep: 'var(--warning)', reject: 'var(--danger)', archive_dup: 'var(--danger)' };
+const AI_COLOR = { promote: 'var(--success)', keep: 'var(--warning)', archive: 'var(--danger)', reject: 'var(--danger)' };
 function aiBadge(r) {
   const c = AI_COLOR[r.ai_verdict] || 'var(--text2)';
   const roleLine = (r.roles || []).map(x => `${x.n[0]}${x.score}${x.v === 'pass' ? '✓' : (x.v === 'veto' ? '✗' : '●')}`).join(' ');
@@ -752,7 +970,7 @@ async function triAutoReview() {
   const extra = (d.failed && d.failed.length) ? `，${t('转正失败')} ${d.failed.length}` : '';
   const arch = (d.archived && d.archived.length) ? `，${t('重复/低质归档')} ${d.archived.length}` : '';
   const veto = (d.veto_kept && d.veto_kept.length) ? `，${d.veto_kept.length} ${t('条涉密/危险留人工')}` : '';
-  toast(`${t('评审')} ${d.reviewed} 条 → ${t('转正')} ${d.promoted.length}、${t('保留')} ${d.kept.length}${arch}${veto}${extra}`, d.promoted.length ? 'success' : 'info');
+  toast(`${t('评审')} ${d.reviewed} 条 → ${t('已转正')} ${d.promoted.length}、${t('保留')} ${d.kept.length}${arch}${veto}${extra}`, d.promoted.length ? 'success' : 'info');
   loadTriage(); loadSide();
 }
 /* 单条转正/存疑：走候选专用路由，并按返回判断成败——
@@ -906,15 +1124,29 @@ async function loadInteg() {
     <span style="min-width:110px;font-weight:500">${esc(t.label)}</span>
     <span class="sub" style="flex:1">${t.any_installed ? '已配置' : '未配置'} · ${t.files[0].path}</span>
     <button class="btn ${t.any_installed ? 'ghost' : 'primary'} small" onclick="mcpInstall('${t.key}')">${t.any_installed ? '更新' : '安装'}</button></div>`).join('');
+  // 开机启动（开机自启开关）：浏览器模式下自动禁用
+  loadAutostart();
+}
+/* 数据与维护模块入口：原为「接入设置」的③④⑤三张卡，已提升为侧栏一级模块 */
+async function loadMaint() {
+  // ① 数据位置
+  loadConfig();
+  // ② 核心经验同步
   $('#hotSyncBtn').onclick = () => { toast('同步中…'); post('/api/hotsync').then(d => { toast(d.ok ? '核心经验已同步' : '失败'); if (d.output) $('#hotSyncInfo').innerHTML = `<pre class="out">${esc(d.output)}</pre>`; }); };
+  // ③ 经验沉淀
   $('#harvBtn').onclick = () => { toast('提取中…（后台运行）'); post('/api/harvest').then(d => {
     if (!d.ok) { toast('失败：' + (d.error || '')); return; }
     pollTask(d.task_id, out => { $('#harvInfo').innerHTML = `<pre class="out">${esc(out)}</pre>`; toast('提取完成'); });
   }); };
   const st = await (await fetch('/api/stats')).json();
   $('#hotSyncInfo').textContent = `当前核心经验 ${st.hot} 条（上限 20）· 索引更新于 ${st.built_at || '—'}`;
-  // 数据位置配置
-  loadConfig();
+}
+/* 版本与更新模块入口：原为「接入设置」里的第⑨张卡，已提升为侧栏一级模块，
+   加载三件事——当前版本、更新检查（24h 缓存，点按钮才强制联网）、更新源配置。 */
+async function loadUpdateView() {
+  loadVersion();
+  loadUpdate(false);
+  loadUpdateSources();
 }
 function fmtCheck(c) {
   if (!c) return '（未知）';
@@ -978,8 +1210,11 @@ $('#saveBtn').onclick = async () => {
     } catch (e) { /* 查重失败不阻断 */ }
   }
   const data = { title, body: $('#fBody').value, type: $('#fType').value, status: $('#fStatus').value, tags: $('#fTags').value };
-  if (EDIT_ID) await post('/api/note/' + encodeURIComponent(EDIT_ID) + '/edit', data);
-  else await post('/api/note', { title: data.title, body: data.body, type: data.type, status: data.status, tags: data.tags });
+  // 假成功修复：保存失败必须留在弹窗并如实提示（此前 404 也提示"已保存"并关窗）
+  const r = EDIT_ID
+    ? await post('/api/note/' + encodeURIComponent(EDIT_ID) + '/edit', data)
+    : await post('/api/note', { title: data.title, body: data.body, type: data.type, status: data.status, tags: data.tags });
+  if (!r.ok) { toast('保存失败：' + (r.error || ('HTTP ' + r.status)), 'danger'); return; }
   $('#modalMask').classList.remove('show'); toast('已保存', 'success'); loadNotes();
 };
 document.addEventListener('keydown', e => {

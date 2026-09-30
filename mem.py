@@ -40,20 +40,29 @@ if sys.stdout and hasattr(sys.stdout, "reconfigure"):
     except (ValueError, OSError):
         pass
 
-def resolve_root() -> Path:
-    """数据目录：PMEM_HOME 优先，否则回退到脚本所在目录。
+# 数据目录与代码目录的唯一解析入口；先补 sys.path，
+# 保证从任意 cwd、冻结态解包目录调用本模块都能找到它。
+from pathlib import Path
 
-    设了 PMEM_HOME 就能把数据放到任意位置，工具代码与数据彻底分离，
-    升级或重装工具不会碰到笔记。
+import sys as _sys
+if str(Path(__file__).resolve().parent) not in _sys.path:
+    _sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+import paths as _paths  # noqa: E402
+paths = _paths  # 供同目录模块复用同一份解析结果（历史写法兼容）
+
+def code_root() -> Path:
+    """代码目录（模板 / 脚本 / 前端资源），冻绝态下可能是临时解包目录。"""
+    return _paths.code_root()
+
+def resolve_root() -> Path:
+    """数据目录（全项目唯一入口）：环境变量 > 持久化配置 > 可移植默认目录。
+
+    mem / server / backup / memimport / harvest / recipes 都必须走 paths.data_root()，
+    否则 PyInstaller 单文件包会出现「核心检索、界面配置、导入、备份恢复」
+    各指向一个目录的分裂问题。
     """
-    env = os.environ.get("PMEM_HOME", "").strip()
-    if env:
-        return Path(env).expanduser().resolve()
-    # 打包产物（PyInstaller 单文件）里 __file__ 落在解压临时目录，用作数据目录是错的；
-    # 回退用「当前工作目录」，用户 cd 到存放笔记的目录即可直接跑，配 PMEM_HOME 可显式指定。
-    if getattr(sys, "frozen", False):
-        return Path.cwd().resolve()
-    return Path(__file__).resolve().parent
+    return _paths.data_root()
 
 HOST_MEMORY_CANDIDATES = (
     ".workbuddy/memory/MEMORY.md",
@@ -185,6 +194,19 @@ def iter_notes():
             out.append(note)
     return out
 
+def _atomic_write(path, text: str, encoding: str = "utf-8") -> None:
+    """原子写：tmp + os.replace，避免并发/中断留下截断文件。"""
+    tmp = path.with_name(path.name + f".tmp-{os.getpid()}")
+    try:
+        tmp.write_text(text, encoding=encoding)
+        os.replace(tmp, path)
+    finally:
+        try:
+            tmp.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+
 def build_index() -> dict:
     notes = iter_notes()
     postings: dict[str, dict[str, int]] = {}
@@ -217,7 +239,7 @@ def build_index() -> dict:
         "postings": postings, "title_postings": title_postings, "docs": docs,
     }
     INDEX_PATH.parent.mkdir(parents=True, exist_ok=True)
-    INDEX_PATH.write_text(json.dumps(idx, ensure_ascii=False), encoding="utf-8")
+    _atomic_write(INDEX_PATH, json.dumps(idx, ensure_ascii=False), encoding="utf-8")
     return idx
 
 def load_index(force: bool = False) -> dict:
@@ -535,6 +557,18 @@ def gc_gzip(src: Path, dst: Path) -> int:
         return 0
 
 
+def gc_t3_batch(arch_rows: list, keep_n: int, trig_size: bool, now: float) -> list:
+    """T3 冷存批次选择：保留最新 keep_n 条可热查，返回应冷存的最老一批。
+
+    独立成函数便于单测（曾因切片方向写反：冷存了最新一批，--prune 会删错对象）。
+    """
+    ordered = sorted(arch_rows, key=lambda r: -gc_file_age_days(r[0], now))  # 最老在前
+    batch = ordered[: max(0, len(ordered) - keep_n)]
+    if trig_size and not batch:
+        batch = ordered[: max(1, len(ordered) // 4)]
+    return batch
+
+
 def cmd_gc(args) -> int:
     """分层清理体检：默认 dry-run 只报告，--apply 才动文件，--prune 才删原文。"""
     now = time.time()
@@ -616,10 +650,10 @@ def cmd_gc(args) -> int:
         keep_n = len(arch_rows)
         if trig_cnt:
             keep_n = min(keep_n, int(args.archive_max * 0.8))
-        ordered = sorted(arch_rows, key=lambda r: -gc_file_age_days(r[0], now))
-        batch = ordered[keep_n:]
-        if trig_size and not batch:
-            batch = ordered[: max(1, len(ordered) // 4)]
+        ordered = sorted(arch_rows, key=lambda r: -gc_file_age_days(r[0], now))  # 最老在前
+        # 保留最新 keep_n 条可热查，冷存超出部分（最老的一批）。
+        # 原实现取 ordered[keep_n:]（尾部=最新）与注释/打印相反，--prune 会删掉最新归档，已修复。
+        batch = gc_t3_batch(arch_rows, keep_n, trig_size, now)
         print(f"   命中：条数或容量超限 → 冷存 {len(batch)} 条（保留最新 {len(arch_rows) - len(batch)} 条可热查）")
     elif trig_age:
         batch = trig_age
@@ -818,7 +852,7 @@ def cmd_hot(args) -> int:
         new = pre + block + post
     else:
         new = text.rstrip() + "\n\n" + block + "\n"
-    target.write_text(new, encoding="utf-8")
+    _atomic_write(target, new)
     print(f"已同步 {len(picks)} 条核心经验 → {target}"
           + (f"（热层保护排除自动收割 {skipped_auto} 条，人工 pin 或 --include-auto 可放行）"
              if skipped_auto else ""))
@@ -1181,7 +1215,7 @@ def promote_candidate(path: Path, review: dict | None = None) -> dict:
     target_dir.mkdir(parents=True, exist_ok=True)
     target = target_dir / f"{slugify(title)}-{d.get('id')}.md"
     try:
-        path.write_text(text, encoding="utf-8")
+        _atomic_write(path, text)
         if target.exists():  # 同名冲突：加时间戳后缀，不覆盖、不中断整批转正
             target = target_dir / f"{slugify(title)}-{d.get('id')}-{int(time.time())}.md"
         path.rename(target)
@@ -1337,7 +1371,7 @@ def cmd_add(args) -> int:
         f"{body.strip()}\n"
     )
     path = sub / f"{slugify(args.title)}-{nid}.md"
-    path.write_text(text, encoding="utf-8")
+    _atomic_write(path, text)
     build_index()
     print(f"已写入 {path}")
     print(f"id: {nid}")
@@ -1378,6 +1412,28 @@ def cmd_show(args) -> int:
         print(f"未找到 {args.id}")
         return 1
     print(Path(d["path"]).read_text(encoding="utf-8"))
+    return 0
+
+
+def cmd_set_status(args) -> int:
+    """改笔记状态：gc 体检提示里引用了 set-status 但从未实现，用户照做会 invalid choice。"""
+    idx = load_index()
+    d = idx.get("docs", {}).get(args.id)
+    if not d or not d.get("path"):
+        print(f"未找到笔记：{args.id}", file=sys.stderr)
+        return 1
+    path = Path(d["path"])
+    raw = path.read_text(encoding="utf-8", errors="replace")
+    if re.search(r"^status:\s*\S+", raw, re.M):
+        raw = re.sub(r"^status:\s*\S+", f"status: {args.status}", raw, count=1, flags=re.M)
+    else:
+        raw = raw.replace("---\n", f"---\nstatus: {args.status}\n", 1)
+    # 原子落盘（与其余写点一致），避免中断留截断文件
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(raw, encoding="utf-8")
+    os.replace(tmp, path)
+    build_index()  # 状态变更必须立即反映到检索池
+    print(f"已更新 {args.id} → status: {args.status}")
     return 0
 
 def cmd_reindex(_args) -> int:
@@ -1433,6 +1489,12 @@ def main() -> int:
     p.add_argument("id")
     p.set_defaults(func=cmd_show)
 
+    p = sub.add_parser("set-status", help="改笔记状态（gc 提示里引用的命令，此前不存在导致照做报错）")
+    p.add_argument("id")
+    p.add_argument("status", choices=["active", "staged", "suspect", "superseded"])
+    p.add_argument("--reindex", action="store_true")
+    p.set_defaults(func=cmd_set_status)
+
     p = sub.add_parser("profile", help="导出使用画像草稿（本地生成，供新工具/新会话随身携带）")
     p.add_argument("--limit", type=int, default=5, help="每个分类最多取几条")
     p.add_argument("--out", default=None, help="写入文件；不给则打印到标准输出")
@@ -1469,9 +1531,10 @@ def main() -> int:
     p.add_argument("action", nargs="?", choices=["list", "check", "review", "auto", "archive", "cap"], default="check")
     p.add_argument("--cap", type=int, default=None, help="容量上限（默认 50）")
     p.add_argument("--ids", nargs="*", default=None, help="review 指定候选 id（默认全部）")
-    p.add_argument("--llm", action="store_true", help="review 时尝试 LLM 精审（需 PMEM_AI_REVIEW 配置）")
-    p.add_argument("--purge", action="store_true", help="（已默认，保留兼容）auto 时把评审否决的候选直接归档")
-    p.add_argument("--no-purge", action="store_true", help="auto 时不归档评审否决的候选（默认归档）")
+    grp = p.add_mutually_exclusive_group()
+    grp.add_argument("--purge", action="store_true",
+                     help="auto 时把评审否决的候选直接归档（默认行为，保留兼容）")
+    grp.add_argument("--no-purge", action="store_true", help="auto 时不归档评审否决的候选")
     p.add_argument("--reindex", action="store_true")
     p.set_defaults(func=cmd_candidates)
 

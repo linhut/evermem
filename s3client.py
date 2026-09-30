@@ -165,8 +165,10 @@ class S3Client:
                 break
         return keys
 
-    def delete_object(self, key: str) -> None:
-        self._request("DELETE", self._full_key(key))
+    def delete_object(self, key: str, raw: bool = False) -> None:
+        # raw=True：key 已含 prefix（如 list_objects 的返回），不再二次拼接。
+        # 原实现总是再拼一次 prefix，导致"云端旧包永不清理且日志谎报已清理"。
+        self._request("DELETE", key if raw else self._full_key(key))
 
     @staticmethod
     def _xml2json(data: bytes) -> dict:

@@ -18,12 +18,20 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
 import time
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
+import sys as _sys
+if str(Path(__file__).resolve().parent) not in _sys.path:
+    _sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+import paths as _paths  # noqa: E402
+
+# 数据目录与 mem.py 同源（env > 持久化配置 > 可移植默认），避免配方扫描扫错目录。
+ROOT = _paths.data_root()
 NOTES = ROOT / "notes"
 LOCK = ROOT / ".recipe-lock.json"
 
@@ -189,8 +197,9 @@ def cmd_resolve(args) -> int:
             continue  # 会话层不被正式引用
         if LAYER_ORDER.get(slayer, 1) < t_order:
             continue  # 引用只许向上：不得引用更下层
-        if slayer == t_order:
-            # 同层仅匹配主 scope（未标 scope 的默认归本项目）
+        if LAYER_ORDER.get(slayer, 1) == t_order:
+            # 同层仅匹配主 scope（未标 scope 的默认归本项目）。
+            # 原写法 slayer == t_order 是字符串与整数比较恒 False，同层其他项目配方漏进求值链。
             if n["scope"] and n["scope"] != main_scope:
                 continue
         elif slayer == "org":
@@ -215,6 +224,11 @@ def cmd_resolve(args) -> int:
 
 def cmd_lock(args) -> int:
     notes = iter_recipes()
+    if getattr(args, "project", None):
+        # 与文档 RECIPES.md 对齐：lock --project <name> 只锁该项目作用域
+        want = f"project:{args.project}"
+        notes = [n for n in notes if (n.get("scope") or "") == want
+                 or (n.get("scope") or "").startswith(want + ":")]
     deps: dict[str, dict] = {}
     for n in notes:
         if n["status"] != "active":
@@ -231,16 +245,29 @@ def cmd_lock(args) -> int:
             deps[d]["consumers"].append(n["id"])
     if not deps:
         print("当前无配方声明 depends，锁文件为空（可留空文件供后续追加）。")
-        LOCK.write_text(json.dumps({"generated_at": time.strftime("%Y-%m-%d %H:%M:%S"), "deps": {}}, ensure_ascii=False, indent=2), encoding="utf-8")
+        _atomic_write(LOCK, json.dumps({"generated_at": time.strftime("%Y-%m-%d %H:%M:%S"), "deps": {}}, ensure_ascii=False, indent=2), encoding="utf-8")
         print(f"已写入 {LOCK}")
         return 0
     payload = {"generated_at": time.strftime("%Y-%m-%d %H:%M:%S"), "deps": deps}
-    LOCK.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    _atomic_write(LOCK, json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"已锁定 {len(deps)} 个依赖 → {LOCK}")
     for d, info in deps.items():
         flag = "[缺失]" if info["status"] == "missing" else ""
         print(f"  {d}  v{info['version'] or '?'}  {info['status']}{flag}  被 {len(info['consumers'])} 个配方引用")
     return 0
+
+
+def _atomic_write(path, text: str, encoding: str = "utf-8") -> None:
+    """原子写：tmp + os.replace，避免并发/中断留下截断锁文件。"""
+    tmp = path.with_name(path.name + f".tmp-{os.getpid()}")
+    try:
+        tmp.write_text(text, encoding=encoding)
+        os.replace(tmp, path)
+    finally:
+        try:
+            tmp.unlink(missing_ok=True)
+        except OSError:
+            pass
 
 
 def main() -> int:
@@ -255,6 +282,8 @@ def main() -> int:
     p.set_defaults(func=cmd_resolve)
 
     p = sub.add_parser("lock", help="生成依赖锁文件 .recipe-lock.json")
+    p.add_argument("--project", default=None,
+                   help="只锁指定项目（scope 前缀 project:<name> 或 <name>）；不给则锁全部 active 配方")
     p.set_defaults(func=cmd_lock)
 
     args = ap.parse_args()

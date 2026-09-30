@@ -19,19 +19,28 @@ jobs:
         include:
           - os: windows-latest
             label: windows
+            plat: windows-x64
             sep: ";"
             exe: ".exe"
-            artifact: evermem-windows
+            artifact: Evermem-windows
+            icon: "--icon assets/icon.ico"
+            version_file: "--version-file assets/version_info.txt"
           - os: ubuntu-latest
             label: linux
+            plat: linux-x64
             sep: ":"
             exe: ""
-            artifact: evermem-linux
+            artifact: Evermem-linux
+            icon: ""
+            version_file: ""
           - os: macos-latest
             label: macos
+            plat: macos-arm64
             sep: ":"
             exe: ""
-            artifact: evermem-macos
+            artifact: Evermem-macos
+            icon: "--icon assets/icon.icns"
+            version_file: ""
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -54,10 +63,45 @@ jobs:
           sudo apt-get install -y -qq libgl1 libegl1 libxkbcommon0 libdbus-1-3 \
             libfontconfig1 libxcb-cursor0 libxcb-xinerama0 libxrandr2 libxfixes3 libxcb-icccm4 libxcb-keysyms1 libxcb-shape0
 
+      - name: 生成 Windows 版本信息
+        if: matrix.os == 'windows-latest'
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          raw = Path('VERSION').read_text(encoding='utf-8').strip()
+          ver = raw.split('.') + ['0']
+          ver = tuple(int(x) for x in ver[:4])
+          vs = '.'.join(map(str, ver))
+          text = f'''VSVersionInfo(
+            ffi=FixedFileInfo(
+              filevers={ver}, prodvers={ver}, mask=0x3f, flags=0x0, OS=0x40004,
+              fileType=0x1, subtype=0x0, date=(0, 0)
+            ),
+            kids=[
+              StringFileInfo([
+                StringTable('040904B0', [
+                  StringStruct('CompanyName', 'Jose-AI'),
+                  StringStruct('FileDescription', '恒忆 Evermem 桌面壳'),
+                  StringStruct('FileVersion', '{vs}'),
+                  StringStruct('InternalName', 'Evermem'),
+                  StringStruct('LegalCopyright', 'Copyright (c) 2026 Jose-AI · MIT License'),
+                  StringStruct('OriginalFilename', 'Evermem.exe'),
+                  StringStruct('ProductName', '恒忆 Evermem'),
+                  StringStruct('ProductVersion', '{vs}')
+                ])
+              ]),
+              VarFileInfo([VarStruct('Translation', [1033, 1200])])
+            ]
+          )'''
+          Path('assets/version_info.txt').write_text(text, encoding='utf-8')
+          PY
+
       - name: 构建桌面壳（PySide6 + QtWebEngine，内嵌 Web 服务；单包即完整产品）
         # 单行书写（Windows Git Bash 不吃 \ 续行）；--paths web 让分析器找到 import server；
-        # add-data 打包前端资源与模板（冻结态定位见 server.py / desktop.py）
-        run: pyinstaller --onefile --windowed --name evergem --paths web --add-data "web${{ matrix.sep }}web" --add-data "templates${{ matrix.sep }}templates" desktop.py
+        # add-data 打包前端资源与模板（冻结态定位见 server.py / desktop.py）。
+        # --hidden-import paths：数据/代码目录唯一解析入口，被各模块动态引用，
+        # 分析器扫不到会导致打包产物启动即 ModuleNotFoundError。
+        run: pyinstaller --onefile --windowed --name Evermem --paths web --hidden-import paths --add-data "web${{ matrix.sep }}web" --add-data "templates${{ matrix.sep }}templates" --add-data "VERSION${{ matrix.sep }}." --add-data "scripts${{ matrix.sep }}scripts" ${{ matrix.icon }} ${{ matrix.version_file }} desktop.py
 
       - name: GUI 冒烟（--smoke 自退并断言退出码 0）
         shell: bash
@@ -67,7 +111,7 @@ jobs:
             export QT_QPA_PLATFORM=offscreen
             export QTWEBENGINE_CHROMIUM_FLAGS="--no-sandbox --disable-gpu --disable-dev-shm-usage"
           fi
-          ./dist/evergem${{ matrix.exe }} --smoke &
+          ./dist/Evermem${{ matrix.exe }} --smoke &
           PID=$!
           rc=""
           i=0
@@ -84,21 +128,59 @@ jobs:
         run: |
           cd dist
           VER="${GITHUB_REF_NAME#v}"
+          FILE_VER="$(cat ../VERSION)"
+          # 非 tag 触发（workflow_dispatch）时 GITHUB_REF_NAME 是分支名，改用 VERSION 文件
+          if [ "$VER" = "${GITHUB_REF_NAME}" ]; then VER="$FILE_VER"; fi
+          # tag 与 VERSION 必须一致：不一致说明漏改版本号，直接失败而不是产出错误版本号
+          if [ "$VER" != "$FILE_VER" ]; then
+            echo "tag 与 VERSION 不一致：tag=$VER VERSION=$FILE_VER"; exit 1
+          fi
           if [ "${{ matrix.label }}" = "macos" ]; then
             # macOS onefile 同时产出裸可执行文件与 .app 目录；gh 不能上传目录，把 .app 打成 zip
-            zip -qry evergem-macos-v$VER.app.zip evergem.app
-            rm -rf evergem.app evergem
+            zip -qry Evermem-macos-v$VER.app.zip Evermem.app
+            rm -rf Evermem.app Evermem
           else
-            mv -f evergem${{ matrix.exe }} evergem-${{ matrix.label }}-v$VER${{ matrix.exe }}
+            mv -f Evermem${{ matrix.exe }} Evermem-${{ matrix.label }}-v$VER${{ matrix.exe }}
+          fi
+          # 生成校验文件（先写清单，避免把自己算进去）
+          if command -v sha256sum >/dev/null 2>&1; then
+            sha256sum * > SHA256SUMS.txt
+          else
+            shasum -a 256 * > SHA256SUMS.txt
           fi
           ls -1
+
+      - name: 生成更新清单片段（本平台资产 + sha256）
+        shell: bash
+        # 片段写在仓库根，不写进 dist/：dist/* 会整体上传为 Release 资产，不能混入清单文件
+        run: |
+          python scripts/gen_update_manifest.py fragment \
+            --platform ${{ matrix.plat }} --dist dist \
+            --version "$(cat VERSION)" --out update-fragment.json
 
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
           # uses 步骤不受 defaults.working-directory 影响，路径相对仓库根
-          path: dist/*
+          path: |
+            dist/*
           if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: manifest-${{ matrix.label }}
+          path: update-fragment.json
+          if-no-files-found: error
+
+      - name: 确保 GitHub Release 存在（tag 触发时自动创建）
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" --title "Evermem (恒忆) v${TAG#v} · 桌面壳" --generate-notes
+          fi
 
       - name: 上传二进制到 Release（tag 触发时）
         if: startsWith(github.ref, 'refs/tags/v')
@@ -106,4 +188,47 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload "${GITHUB_REF_NAME}" dist/* --clobber
+          cd dist
+          gh release upload "${GITHUB_REF_NAME}" * --clobber
+
+  # 更新清单必须等三平台都构建完才能汇总（要拿齐全平台的 sha256）
+  manifest:
+    name: 汇总更新清单
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: manifest-*
+          path: fragments
+          merge-multiple: true
+
+      - name: 合成更新清单 update-manifest.json
+        run: |
+          ls -1 fragments
+          # 输出名带前缀：避免与客户端的更新源配置 update.json 同名（开发态两者会落在同一目录）
+          # 清单不进仓库：它由 Release 附件分发，需要自建源时由维护者上传到自己的静态服务器
+          python scripts/gen_update_manifest.py merge \
+            --fragments fragments --version "$(cat VERSION)" \
+            --out update-manifest.json --changelog CHANGELOG.md \
+            --mirror https://gh-proxy.com/ --mirror https://cdn.gh-proxy.org/
+          cat update-manifest.json
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Evermem-update-manifest
+          path: update-manifest.json
+          if-no-files-found: error
+
+      - name: 上传清单到 Release（tag 触发时）
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "${GITHUB_REF_NAME}" update-manifest.json --clobber
+      # 到此为止。清单不再提交回仓库（此前为"让 jsDelivr 直读"而 commit back，
+      # 既污染仓库历史，又把发布流程绑在第三方 CDN 上；项目没有 CDN，也不需要）。
+      # 自建源的用法：把本步骤产出的附件传到自己的静态服务器，再在界面填清单地址。

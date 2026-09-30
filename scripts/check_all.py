@@ -9,6 +9,8 @@
 #
 
 import json
+import os as _os
+import shutil as _shutil
 import subprocess
 import sys
 import time
@@ -18,12 +20,15 @@ BASE = Path(__file__).resolve().parents[1]  # 项目根（scripts/ 的上一级�
 if str(BASE) not in sys.path:
     sys.path.insert(0, str(BASE))
 import mem  # noqa: E402
+import paths as Paths  # noqa: E402 - 数据目录唯一入口（清理测试残留用数据根，勿用代码根）
 # 解释器与测试目录走环境变量，勿写死用户机器路径（发布约定）：
 #   PMEM_SYS_PY     指定解释器（缺省用运行本脚本的 python）
 #   PMEM_TEST_DIR   指向含可提取文档的样本目录（缺省跳过 extract 用例）
 import os as _os
 PY = _os.environ.get("PMEM_SYS_PY", "") or sys.executable
 SYS = _os.environ.get("PMEM_SYS_PY", "") or sys.executable
+# node 语法检查用 PATH 探测（原写死 C:/Program Files/nodejs/node.exe，macOS/Linux 直接不可用）
+_NODE = _os.environ.get("PMEM_NODE", "") or _shutil.which("node") or ""
 SAMPLE_DIR = Path(_os.environ.get("PMEM_TEST_DIR", "")) if _os.environ.get("PMEM_TEST_DIR") else None
 
 RESULTS = []  # (功能, 状态, 说明)
@@ -166,6 +171,11 @@ st, body = api("/api/note?id=20260927-0245-134")
 check("GET /api/note（存在，含 origin）", st == 200 and '"origin"' in body)
 st, body = api("/api/note?id=bad")
 check("GET /api/note（不存在→404）", st == 404)
+st, body = api("/api/version")
+check("GET /api/version（版本号随 VERSION 文件）", st == 200 and '"version"' in body)
+st, body = api("/api/update/sources")
+check("GET /api/update/sources（离线返回源配置）",
+      st == 200 and '"config"' in body and '"platform"' in body)
 st, body = api("/api/doesnotexist")
 check("GET 未知路径→404", st == 404)
 st, body = api("/api/note", "POST", {"title": ""})
@@ -180,7 +190,7 @@ if st == 200:
         pass
     if nid:
         # 清理测试残留，避免污染正式库（Web 新建的笔记是 staged 测试笔记）
-        test_path = BASE / "notes" / "lessons" / f"web-{nid}.md"
+        test_path = Path(str(Paths.data_root())) / "notes" / "lessons" / f"web-{nid}.md"
         if test_path.exists():
             test_path.unlink()
             mem.build_index()
@@ -194,9 +204,16 @@ print()
 print("六、前端与数据健康")
 ok, out, ms = run([PY, "scripts/frontend_smoke.py"])
 check("前端静态契约冒烟（元素/函数/路由）", ok)
-ok, out, ms = run(["C:/Program Files/nodejs/node.exe", "--check", "web/index.js"])
-check("index.js 语法", ok)
-ok, out, ms = run([PY, "-m", "py_compile", "web/server.py", "web/launcher.py", "evermem_mcp.py", "mem.py", "scripts/ingest.py", "harvest.py", "scripts/knowledge_scan.py"])
+if _NODE:
+    ok, out, ms = run([_NODE, "--check", "web/index.js"])
+    check("index.js 语法", ok)
+else:
+    check("index.js 语法（跳过：PATH 无 node）", True)
+ok, out, ms = run([PY, "-m", "py_compile", "web/server.py", "evermem_mcp.py",
+                   "mem.py", "update.py", "paths.py", "recipes.py", "backup.py", "harvest.py",
+                   "memimport.py", "s3client.py", "desktop.py", "scripts/ingest.py",
+                   "scripts/knowledge_scan.py", "scripts/gen_update_manifest.py", "scripts/make_icon.py",
+                   "scripts/scan_spaces.py", "scripts/check_all.py", "scripts/frontend_smoke.py"])
 check("全部 Python 语法", ok)
 
 print()

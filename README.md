@@ -52,7 +52,7 @@
 | 🔒 **涉密安全优先** | 合规官检测敏感特征（涉密/身份证/令牌等）、技术官检测危险命令（`rm -rf` 等）；被否决的候选绝不自动归档隐藏，留人工处置 |
 | 🧠 **检索即用** | BM25 + 中文 2/3-gram 词面匹配；三层架构（热层常驻 / 温层召回 / 冷层溯源）保证"最值钱的经验绕过检索直接进上下文" |
 | 📥 **数据导入（双来源）** | 文档导入：存量 docx/xlsx/pdf 切成文本块供 AI 提炼；其他记忆导入：画像导出格式、Markdown、JSON、目录批量收，自动去重后落 `staged` |
-| 🖥️ **完整 Web 界面** | 零依赖（Python 标准库）HTTP 服务：记忆浏览、候选审核、数据导入、统计诊断、数据备份等 7 视图，明亮/暗色双主题、中英双语 |
+| 🖥️ **完整 Web 界面** | 零依赖（Python 标准库）HTTP 服务：记忆浏览、候选审核、数据导入、核心经验、统计诊断、接入设置、数据与维护、数据备份、版本与更新共 9 个一级模块，明亮/暗色双主题、中英双语 |
 | 💾 **多渠道备份同步** | 对象存储（S3 兼容：阿里云 OSS / 腾讯云 COS / AWS / MinIO / 百度 BOS）、SMTP 邮件、本地镜像、全量快照、百度网盘冷备；增量同步 + 加密归档 + 失败告警 |
 | 🌍 **跨平台零依赖** | 纯 Python 标准库实现，Windows / macOS / Linux 通用，无第三方运行时 |
 
@@ -62,17 +62,22 @@
 .
 ├── README.md (ZH 默认) / README.en.md (EN)   # 项目文档（默认中文）
 ├── CHANGELOG.md / LICENSE / VERSION / .gitignore
-├── mem.py            # CLI 引擎：recall / add / show / gc / hot / candidates / reindex / stats
+├── mem.py            # CLI 引擎：recall / add / show / set-status / gc / hot / candidates / reindex / stats
 ├── memimport.py      # 外部记忆导入引擎（画像 / Markdown / JSON / 目录，内容哈希判重）
 ├── harvest.py        # 会话收割：命令级 + 任务级经验候选
+├── recipes.py        # 配方治理（四层作用域 / 求值链 / 依赖锁）
+├── update.py         # 多源更新检查（自建清单 → GitHub 直连 → 镜像竞速）
 ├── evermem_mcp.py    # MCP 服务（查记忆 / 存记忆 / 更新 / 核心经验）
 ├── backup.py / s3client.py   # 多渠道数据备份（对象存储 / SMTP / 快照/加密）
 ├── desktop.py        # 桌面壳（内嵌 Web 服务 + QtWebEngine，跨平台）
+├── paths.py          # 数据目录 / 代码目录唯一解析入口（env > 持久化配置 > 可移植默认）
+├── Evermem.spec      # PyInstaller 构建描述（与 build.yml 等价）
+├── assets/           # 应用图标（icon.ico / icon.icns / icon.png，由 scripts/make_icon.py 生成）
 ├── web/              # 零依赖 Web 界面（server.py 启动，前端内嵌资源）
-├── scripts/          # 开发与运维工具（批量读 / 基准 / 自检 / 空间扫描 / 知识扫描 / 热预览）
+├── scripts/          # 开发与运维工具（批量读 / 基准 / 自检 / 空间扫描 / 知识扫描 / 热预览 / 图标生成）
 ├── templates/        # 技能与提示词模板（唯一事实源）
 ├── tests/            # 回归测试
-└── docs/             # 架构 / 备份 / 审计 / 平台文档
+└── docs/             # 架构 / 备份 / 审计 / 平台文档 / 零基础使用说明
 ```
 
 ## 界面预览 · System Diagram
@@ -81,7 +86,7 @@
 
 ### 01 · 记忆浏览 · 桌面
 
-> 系统主界面：侧边导航（8 视图）、记忆检索列表、标签 / 类型 / 状态筛选与分页。
+> 系统主界面：侧边导航（9 个一级模块：记忆浏览 / 候选审核 / 数据导入 / 核心经验 / 统计诊断 / 接入设置 / 数据与维护 / 数据备份 / 版本与更新）、记忆检索列表、标签 / 类型 / 状态筛选与分页。
 
 ![01 记忆浏览](docs/ui/01-view-browse.png)
 
@@ -136,21 +141,32 @@
 
 ### 0. 直接作为桌面程序运行（可选，推荐）
 
-> 把 7 视图 Web 版原样作为桌面应用：内嵌本地服务 + 内嵌浏览器，无需打开浏览器标签页。
+> 把 9 个一级模块的界面原样作为桌面应用：内嵌本地服务 + 内嵌浏览器，无需打开浏览器标签页。
 
 ```bash
 python desktop.py            # 桌面壳（单实例 / 托盘 / 关闭即最小化并询问是否停服）
 ```
 
-> 也可直接用发布产物（GitHub Release 的 `evergem-<平台>-v*`，每平台一个桌面运行包）：
+> **开机自启动**：系统 → 接入设置 → ⑦ 桌面常驻 → 「开机自启动」开关。
+> 系统登录后自动启动并静默驻留托盘；开关状态取自系统真实自启项，设置失败会回滚并提示原因。
+> 浏览器/独立服务模式下该开关不可用（无系统自启权限），会显示禁用与原因。
 
-> - **Windows**：`evergem-windows-v*.exe`，双击运行
-> - **macOS**：`evergem-macos-v*.app.zip`，解压出 `evergem.app` 后双击（未签名首次：右键 → 打开）
-> - **Linux**：`evergem-linux-v*`（无后缀的 ELF 可执行文件），下载后先 `chmod +x` 再运行：
+> 数据目录解析顺序：`PMEM_HOME` 环境变量 > 数据目录 `pmem_config.json` 的 `home` 字段 > 可移植默认目录
+> （打包产物为可执行文件同级目录；不用当前工作目录，避免双击 / 托盘 / 开机自启三种启动方式落到不同位置）。
+> 从开发环境迁移数据到桌面版，见 [docs/DESKTOP-MIGRATION.md](docs/DESKTOP-MIGRATION.md)。
+
+> 也可直接用发布产物（GitHub Release 的 `Evermem-<平台>-v*`，每平台一个桌面运行包）：
+
+> - **Windows**：`Evermem-windows-v*.exe`，双击运行
+> - **macOS**：`Evermem-macos-v*.app.zip`，解压出 `Evermem.app` 后双击（未签名首次：右键 → 打开）
+> - **Linux**：`Evermem-linux-v*`（无后缀的 ELF 可执行文件），下载后先 `chmod +x` 再运行：
 >
 >   ```bash
->   chmod +x evergem-linux-v0.2.2 && ./evergem-linux-v0.2.2
+>   chmod +x Evermem-linux-v0.2.3 && ./Evermem-linux-v0.2.3
 >   ```
+>
+> **完全不懂技术的用户请直接看**：[docs/USER-GUIDE.md](docs/USER-GUIDE.md)（零基础使用说明：下载哪一个文件、
+> 双击后没反应/被杀软拦截/白屏怎么办、首次运行如何设置数据位置、如何更新不丢数据）。
 
 ### 1. 启动 Web 界面
 
@@ -170,7 +186,8 @@ python harvest.py scan --days 7 --dry-run   # 预览收割（确认后去掉 --d
 python mem.py hot --apply          # 同步热层到宿主必读文件
 ```
 
-> 未设置 `PMEM_HOME` 时数据目录默认为脚本所在目录；所有路径走 pathlib，代码中不存在写死的绝对路径。
+> 未设置 `PMEM_HOME` 时数据目录按「持久化配置 > 可移植默认目录」解析（源码态为脚本所在目录，打包态为可执行文件同级目录）；
+> 所有路径走 `paths.py` 单一入口，代码中不存在写死的绝对路径。
 
 ## 使用说明
 
@@ -185,7 +202,7 @@ python mem.py hot --apply          # 同步热层到宿主必读文件
 | 同步热层 | `mem.py hot --apply --target <项目>/.workbuddy/memory/MEMORY.md` |
 | 清理体检 | `mem.py gc`（默认只体检；`--apply` 执行，`--prune` 才删原文） |
 | 导出画像 | `mem.py profile --limit 5 [--out 画像.md]` |
-| 自检 | `tests/test_recall.py`、`scripts/frontend_smoke.py`、`scripts/check_all.py` |
+| 自检 | `tests/test_recall.py`、`tests/test_recipes.py`、`tests/test_paths_autostart.py`、`scripts/frontend_smoke.py`、`scripts/check_all.py` |
 
 ### 数据导入（主菜单一个模块，内含两个子模块）
 
@@ -232,6 +249,11 @@ python backup.py --restore         # 从渠道恢复
 ```
 
 详见 [docs/BACKUP-DESIGN.md](docs/BACKUP-DESIGN.md)。
+
+跨机器或「开发环境 → 桌面版」的数据迁移（白名单、禁止项、校验与回滚）见
+[docs/DESKTOP-MIGRATION.md](docs/DESKTOP-MIGRATION.md)；
+仓库同步范围、提交规范与发布检查清单见
+[docs/REPO-RELEASE-CHECKLIST.md](docs/REPO-RELEASE-CHECKLIST.md)。
 
 ### 分层清理（Retention）
 
@@ -314,24 +336,6 @@ AI 会话落盘 JSONL
 - **涉密免责**：涉及国家秘密、警务、未公开政务项目的信息一律不得写入笔记；合规官会自动检测敏感特征并否决入档；
 - **进 Git 前自查**：正文只留方法论，敏感细节（密钥、内网 IP、身份证号、手机号、涉密文件名全称）一律用占位符；
 - **危险命令拦截**：含 `rm -rf`、`del /s`、`DROP TABLE` 等危险操作的候选自动留人工，绝不归档隐藏。
-
-## 项目结构
-
-```
-evermem/
-├── mem.py                 核心引擎：检索 / 笔记管理 / 热层同步 / 候选治理
-├── harvest.py             会话收割：命令级碎片 + 任务级经验提炼（无需钩子）
-├── backup.py              数据备份领域层：渠道契约 / 投影 / 状态判定（单一事实源）
-├── s3client.py            零依赖 S3 兼容客户端（AWS SigV4）
-├── web/                   零依赖 Web 界面（server.py / index.js / channel.js）
-├── notes/                 记忆数据（**不进 Git**）：facts / lessons / procedures / candidates
-├── events/                证据层 JSONL（只追加，溯源与证伪）
-├── docs/                  架构 / 备份设计 / 状态流转 / 审计等平台文档
-├── tests/                 回归测试
-├── templates/             skill 模板
-├── LICENSE                MIT 许可
-└── CHANGELOG.md / VERSION / USAGE.md
-```
 
 ## 文档
 
