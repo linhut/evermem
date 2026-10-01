@@ -1373,6 +1373,10 @@ class Handler(BaseHTTPRequestHandler):
         self.send_error(404)
 
 def main() -> int:
+    ok, reason = _paths.ensure_data_root()
+    if not ok:
+        print(f"[server] {reason}", file=sys.stderr)
+        return 5
     from http.server import ThreadingHTTPServer
     Handler.protocol_version = "HTTP/1.1"  # keep-alive：省握手开销
     print(f"pmem Web 版启动：http://127.0.0.1:{PORT} （Ctrl+C 退出）")
