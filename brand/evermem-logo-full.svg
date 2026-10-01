@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 512" fill="none">
+  <!--
+    恒忆 Evermem 品牌字标 · 主版（图标 + 中英文字）
+    字体依赖：渲染端需有 Inter（英文）与 思源黑体/苹方/微软雅黑（中文）之一；
+    CI/离线环境若缺字体将回退系统默认 sans-serif，请用浏览器或装有字体的环境导出。
+  -->
+  <defs>
+    <linearGradient id="core2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6FA0FF"/>
+      <stop offset="1" stop-color="#2B4FD8"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 图标部分（复用主版，横向左移） -->
+  <g transform="translate(-96 0)">
+    <circle cx="256" cy="256" r="150" stroke="#4A7DFF" stroke-width="10" opacity="0.18"/>
+    <path d="M 221.3 453.0 A 200 200 0 0 1 68.1 187.6"
+          stroke="#4A7DFF" stroke-width="52" stroke-linecap="round"/>
+    <path d="M 102.8 127.4 A 200 200 0 0 1 409.2 127.4"
+          stroke="#2B3E8F" stroke-width="52" stroke-linecap="round"/>
+    <path d="M 443.9 187.6 A 200 200 0 0 1 290.7 453.0"
+          stroke="#4A7DFF" stroke-width="52" stroke-linecap="round"/>
+    <circle cx="221.3" cy="453.0" r="26" fill="#FFB84D"/>
+    <circle cx="102.8" cy="127.4" r="26" fill="#FFB84D"/>
+    <circle cx="443.9" cy="187.6" r="26" fill="#FFB84D"/>
+    <rect x="196" y="196" width="120" height="120" rx="18"
+          transform="rotate(45 256 256)" fill="url(#core2)"/>
+  </g>
+
+  <!-- 文字部分 -->
+  <text x="472" y="206" font-family="Inter, 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', sans-serif"
+        font-size="120" font-weight="700" fill="#1F2430" letter-spacing="2">Evermem</text>
+  <text x="474" y="312" font-family="'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', 'Source Han Sans SC', sans-serif"
+        font-size="66" font-weight="600" fill="#4A7DFF" letter-spacing="24">恒忆</text>
+  <text x="476" y="374" font-family="Inter, 'PingFang SC', 'Microsoft YaHei', sans-serif"
+        font-size="30" font-weight="400" fill="#7A8299" letter-spacing="5">个人跨会话经验记忆系统</text>
+</svg>

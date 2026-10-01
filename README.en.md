@@ -1,3 +1,7 @@
+<p align="center">
+  <img alt="Evermem" src="brand/evermem-logo-full.svg" width="160">
+</p>
+
 <h1 align="center">Evermem (pmem)</h1>
 
 <p align="center"><em>A personal cross-session experience memory system — distill the trial-and-error from AI conversations into reusable local knowledge, so the next session reuses verified conclusions instead of starting from scratch.</em></p>
@@ -5,7 +9,7 @@
 <p align="center">
   <img alt="License MIT" src="https://img.shields.io/badge/License-MIT-yellow.svg">
   <img alt="Python 3.10+" src="https://img.shields.io/badge/Python-3.10%2B-blue">
-  <img alt="Version 0.2.2" src="https://img.shields.io/badge/Version-0.2.2-green">
+  <img alt="Version 0.2.6" src="https://img.shields.io/badge/Version-0.2.6-green">
   <img alt="Zero Dependency" src="https://img.shields.io/badge/Dependencies-Zero-orange">
   <img alt="Platform Win/macOS/Linux" src="https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey">
 </p>

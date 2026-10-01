@@ -26,7 +26,8 @@ if getattr(sys, "frozen", False):
     WEB = Path(getattr(sys, "_MEIPASS", Path(__file__).parent)) / "web"
 else:
     WEB = Path(__file__).resolve().parent
-BASE = WEB.parent  # 代码目录（模板 / 脚本 / 前端资源）
+BASE = WEB.parent  # 代码目录（模板 / 脚本 / 前端资源 / 品牌资产）
+BRAND = BASE / "brand"  # 品牌资源（logo/favicon）；冻结态随 --add-data brand 落到 _MEIPASS
 # 数据目录与代码目录必须分开：冻结态下 BASE 落在临时解包目录，
 # 把配置/备份/导入写到这里会在重启后消失，且与 mem.py 的核心检索不是同一个目录。
 _ROOT = Path(__file__).resolve().parent.parent
@@ -513,6 +514,29 @@ class Handler(BaseHTTPRequestHandler):
                       ".html": "text/html; charset=utf-8", ".png": "image/png", ".svg": "image/svg+xml",
                       ".ico": "image/x-icon", ".woff2": "font/woff2"}
         suffix = Path(p).suffix.lower()
+        # 浏览器会自动请求 /favicon.ico，映射到品牌 favicon（要在静态通配前命中）
+        if p == "/favicon.ico":
+            try:
+                self._bytes((BRAND / "favicon.ico").read_bytes(), static_ext[".ico"])
+                return
+            except OSError:
+                pass
+            self.send_error(404)
+            return
+        # 品牌资源：/brand/ 路由，供前端、README、安装包统一引用。
+        # 单独路由避免把 brand/ 放进 web/ 导致重复；--add-data brand 在冻结态保证可用。
+        if p.startswith("/brand/"):
+            try:
+                rel = Path(p[len("/brand/"):].replace("\\", "/"))
+                full = (BRAND / rel).resolve()
+                if (str(full).startswith(str(BRAND.resolve())) and full.is_file()
+                        and suffix in static_ext):
+                    self._bytes(full.read_bytes(), static_ext[suffix])
+                    return
+            except OSError:
+                pass
+            self.send_error(404)
+            return
         if suffix in static_ext:
             try:
                 rel = Path(p.lstrip("/").replace("\\", "/"))

@@ -13,6 +13,9 @@ LABEL="$1"
 VER="$2"
 DIST="$3"
 
+# cd 到 dist 之后就找不到仓库里的 assets/ 了，先把仓库根存下来
+REPO_ROOT="$PWD"
+
 cd "$DIST" || exit 1
 
 case "$LABEL" in
@@ -48,7 +51,28 @@ Description: 恒忆 Evermem — 个人跨会话经验记忆系统
  Local-first personal memory: capture experience from conversations
  and reuse it across sessions. All data stays on your machine.
 EOF
-    dpkg-deb --build --root-owner pkg-deb "Evermem-linux-v$VER.deb" || {
+    # 启动器：onedir 目录里的 Evermem 只能在自身目录下跑（要找 _internal），
+    # 装到 /opt 后必须有个 wrapper，否则装完在终端敲 evermem 起不来。
+    mkdir -p pkg-deb/usr/bin pkg-deb/usr/share/applications pkg-deb/usr/share/icons/hicolor/256x256/apps
+    cat > pkg-deb/usr/bin/evermem <<'EOF'
+#!/bin/sh
+exec /opt/evermem/Evermem "$@"
+EOF
+    chmod 0755 pkg-deb/usr/bin/evermem
+    cat > pkg-deb/usr/share/applications/evermem.desktop <<'EOF'
+[Desktop Entry]
+Type=Application
+Name=恒忆 Evermem
+Comment=个人跨会话经验记忆系统
+Exec=/usr/bin/evermem
+Icon=evermem
+Categories=Utility;
+Terminal=false
+EOF
+    cp "$REPO_ROOT/assets/icon.png" pkg-deb/usr/share/icons/hicolor/256x256/apps/evermem.png 2>/dev/null || true
+    # --root-owner 不存在（dpkg-deb 1.19+ 的正确参数是 --root-owner-group），
+    # 写错会直接 error: unknown option → deb 从未产出过。
+    dpkg-deb --build --root-owner-group pkg-deb "Evermem-linux-v$VER.deb" || {
       echo "[installer] dpkg-deb 失败（跳过，不影响发布）"; rm -rf pkg-deb; exit 0; }
     rm -rf pkg-deb
 
@@ -72,8 +96,23 @@ it across sessions. All data stays on your machine.
 mkdir -p %{buildroot}/opt/evermem
 cp -r Evermem/. %{buildroot}/opt/evermem/
 touch %{buildroot}/opt/evermem/install.marker
+mkdir -p %{buildroot}/usr/bin %{buildroot}/usr/share/applications %{buildroot}/usr/share/icons/hicolor/256x256/apps
+printf '#!/bin/sh\nexec /opt/evermem/Evermem "$@"\n' > %{buildroot}/usr/bin/evermem
+chmod 0755 %{buildroot}/usr/bin/evermem
+cat > %{buildroot}/usr/share/applications/evermem.desktop <<'DESKTOP'
+[Desktop Entry]
+Type=Application
+Name=恒忆 Evermem
+Comment=个人跨会话经验记忆系统
+Exec=/usr/bin/evermem
+Icon=evermem
+Categories=Utility;
+Terminal=false
+DESKTOP
 %files
 /opt/evermem
+/usr/bin/evermem
+/usr/share/applications/evermem.desktop
 %changelog
 * $(date +"%a %b %d %Y") Jose-AI - $VER-1
 - Initial package

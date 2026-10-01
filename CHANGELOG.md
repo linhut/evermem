@@ -1,5 +1,45 @@
 # 变更日志
 
+## [0.2.6] - 2026-10-01（缺陷修复 + 品牌视觉落地）
+
+### 真实缺陷修复
+
+- **空数据根下 `/api/stats` 500 修复**：`mem.load_index()` 中 `max(p.stat().st_mtime for p in NOTES.rglob("*.md"))`
+  在全新安装/无笔记时抛 `ValueError: max() iterable argument is empty`。
+  影响：**任何新用户第一次打开程序**，「统计诊断」必 500。已用 `default=0.0` 兜底，
+  并新增回归测试 `tests/test_empty_datastore.py`（3 项）。
+- **侧栏「核心经验」SVG path 语法错误修复**：原 path 属性 `d` 是多个无效路径段拼接，
+  QtWebEngine 控制台报 `Expected number, "…9a9 9 0 0 0 18 0c…"`，图标渲染异常。已替换为合法火焰路径。
+- **Linux deb 打包修复**：`dpkg-deb --build --root-owner` 参数不存在（dpkg 1.19+ 应为 `--root-owner-group`），
+  导致 deb 从未产出；同时补充 `/usr/bin/evermem` 启动器、.desktop 文件与 256px 图标。
+- **Linux AppImage 构建修复**：原脚本用 `./linuxdeploy`（文件实际在 `/tmp`）+ 只复制二进制，
+  修复为 `linuxdeploy --appimage-extract-and-run` + 拷贝整个 onedir + wrapper。
+  仍为 `continue-on-error` 可选增强，但不至于因明显路径错误直接挂掉。
+- **Release 校验清单跨平台统一**：新增 `checksums` job，下载三平台产物后生成统一 `SHA256SUMS.txt`
+  并覆盖上传；原各平台 job 上传自己的 `SHA256SUMS.txt` 互相 clobber，最终 Release 里只剩 Windows 哈希。
+
+### 品牌 Logo 全面落地
+
+- **应用图标**：`assets/icon.ico`（16/24/32/48/64/128/256）/`assets/icon.icns`（32/64/128/256/512/1024）/
+  `assets/icon.png`（256px）统一替换为品牌 Logo；脚本 `scripts/make_icon.py` 改为从 `brand/png` 零依赖打包。
+- **Windows 安装向导**：`installers/windows/evermem.iss` 设置 `SetupIconFile`、
+  `WizardImageFile`（246x471 透明 PNG，比例 164:314）、`WizardSmallImageFile`（147x147 透明 PNG）。
+- **桌面壳**：窗口标题栏/托盘图标从 `assets/icon.ico` 加载；新增启动 splash（显示 1.4s，非冒烟/非自启）；
+  新增「帮助」→「关于恒忆」对话框，展示 64px Logo + 版本 + 官网/源码链接。
+- **前端 UI**：`web/index.html` 增加 `<link rel="icon">` 与 Apple touch icon，侧栏品牌区改用 `/brand/evermem-logo.svg`；
+  版本与更新页新增「关于恒忆」面板，含 64px Logo 与项目信息。
+- **Web 品牌路由**：`web/server.py` 新增 `/brand/` 静态路由与 `/favicon.ico` 映射，
+  并加入 PyInstaller `--add-data "brand;brand"`，冻结态下单点真相源仍为 `brand/`。
+- **项目介绍页**：`README.md` / `README.en.md` 页眉嵌入 `brand/evermem-logo-full.svg`，版本徽章更新为 0.2.6。
+
+### 工程与验证
+
+- `scripts/render_logo.js` 扩展输出：16/24/32/48/64/128/256/512/1024 PNG + 安装向导横幅/小图。
+- `scripts/make_installers.sh` 增加 `/usr/bin/evermem` 启动器与 .desktop（deb/rpm），修复根目录引用。
+- `harvest.py`：防御 `--min-failures 0` 时 `max()` 空可迭代对象的潜在 ValueError。
+- 验证：`scripts/check_all.py` 38/38 全绿；`python -m unittest discover -s tests` 35 项全绿；
+  空数据根下 `/api/stats`、`/api/notes`、`/api/hot` 均 200。
+
 ## [0.2.5] - 2026-10-01（发行形态落地：绿色版 onedir + 安装版 + 更新清单改云固定文件）
 
 ### 绿色版（onedir 免安装，替代 onefile）
