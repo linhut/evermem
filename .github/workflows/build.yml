@@ -108,6 +108,11 @@ jobs:
         shell: bash
         run: |
           # 桌面壳带 --smoke：内嵌服务就绪 + 窗口加载 6s 后自动退出，退出码 0 才算通过
+          # 数据根指向临时目录：冻结态默认数据根=exe 同级（dist/），冒烟会重建 index.json，
+          # 曾因此把数据文件误传进 Release（见 2026-10-01 发布事故）。
+          export PMEM_HOME="$RUNNER_TEMP/pmem-smoke-${{ github.run_id }}"
+          mkdir -p "$PMEM_HOME"
+          export PMEM_NO_AUTO_HARVEST=1
           if [ "${{ matrix.os }}" != "windows-latest" ]; then
             export QT_QPA_PLATFORM=offscreen
             export QTWEBENGINE_CHROMIUM_FLAGS="--no-sandbox --disable-gpu --disable-dev-shm-usage"
@@ -222,7 +227,9 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           cd dist
-          gh release upload "${GITHUB_REF_NAME}" * --clobber
+          # 只上传平台产物与校验文件：排除冒烟可能残留的运行时数据（与 find_asset 同名单，防御纵深）
+          ASSETS=$(ls -1 | grep -vE '^(index\.json|harvest_state\.json|corpus_spaces\.json|kb\.json|knowledge-base\.md|pmem_config\.json|pmem_backup\.json|\.pmem-backup-last\.json|\.recipe-lock\.json|update_state\.json|backup\.log)$')
+          echo "$ASSETS" | xargs -r gh release upload "${GITHUB_REF_NAME}" --clobber
 
   # 更新清单必须等三平台都构建完才能汇总（要拿齐全平台的 sha256）
   manifest:
