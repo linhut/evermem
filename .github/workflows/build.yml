@@ -271,9 +271,10 @@ jobs:
         run: |
           cd dist
           # 只上传平台产物：排除冒烟可能残留的运行时数据（与 find_asset 同名单，防御纵深），
-          # 并排除本平台的 SHA256SUMS.txt —— 统一清单由 checksums 作业生成后上传，
-          # 否则三个平台互相 clobber，最终只剩最后一个平台（Windows）的哈希。
-          ASSETS=$(ls -1 | grep -vE '^(index\.json|harvest_state\.json|corpus_spaces\.json|kb\.json|knowledge-base\.md|pmem_config\.json|pmem_backup\.json|\.pmem-backup-last\.json|\.recipe-lock\.json|update_state\.json|backup\.log|SHA256SUMS\.txt)$')
+          # 排除构建日志（rpmbuild.log 等，make_installers.sh 在 dist 下写日志）与各平台局部
+          # SHA256SUMS.txt —— 统一清单由 checksums 作业生成后上传，否则三个平台互相 clobber，
+          # 最终只剩最后一个平台（Windows）的哈希。
+          ASSETS=$(ls -1 | grep -vE '^(index\.json|harvest_state\.json|corpus_spaces\.json|kb\.json|knowledge-base\.md|pmem_config\.json|pmem_backup\.json|\.pmem-backup-last\.json|\.recipe-lock\.json|update_state\.json|backup\.log|rpmbuild\.log|SHA256SUMS\.txt)$')
           echo "$ASSETS" | xargs -r gh release upload "${GITHUB_REF_NAME}" --clobber
 
   # 统一校验清单：三个平台各自的 SHA256SUMS.txt 只含本平台产物，必须汇总后覆盖上传。
