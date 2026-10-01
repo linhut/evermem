@@ -45,8 +45,9 @@ CloseApplications=yes
 SetupMutex=EvermemSetupMutex
 
 [Languages]
-Name: "chinesesimplified"; MessagesFile: "compiler:Languages\ChineseSimplified.isl"
-; 英文是 Inno 内置默认语言：没有 English.isl 文件，须用 Default.isl（新版 Inno 已移除 English.isl）
+; 语言文件内嵌进仓库（installers/windows/languages/）：CI 的 choco Inno 安装不带 Languages 目录，
+; 用 compiler: 前缀（安装目录内）会找不到。English 是 Inno 内置默认，用 Default.isl。
+Name: "chinesesimplified"; MessagesFile: "languages\ChineseSimplified.isl"
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
