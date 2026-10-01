@@ -98,3 +98,27 @@ def data_root() -> Path:
         except (OSError, RuntimeError):
             pass
     return _default_data_root()
+
+
+def ensure_data_root(create: bool = True) -> tuple[bool, str]:
+    """启动自检：数据根可用性（预建基础目录 + 可写探测）。
+
+    返回 (ok, reason)。失败场景（exe 被放到只读目录、磁盘满等）必须由调用方
+    明确提示并阻止继续——否则会出现「界面正常但什么都存不进去」的假成功。
+    """
+    root = data_root()
+    try:
+        if create:
+            root.mkdir(parents=True, exist_ok=True)
+            for sub in ("notes", "events", "updates"):
+                (root / sub).mkdir(parents=True, exist_ok=True)
+        probe = root / ".pmem-write-probe"
+        probe.write_text("ok", encoding="utf-8")
+        try:
+            probe.unlink()
+        except OSError:
+            pass
+        return True, ""
+    except OSError as exc:
+        return False, (f"数据目录不可用：{root}（{exc.__class__.__name__}）。"
+                       "请把程序放到可写目录，或设置 PMEM_HOME 指向可写位置后重试。")

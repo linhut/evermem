@@ -33,6 +33,8 @@ for _p in (str(ROOT), str(ROOT / "web")):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
+import paths as _paths  # noqa: E402 - 数据目录唯一入口（ensure_data_root 启动自检）
+
 SMOKE = "--smoke" in sys.argv
 AUTOSTART = "--autostart" in sys.argv
 
@@ -466,6 +468,19 @@ def main() -> int:
         set_autostart(False)
         print("[autostart] 已取消开机自启")
         return 0
+
+    ok, reason = _paths.ensure_data_root()
+    if not ok:
+        # 数据根不可写属于阻断级：继续启动会造成「界面正常但什么都存不了」的假成功
+        print(f"[main] {reason}", file=sys.stderr)
+        try:
+            import PySide6
+            from PySide6.QtWidgets import QApplication, QMessageBox
+            _qapp = QApplication(sys.argv)
+            QMessageBox.critical(None, "恒忆 Evermem", reason)
+        except Exception:
+            pass
+        return 5
 
     inst = SingleInstance()
     if not inst.acquire():
