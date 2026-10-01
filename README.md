@@ -320,6 +320,10 @@ AI 会话落盘 JSONL
 | 变量 | 说明 | 默认 |
 | --- | --- | --- |
 | `PMEM_HOME` | 数据目录（代码与数据彻底分离） | 脚本所在目录 |
+
+> 本机数据与调试分离（2026-10-01 落地）：正式数据根 `<数据目录>/db`（用户级环境变量 `PMEM_HOME` 已设）；
+> 源码目录 `notes/` 等为**调试数据区**（未设 `PMEM_HOME` 时的默认回退），临时调试数据放 `.memory/.debug-data/`
+> （均已 `.gitignore`）。迁移回滚点：代码目录源数据未删。
 | `PMEM_WEB_PORT` | Web 服务端口 | 8765 |
 | `PMEM_AUTO_HARVEST_SECONDS` | 自动收割间隔 | 3600 |
 | `PMEM_NO_AUTO_HARVEST` | 设为 `1` 禁用自动收割线程 | 开启 |

@@ -274,7 +274,30 @@ def _run_task(task_id: str, fn, retries: int = 1) -> None:
         _TASKS[task_id] = {"state": "error", "output": last_err}
 
     _TASKS[task_id] = {"state": "running", "output": ""}
-    _threading.Thread(target=_worker, daemon=True).start()
+    _threading.Thread(target=_worker, daemon=True,
+                      name=f"pmem-task-{task_id[:8]}").start()
+
+
+def _run_inline_task(task_id: str, fn) -> None:
+    """同进程任务执行：fn 在后台线程运行并自行更新 _TASKS[task_id]。
+
+    与 _run_task 的区别：后者接受子进程命令列表；下载/进度类任务需要在进程内
+    跑 Python 函数并持续上报 progress，不能走子进程（冻结态下 sys.executable 是自己）。
+    """
+
+    def _worker():
+        try:
+            fn()
+        except Exception as exc:  # noqa: BLE001
+            _TASKS[task_id] = {"state": "error", "output": f"任务异常：{exc}"}
+
+    # 若调用方已预建任务对象（如带 progress 的下载任务），不覆盖它——fn 更新同一引用
+    if task_id not in _TASKS:
+        _TASKS[task_id] = {"state": "running", "output": "",
+                           "started": time.strftime("%H:%M:%S")}
+    _threading.Thread(target=_worker, daemon=True,
+                      name=f"pmem-inline-{task_id[:8]}").start()
+
 
 TYPE_LABEL = {"fact": "事实", "lesson": "经验", "procedure": "配方"}
 
@@ -1251,6 +1274,69 @@ class Handler(BaseHTTPRequestHandler):
                 self._json({"ok": False, "error": f"保存失败：{exc}"}, 500)
                 return
             self._json({"ok": True, "config": cfg, "file": str(update.config_file())})
+            return
+        if p == "/api/update/download":
+            """P2 内置下载：后台线程下载到 <数据根>/updates/，进度经 /api/task/status 轮询。"""
+            if update is None:
+                self._json({"ok": False, "error": "更新模块不可用"}, 500)
+                return
+            b = self._body() or {}
+            asset = b.get("asset") or {}
+            if not str(asset.get("name") or "").strip() or not (asset.get("urls") or []):
+                self._json({"error": "资产参数缺失（name/urls 必填）"}, 400)
+                return
+            tid = _uuid.uuid4().hex[:10]
+            state = {"progress": {"done": 0, "total": int(asset.get("size") or 0) or None,
+                                  "phase": "排队中"}, "state": "running",
+                     "output": "", "started": time.strftime("%H:%M:%S")}
+            _TASKS[tid] = state
+
+            def _dl():
+                def cb(done, total):
+                    state["progress"] = {"done": done, "total": total, "phase": "下载中"}
+                try:
+                    res = update.download(asset, progress_cb=cb)
+                    if res.get("ok"):
+                        state.update({"state": "done",
+                                      "output": f"下载完成：{res['path']}（{res['source']}）"})
+                    else:
+                        state.update({"state": "error", "output": res.get("error", "下载失败")})
+                except Exception as exc:  # noqa: BLE001
+                    state.update({"state": "error", "output": f"下载异常：{exc}"})
+
+            _run_inline_task(tid, _dl)  # 同进程下载（可上报进度；不能走子进程）
+            self._json({"ok": True, "task_id": tid, "note": "后台下载中，轮询 /api/task/status"})
+            return
+        if p == "/api/update/apply":
+            """P3 一键替换（Windows 打包版）：暂存→备份 .old→延迟替换→重启→失败回滚。"""
+            if update is None:
+                self._json({"ok": False, "error": "更新模块不可用"}, 500)
+                return
+            b = self._body() or {}
+            name = str(b.get("name") or "").strip()
+            if not name:
+                self._json({"error": "name 必填"}, 400)
+                return
+            pkg = update.updates_dir() / update._safe_filename(name)
+            if not pkg.is_file():
+                self._json({"error": f"更新包不存在：{pkg.name}"}, 404)
+                return
+            r = update.apply_update(str(pkg))
+            self._json(r)
+            return
+        if p == "/api/update/sources/test":
+            """P1 逐源测试：对指定 URL 发一次请求，报告可用性与耗时（不缓存结果）。"""
+            if update is None:
+                self._json({"ok": False, "error": "更新模块不可用"}, 500)
+                return
+            b = self._body() or {}
+            url = str(b.get("url") or "").strip()
+            if not url:
+                self._json({"error": "url 必填"}, 400)
+                return
+            data, err, ms = update.http_json(url, timeout=8.0)
+            self._json({"ok": err is None, "url": url[:120], "elapsed_ms": ms,
+                        "error": err or "可用", "json_ok": data is not None})
             return
         if p == "/api/autostart/save":
             """设置开机自启：写完立刻回读系统真实状态，不一致就报失败，

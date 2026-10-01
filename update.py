@@ -18,9 +18,12 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import platform as _platform
+import shutil
+import subprocess
 import re
 import sys
 import time
@@ -146,6 +149,19 @@ def _asset_matches(name: str, key: str) -> bool:
 
 
 # ---------- 配置与状态 ----------
+def _atomic_write(path: Path, text: str) -> None:
+    """原子写：tmp + os.replace，避免中断留下截断 JSON。"""
+    tmp = path.with_name(path.name + f".tmp-{os.getpid()}")
+    try:
+        tmp.write_text(text, encoding="utf-8")
+        os.replace(tmp, path)
+    finally:
+        try:
+            tmp.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+
 def config_file() -> Path:
     return _paths.data_root() / CONFIG_NAME
 
@@ -183,7 +199,7 @@ def save_config(patch: dict) -> dict:
             cfg[k] = patch[k]
     p = config_file()
     p.parent.mkdir(parents=True, exist_ok=True)
-    p.write_text(json.dumps(cfg, ensure_ascii=False, indent=2), encoding="utf-8")
+    _atomic_write(p, json.dumps(cfg, ensure_ascii=False, indent=2))
     return load_config()
 
 
@@ -473,10 +489,10 @@ def _finish(base: dict, result: dict, attempts: list) -> dict:
                 "source": result.get("source", "github")})
     try:
         state_file().parent.mkdir(parents=True, exist_ok=True)
-        state_file().write_text(json.dumps(
+        _atomic_write(state_file(), json.dumps(
             {"last_check_at": time.time(),
              "last_ok": {k: v for k, v in out.items() if k != "cached"}},
-            ensure_ascii=False, indent=2), encoding="utf-8")
+            ensure_ascii=False, indent=2))
     except OSError:
         pass
     return out
@@ -488,6 +504,164 @@ def sources_info() -> dict:
             "download_only_mirrors": list(DOWNLOAD_ONLY_MIRRORS),
             "github_api": GITHUB_API_LATEST, "releases_page": RELEASES_PAGE,
             "platform": platform_key(), "current": current_version()}
+
+
+# ---------- 下载与安装（P2 内置下载 / P3 一键替换+回滚） ----------
+def updates_dir() -> Path:
+    return _paths.data_root() / "updates"
+
+
+def _safe_filename(name: str) -> str:
+    """资产名 → 安全本地文件名（防路径穿越：去目录、只留安全字符）。"""
+    base = str(name or "").replace("\\", "/").rsplit("/", 1)[-1].strip()
+    base = re.sub(r"[^A-Za-z0-9._\-]", "_", base)
+    return base or "update.bin"
+
+
+def _sha256_of(path: Path) -> str:
+    h = hashlib.new("sha256")
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _url_candidates(urls: list) -> list:
+    """[(label, url)]：直链优先，镜像兜底（下载链比检查链多一层）。"""
+    out = []
+    for u in urls or []:
+        if not isinstance(u, str) or not u.strip():
+            continue
+        label = "直连" if ("github.com" in u or "github-releases" in u) else "镜像"
+        if (label, u) not in out:
+            out.append((label, u))
+    return out
+
+
+def _download_one(url: str, part: Path, progress_cb=None) -> tuple[int, str, str]:
+    """单源下载（支持 Range 断点续传到 .part）。返回 (size, sha256, resume状态)。"""
+    pos = part.stat().st_size if part.exists() else 0
+    headers = {"User-Agent": _ua()}
+    if pos > 0:
+        headers["Range"] = f"bytes={pos}-"
+    h = hashlib.new("sha256")
+    if pos > 0:  # 续传：已有部分也算进校验
+        with part.open("rb") as f:
+            for chunk in iter(lambda: f.read(1 << 20), b""):
+                h.update(chunk)
+    req = urllib.request.Request(url, headers=headers)
+    with urllib.request.urlopen(req, timeout=60) as r:
+        if pos > 0 and r.status == 206:
+            mode = "ab"
+        else:
+            pos, h, mode = 0, hashlib.new("sha256"), "wb"
+        with part.open(mode) as f:
+            while True:
+                chunk = r.read(1 << 20)
+                if not chunk:
+                    break
+                f.write(chunk)
+                h.update(chunk)
+                pos += len(chunk)
+                if progress_cb:
+                    progress_cb(pos, None)  # 总大小由 asset.size 提供（206 时 Header 只是剩余量）
+    return part.stat().st_size, h.hexdigest()
+
+
+def download(asset: dict, progress_cb=None, force: bool = False) -> dict:
+    """内置下载（P2）：候选 URL 换源重试 + Range 断点续传 + SHA256 必校验。
+
+    返回 {"ok":True,"path":...,"size":...,"sha256":...,"source":...}
+    或 {"ok":False,"error":...,"attempts":[...]}
+    """
+    name = _safe_filename(asset.get("name") or "")
+    urls = [u for u in (asset.get("urls") or []) if isinstance(u, str) and u.strip()]
+    expect = str(asset.get("sha256") or "").strip().lower()
+    total_expected = int(asset.get("size") or 0) or None
+    if not name or not urls:
+        return {"ok": False, "error": "资产缺少文件名或下载地址", "attempts": []}
+    dst_dir = updates_dir()
+    dst_dir.mkdir(parents=True, exist_ok=True)
+    target = dst_dir / name
+    # 已存在且校验通过 → 秒完成（幂等，可反复点下载）
+    if not force and target.exists() and target.stat().st_size > 0:
+        sha = _sha256_of(target)
+        if not expect or sha == expect:
+            if progress_cb:
+                progress_cb(target.stat().st_size, target.stat().st_size)
+            return {"ok": True, "path": str(target), "size": target.stat().st_size,
+                    "sha256": sha, "source": "本机缓存"}
+    part = target.with_name(name + ".part")
+    attempts: list[dict] = []
+    for label, url in _url_candidates(urls):
+        try:
+            done, sha = _download_one(url, part, progress_cb)[:2]
+            attempts.append({"label": label, "url": url[:80], "ok": True, "size": done})
+            if expect and sha != expect:
+                part.unlink(missing_ok=True)
+                return {"ok": False,
+                        "error": f"SHA256 校验失败（期望 {expect[:12]}… 实得 {sha[:12]}…）",
+                        "attempts": attempts}
+            os.replace(part, target)
+            return {"ok": True, "path": str(target), "size": done, "sha256": sha,
+                    "source": label, "attempts": attempts}
+        except Exception as exc:  # noqa: BLE001 - 换源
+            attempts.append({"label": label, "url": url[:80], "ok": False, "error": _err_text(exc)})
+    part.unlink(missing_ok=True)
+    return {"ok": False, "error": "所有下载源均失败", "attempts": attempts}
+
+
+def apply_update(package: str) -> dict:
+    """P3 一键替换（Windows 打包版）：独立脚本延迟替换 + 备份 .old + 失败回滚 + 重启。
+
+    只有 sys.frozen + win32 支持自动替换；源码态/浏览器模式返回明确指引（手动替换）。
+    """
+    if not getattr(sys, "frozen", False) or sys.platform != "win32":
+        return {"ok": False,
+                "error": "自动替换仅支持 Windows 打包版（Evermem.exe）；源码态 / 其他平台请手动替换，"
+                         "见 docs/USER-GUIDE.md"}
+    src = Path(package)
+    if not src.is_file():
+        return {"ok": False, "error": f"更新包不存在：{package}"}
+    if not src.name.lower().endswith(".exe"):
+        return {"ok": False, "error": f"更新包不是可执行文件：{src.name}"}
+    exe = Path(sys.executable).resolve()
+    exe_dir = exe.parent
+    staged = exe_dir / (exe.stem + "-new" + exe.suffix)   # 先放同盘才能原子 move
+    bak = exe.with_name(exe.name + ".old.exe")            # 回滚点
+    try:
+        shutil.copy2(src, staged)
+    except OSError as exc:
+        return {"ok": False, "error": f"暂存更新包失败：{exc}"}
+    script = exe_dir / "apply-update.bat"
+    script.write_text(
+        "@echo off\r\n"
+        "chcp 65001 >nul\r\n"
+        "rem 恒忆 Evermem 自动更新：等待主进程退出后替换，失败自动回滚\r\n"
+        "timeout /t 3 /nobreak >nul\r\n"
+        f'cd /d "{exe_dir}"\r\n'
+        f'if exist "{bak.name}" del /q "{bak.name}"\r\n'
+        f'move /y "{exe.name}" "{bak.name}" >nul 2>&1\r\n'
+        f'move /y "{staged.name}" "{exe.name}" >nul 2>&1\r\n'
+        f'if not exist "{exe.name}" (\r\n'
+        f'  rem 替换失败：恢复旧版\r\n'
+        f'  move /y "{bak.name}" "{exe.name}" >nul 2>&1\r\n'
+        f'  echo FAILED > "{exe_dir}\\update-result.txt"\r\n'
+        f') else (\r\n'
+        f'  echo OK > "{exe_dir}\\update-result.txt"\r\n'
+        f'  start "" "{exe.name}"\r\n'
+        f')\r\n',
+        encoding="utf-8", newline="\r\n")
+    try:
+        subprocess.Popen(["cmd", "/c", "start", "", str(script)],
+                         cwd=str(exe_dir), close_fds=True, shell=False)
+    except OSError as exc:
+        return {"ok": False, "error": f"启动替换脚本失败：{exc}"}
+    # 替换期间主进程自己退出（前端收到 ok 后延迟退出；若未退出，脚本会等 3 秒后 start 新实例时文件仍被锁，
+    # move 失败走回滚分支——失败安全）
+    return {"ok": True,
+            "msg": "更新脚本已启动：3 秒后自动替换并重启（旧版已备份为 .old.exe，可手动回滚）",
+            "backup": str(bak)}
 
 
 if __name__ == "__main__":

@@ -25,6 +25,11 @@
     '核心经验为空': 'No hot entries yet',
     '在记忆详情里点「★ 核心经验」，它就会随每次会话自动携带':
         'Star a note as ★ hot layer in its detail view; it will be carried into every session',
+    '内置下载': 'Download', '更新并重启': 'Update & restart', '下载中…': 'Downloading…',
+    '下载完成，可更新': 'Downloaded — update ready', '下载失败：': 'Download failed: ',
+    '重试': 'Retry', '更新失败：': 'Update failed: ', '更新已启动': 'Update started',
+    '将替换当前程序并重启；旧版备份为 .old.exe，可手动回滚。':
+        'The current program will be replaced and restarted; the old build is kept as .old.exe for manual rollback.',
     /* 侧栏 */
     '记忆': 'Memory', '系统': 'System',
     '记忆浏览': 'Browse', '数据导入': 'Import Data',
