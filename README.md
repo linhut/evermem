@@ -70,8 +70,8 @@
 ├── evermem_mcp.py    # MCP 服务（查记忆 / 存记忆 / 更新 / 核心经验）
 ├── backup.py / s3client.py   # 多渠道数据备份（对象存储 / SMTP / 快照/加密）
 ├── desktop.py        # 桌面壳（内嵌 Web 服务 + QtWebEngine，跨平台）
-├── paths.py          # 数据目录 / 代码目录唯一解析入口（env > 持久化配置 > 可移植默认）
-├── Evermem.spec      # PyInstaller 构建描述（与 build.yml 等价）
+├── paths.py          # 数据目录 / 代码目录唯一解析入口（env > 持久化配置 > 安装版数据区 > 可移植默认）
+├── installers/       # 安装版安装器脚本（windows/evermem.iss，Inno Setup 入库）
 ├── assets/           # 应用图标（icon.ico / icon.icns / icon.png，由 scripts/make_icon.py 生成）
 ├── web/              # 零依赖 Web 界面（server.py 启动，前端内嵌资源）
 ├── scripts/          # 开发与运维工具（批量读 / 基准 / 自检 / 空间扫描 / 知识扫描 / 热预览 / 图标生成）

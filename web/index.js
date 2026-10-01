@@ -275,7 +275,7 @@ const maintHTML = () => `<div style="width:100%;max-width:820px">
    ① 更新检查：当前版本 / 检查更新 / 结果（新版本·已是最新·失败含各源耗时）
    ② 更新源：自动检查开关 / 自建清单 / 加速镜像，全部回读真实生效配置 */
 const updateHTML = () => `<div style="width:100%;max-width:820px">
-  <div class="sub" style="margin-bottom:12px">${t('检查走 GitHub 直连 + 加速镜像并发取最快的一个；下载走外链在浏览器完成，程序不会静默改动你的文件。')}</div>
+  <div class="sub" style="margin-bottom:12px">${t('检查走官方云清单 + GitHub 直连 + 加速镜像并发取最快的一个；更新可内置下载、一键应用。')}</div>
   <div class="pane"><h3>${t('① 更新检查')}</h3>
     <div class="btnrow" style="align-items:center">
       <span>${t('当前版本：')}<b id="verCurrent">${t('读取中…')}</b></span>
@@ -290,12 +290,12 @@ const updateHTML = () => `<div style="width:100%;max-width:820px">
     <label class="ck" style="font-size:13px;color:var(--text)" for="updAuto"><input type="checkbox" id="updAuto"><span>${t('自动检查更新')}</span></label>
     <div class="sub">${t('打开设置页时自动检查一次，结果缓存 24 小时')}</div>
     <div style="border-top:1px solid var(--line);margin-top:10px;padding-top:10px">
-      <div class="sub" style="margin-bottom:4px">${t('自建清单地址（可选，留空则不使用）')}</div>
+      <div class="sub" style="margin-bottom:4px">${t('官方清单地址（云服务器固定文件；留空则回退 GitHub 直连 + 镜像）')}</div>
       <div class="btnrow">
         <input id="updManifest" type="text" placeholder="${t('留空')}" style="flex:1;min-width:180px">
         <button class="btn small" id="updManifestSave">${t('保存')}</button>
       </div>
-      <div class="sub">${t('留空即可：默认走 GitHub 直连 + 镜像，不需要自己托管任何文件')}</div>
+      <div class="sub">${t('官方云服务器固定清单，上传一次长期有效（只下发镜像列表，版本仍由 GitHub 说了算）；留空则直接走 GitHub 直连 + 镜像。')}</div>
     </div>
     <div style="margin-top:10px">
       <div class="sub" style="margin-bottom:4px">${t('加速镜像（一行一个，用于版本检查与下载）')}</div>
@@ -374,7 +374,7 @@ async function loadUpdateSources() {
   });
   const b3 = $('#updReset');
   if (b3) b3.onclick = () => saveUpdateConfig({
-    mirrors: (d.defaults || {}).mirrors || [], manifest_url: '', auto_check: true
+    mirrors: (d.defaults || {}).mirrors || [], manifest_url: (d.defaults || {}).manifest_url || '', auto_check: true
   });
 }
 
@@ -402,6 +402,8 @@ async function loadVersion() {
   if (!cur) return;
   try {
     const d = await (await fetch('/api/version')).json();
+    // 发行形态（portable/installer）供更新按钮分流使用
+    if (d.form) document.body.dataset.form = d.form;
     cur.textContent = d.version || t('版本号未知');
     btn.onclick = () => {
       try { window.open(d.releases_url || 'https://github.com/linhut/evermem/releases/latest', '_blank'); }
@@ -443,13 +445,15 @@ async function loadUpdate(force) {
     const asset = d.asset || {};
     const urls = asset.urls || [];
     const url = urls[0] || d.manual_url;
+    // 安装版下载的是安装包（setup），绿色版下载的是绿色版 zip：按钮文案与动作随形态变化
+    const isInst = d.form === 'installer';
     // 直连之外再给一个镜像加速入口：大文件走镜像通常更快
     const fast = urls.find(u => u && u !== url && !u.startsWith('https://github.com/'));
     const notes = (d.notes || '').split('\n').filter(x => x.trim()).slice(0, 3).join('<br>');
     const sizeMb = asset.size ? '（' + (asset.size / 1048576).toFixed(1) + ' MB）' : '';
     info.innerHTML = `<b>${t('发现新版本：')}v${esc(d.latest || '')}</b>（${t('当前：')}v${esc(d.current || '')}）` +
       `<div style="margin:8px 0;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-        <button class="btn primary small" id="updDL">⬇ ${t('内置下载')}${sizeMb}</button>
+        <button class="btn primary small" id="updDL">⬇ ${isInst ? t('下载安装包') : t('内置下载')}${sizeMb}</button>
         <span style="flex:1;min-width:120px;height:6px;background:var(--surface2,#e8e8e8);border-radius:3px;display:inline-block;vertical-align:middle">
           <span id="updBar" style="display:block;height:100%;width:0;background:var(--accent,#4a7dff);border-radius:3px"></span>
         </span>
@@ -486,11 +490,13 @@ async function startUpdateDl(asset) {
   });
 }
 
-/* P3 一键替换：确认后触发 apply（Windows 打包版），随后主进程退出交由脚本替换重启 */
+/* P3 一键替换：确认后触发 apply（Windows 打包版，按发行形态分流），随后主进程退出交由脚本替换重启 */
 async function applyUpdate(name) {
+  const isInst = document.body.dataset.form === 'installer';
   const go = await askConfirm({
     title: t('更新并重启'),
-    msg: t('将替换当前程序并重启；旧版备份为 .old.exe，可手动回滚。'),
+    msg: isInst ? t('安装版更新将静默安装新版安装包，数据保留在系统数据目录。')
+                : t('将替换当前程序并重启；旧版自动备份，可手动回滚。'),
     ok: t('更新并重启'), danger: false,
   });
   if (!go) return;

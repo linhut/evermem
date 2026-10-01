@@ -808,6 +808,8 @@ class Handler(BaseHTTPRequestHandler):
             self._json({
                 "version": version,
                 "releases_url": "https://github.com/linhut/evermem/releases/latest",
+                "form": update.install_form() if update is not None else "portable",
+                "installed": _paths.is_installed(),
             })
             return
         if p == "/api/update/check":

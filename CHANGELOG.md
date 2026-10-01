@@ -1,5 +1,46 @@
 # 变更日志
 
+## [0.2.5] - 2026-10-01（发行形态落地：绿色版 onedir + 安装版 + 更新清单改云固定文件）
+
+### 绿色版（onedir 免安装，替代 onefile）
+
+- **6-1 已实现**：build.yml `--onefile` → `--onedir`（消除每次启动全量解包 219MB 的开销，
+  直接解决 v0.2.3 实测的"杀软下打开极慢"）；产物命名约定
+  `Evermem-windows-vX-portable.zip` / `Evermem-macos-vX.app.zip` /
+  `Evermem-linux-vX-portable.tar.gz`。
+- **P3 更新适配 onedir**：`apply_update()` 绿色版分支——备份整个程序目录（`Evermem.old`）→
+  zip 解压替换 → 失败自动回滚 → 重启（仅 Windows 打包版）。
+
+### 安装版（安装向导 / 卸载 / 系统集成）
+
+- **6-2** `paths.py`：新增 `install.marker` 检测（`is_installed()`）；安装版默认数据根 =
+  `%APPDATA%\EvermemData`（macOS/Linux 对应系统数据目录），与程序目录分离、卸载不丢数据。
+- **6-3** 升级分流：安装版检测到新版 → 下载 setup **静默升级**（`/VERYSILENT`）而非 exe 替换。
+- **6-4** `installers/windows/evermem.iss`（Inno，入库）+ CI windows job 产 `Evermem-setup-vX.exe`。
+- **6-5** `scripts/make_installers.sh`：macOS dmg（hdiutil）/ Linux deb（dpkg-deb）、rpm（rpmbuild），
+  CI 接入（continue-on-error，可选增强）。
+- **6-6** Inno 卸载页询问是否删除 `%APPDATA%\EvermemData`（默认保留）。
+- **6-7** 实例锁按数据根哈希命名（`pmem-desktop-<hash>.lock`）：绿色版/安装版可并存，同数据根仍单实例。
+- **6-9** 更新 UI 按发行形态分流：安装版按钮显示「下载安装包」，确认文案提示数据保留。
+
+### 更新清单改云服务器固定文件（用户拍板）
+
+- **update-manifest.json 不进 GitHub Releases、不由 CI 生成**（删除 fragment/merge/上传整条链）。
+- `update.py` 默认清单地址 = `https://www.linhut.cn/evermem/update-manifest.json`；
+  清单只应下发镜像列表（不写版本号，防"假最新"），404/不可用自动降级 GitHub 直连 + 镜像。
+- 资产匹配按「平台 × 发行形态」分流（`_asset_matches(name, key, form)`），
+  GitHub 源与清单源都按当前形态挑资产。
+- `scripts/gen_update_manifest.py` 保留为手动工具（原 docstring 含 CI 流程说明，已更新）。
+
+### 其它
+
+- 前端：更新页文案随清单策略更新（i18n 中英同步）；`/api/version` 返回 `form`/`installed`。
+- 验证：`check_all.py` 38/38、单元测试 32 项全绿；本地 onedir 构建 + GUI 冒烟（--smoke）rc=0；
+  绿色版 zip 结构与更新解压逻辑对齐（顶层 `Evermem/` + exe）。
+- 测试修订：默认清单断言、形态资产名、`test_safe_filename` 期望纠正（点号属安全字符）、
+  移除过时的"未填清单不请求"用例。
+- `.spec` 文件删除（构建完全命令行化）；README/README.en/UPDATE-DESIGN/DISTRIBUTION-PLAN 同步。
+
 ## [0.2.4] - 2026-10-01（跨环境可用性与发行规范）
 
 ### 全新环境数据根自检（重要修复，提交 3caf154）

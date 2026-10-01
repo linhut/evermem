@@ -25,11 +25,14 @@
     '核心经验为空': 'No hot entries yet',
     '在记忆详情里点「★ 核心经验」，它就会随每次会话自动携带':
         'Star a note as ★ hot layer in its detail view; it will be carried into every session',
-    '内置下载': 'Download', '更新并重启': 'Update & restart', '下载中…': 'Downloading…',
+    '内置下载': 'Download', '下载安装包': 'Download installer',
+    '更新并重启': 'Update & restart', '下载中…': 'Downloading…',
     '下载完成，可更新': 'Downloaded — update ready', '下载失败：': 'Download failed: ',
     '重试': 'Retry', '更新失败：': 'Update failed: ', '更新已启动': 'Update started',
-    '将替换当前程序并重启；旧版备份为 .old.exe，可手动回滚。':
-        'The current program will be replaced and restarted; the old build is kept as .old.exe for manual rollback.',
+    '将替换当前程序并重启；旧版自动备份，可手动回滚。':
+        'The current program will be replaced and restarted; the old build is backed up automatically for manual rollback.',
+    '安装版更新将静默安装新版安装包，数据保留在系统数据目录。':
+        'The installer will run silently in the background; your data stays in the system data folder.',
     /* 侧栏 */
     '记忆': 'Memory', '系统': 'System',
     '记忆浏览': 'Browse', '数据导入': 'Import Data',
@@ -183,8 +186,8 @@
     /* 版本与更新（一级模块） */
     '版本与更新': 'Version & Update',
     '① 更新检查': '① Update check', '② 更新源': '② Update sources',
-    '检查走 GitHub 直连 + 加速镜像并发取最快的一个；下载走外链在浏览器完成，程序不会静默改动你的文件。':
-      'Checks GitHub direct + mirrors in parallel and takes the fastest; downloads open in your browser — the app never silently replaces your files.',
+    '检查走官方云清单 + GitHub 直连 + 加速镜像并发取最快的一个；更新可内置下载、一键应用。':
+      'Checks official cloud manifest + GitHub direct + mirrors in parallel, takes the fastest; updates can be downloaded and applied in one click.',
     '仅桌面版': 'Desktop only', '开机自启动': 'Launch at login',
     '当前版本：': 'Version: ', '查看最新版本': 'Check latest',     '版本号未知': 'Unknown version',
     '检查更新': 'Check for updates', '检查中…': 'Checking…', '已是最新版本': 'Up to date',
@@ -192,8 +195,8 @@
     '镜像加速下载': 'Mirror (faster)',
     '自动检查更新': 'Check automatically',
     '打开设置页时自动检查一次，结果缓存 24 小时': 'Check once when settings open; result cached for 24h',
-    '自建清单地址（可选，留空则不使用）': 'Self-hosted manifest URL (optional, blank = unused)',
-    '留空即可：默认走 GitHub 直连 + 镜像，不需要自己托管任何文件': 'Leave blank: uses GitHub direct + mirrors, no hosting needed',
+    '官方清单地址（云服务器固定文件；留空则回退 GitHub 直连 + 镜像）': 'Official manifest URL (fixed file on our cloud server; blank falls back to GitHub direct + mirrors)',
+    '官方云服务器固定清单，上传一次长期有效（只下发镜像列表，版本仍由 GitHub 说了算）；留空则直接走 GitHub 直连 + 镜像。': 'A fixed manifest on our cloud server, uploaded once (mirror list only — versions always come from GitHub); blank uses GitHub direct + mirrors.',
     '留空': 'blank',
     '加速镜像（一行一个，用于版本检查与下载）': 'Acceleration mirrors (one per line, for check and download)',
     '恢复默认': 'Restore defaults',

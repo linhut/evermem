@@ -4,22 +4,25 @@
 # 官网: https://www.linhut.cn
 # 许可: MIT License（SPDX-License-Identifier: MIT，详见根目录 LICENSE）
 
-# gen_update_manifest - 生成恒忆更新清单 update-manifest.json
+# gen_update_manifest - 生成恒忆更新清单 update-manifest.json（手动工具）
 #
-# 为什么分两步：
+# 2026-10-01 定案：CI 不再生成 / 上传 update-manifest.json（Release 不含清单）。
+# 清单是官网云服务器上的固定文件（https://www.linhut.cn/evermem/update-manifest.json），
+# 由维护者手动生成一次、长期有效——内容只应包含 sources.mirrors 等低频信息
+# （不要写死版本号：版本判断由 GitHub Release 说了算，防"忘更新清单=永远显示已是最新"）。
+# 本脚本保留为手动工具：需要更新云服务器清单时在本机跑一次 merge（fragment 命令已经不需要）。
+#
+# 用法（手动更新镜像列表等时）：
+#   python scripts/gen_update_manifest.py merge \
+#       --fragments <片段目录> --version 0.2.5 --out update-manifest.json \
+#       --changelog CHANGELOG.md --mirror https://edgeone.gh-proxy.org/ --mirror https://cdn.gh-proxy.org/
+#   然后手动上传 update-manifest.json 到 www.linhut.cn/evermem/update-manifest.json。
+#   （fragment 命令供本地扫描单个平台产物仍可用；assets 建议按 {platform: {portable: ..., installer: ...}} 组织）
+#
+# 为什么曾分两步：
 #   三平台是三个并行的 CI job，各只知道自己的产物。所以每个 job 先产出一份
 #   「平台片段」，最后一个汇总 job 把片段合成完整的 update-manifest.json。
 #   直接在一个 job 里生成是做不到的（拿不到其他平台的 sha256）。
-#
-# 用法：
-#   # ① 各平台 job：扫描 dist/ 生成片段
-#   python scripts/gen_update_manifest.py fragment \
-#       --platform windows-x64 --dist dist --version 0.2.3 --out dist/update-fragment.json
-#
-#   # ② 汇总 job：合成清单
-#   python scripts/gen_update_manifest.py merge \
-#       --fragments fragments/ --version 0.2.3 --out update-manifest.json \
-#       --changelog CHANGELOG.md --mirror https://gh-proxy.com/
 
 from __future__ import annotations
 
