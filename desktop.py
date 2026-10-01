@@ -236,6 +236,11 @@ class EmbeddedServer:
         self._thread = threading.Thread(target=self.server.serve_forever, daemon=True, name="pmem-http")
 
     def start(self) -> None:
+        # 冒烟模式只起 HTTP 线程：不启动自动备份/收割，避免后台线程把 index.json 等
+        # 数据写进 exe 同级目录（CI 冒烟曾因此在 dist/ 留下数据，触发清单"资产不止一个"）。
+        if SMOKE:
+            self._thread.start()
+            return
         # 自动备份循环（与 server.main 一致；收割走 CLI/Web 手动，避免打包后子进程陷阱）
         import backup
         secs = getattr(backup, "AUTO_CHECK_SECONDS", 3600)
