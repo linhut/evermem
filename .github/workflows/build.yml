@@ -209,8 +209,12 @@ jobs:
             zip -qry "Evermem-macos-v$VER.app.zip" Evermem.app
             rm -rf Evermem.app Evermem
           elif [ "${{ matrix.label }}" = "windows" ]; then
-            # 绿色版：onedir 目录（Evermem.exe + _internal/）打 zip，解压即用
-            zip -qry "Evermem-windows-v$VER-portable.zip" Evermem
+            # 绿色版：onedir 目录（Evermem.exe + _internal/）打 zip，解压即用。
+            # 注意：Windows runner 的 Git Bash 没有 zip 命令，用 Python zipfile 打包。
+            python - <<PY
+import shutil
+shutil.make_archive("Evermem-windows-v$VER-portable", "zip", ".", "Evermem")
+PY
             rm -rf Evermem
           else
             # 绿色版：onedir 目录打 tar.gz
