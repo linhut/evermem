@@ -89,9 +89,33 @@
 | `scripts/render_logo.js` | SVG→PNG 渲染（resvg-js，改源后重跑） |
 | `scripts/make_logo_ico.py` | PNG→ICO 打包（零依赖） |
 
-修改流程：改 `brand/evermem-logo.svg` → `node scripts/render_logo.js` → `python scripts/make_logo_ico.py`。
+修改流程：改 `brand/evermem-logo.svg` → `node scripts/render_logo.js` → `python scripts/make_logo_ico.py`
+→ `python scripts/make_icon.py`（产出 `assets/` 三件套）。
 
-## 八、禁止事项
+## 八、工程落地对照表（改 Logo 后要同步的地方）
+
+| 落地位置 | 文件 | 来源 |
+|---|---|---|
+| Windows exe / 安装包图标 | `assets/icon.ico`（16/24/32/48/64/128/256） | `scripts/make_icon.py` 从 `brand/png` 打包 |
+| macOS .app 图标 | `assets/icon.icns`（32→1024） | 同上 |
+| Linux / AppImage / deb 图标 | `assets/icon.png`（256） | 同上 |
+| 安装向导横幅（左上大图） | `installers/windows/wizard-image.png`（246×471） | `scripts/render_logo.js` |
+| 安装向导小图（右上角） | `installers/windows/wizard-small-image.png`（147×147） | `scripts/render_logo.js` |
+| 桌面壳窗口/托盘图标 | `desktop.py` 读 `assets/icon.ico` | — |
+| 桌面壳启动页 splash | `ROOT/brand/png/evermem-logo-128.png` | 冻结态随 `--add-data brand` |
+| 桌面壳「帮助 → 关于」 | `ROOT/brand/png/evermem-logo-64.png` | 同上 |
+| 网页 favicon | `web/index.html` `<link rel="icon" href="/brand/favicon.ico">` | `web/server.py` `/favicon.ico` 路由 |
+| 网页侧栏品牌区 | `<img src="/brand/evermem-logo.svg" width="28">` | `web/server.py` `/brand/` 路由 |
+| 版本与更新页「关于恒忆」 | `web/index.js` 引 `/brand/png/evermem-logo-64.png` | 同上 |
+| README / README.en 页眉 | `brand/evermem-logo-full.svg`（width=160） | 仓库相对路径，GitHub 直读 |
+
+两条硬约束：
+1. **冻结态必须带 brand**：PyInstaller 命令含 `--add-data "brand;brand"`，否则打包后 `/brand/` 路由 404、
+   splash 与关于页读不到图（源码态能跑 ≠ 打包后能跑）。
+2. **不要复制第二份**：界面一律走 `/brand/` 路由或 `brand/` 目录，不要在 `web/` 下再放一份 logo，
+   改了源图就会出现「一处更新、一处还是旧图」。
+
+## 九、禁止事项
 
 - 拉伸变形、旋转 90°/45° 之外的角度、裁剪任意一条弧。
 - 更换颜色、调整弧长/间隙比例、删除注入点。

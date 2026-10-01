@@ -14,7 +14,7 @@
 #
 # 用法（手动更新镜像列表等时）：
 #   python scripts/gen_update_manifest.py merge \
-#       --fragments <片段目录> --version 0.2.5 --out update-manifest.json \
+#       --fragments <片段目录> --version 0.2.7 --out update-manifest.json \
 #       --changelog CHANGELOG.md --mirror https://edgeone.gh-proxy.org/ --mirror https://cdn.gh-proxy.org/
 #   然后手动上传 update-manifest.json 到 www.linhut.cn/evermem/update-manifest.json。
 #   （fragment 命令供本地扫描单个平台产物仍可用；assets 建议按 {platform: {portable: ..., installer: ...}} 组织）
