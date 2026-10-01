@@ -1,6 +1,43 @@
 # 变更日志
 
-## [0.2.3] - 2026-09-30
+## [0.2.3] - 2026-09-30（2026-10-01 补记：审计修复与更新链路）
+
+### 双模型审计修复（2026-10-01，提交 b2be3b8）
+
+- **安全**：CSRF Origin 校验（跨站 POST 403）；`/api/block`、`/api/scan` 路径根约束；候选归档空 ids 拒绝；
+  恢复（tar/zip）路径穿越校验。
+- **崩溃修复**：`/api/extract` 未定义标识符 `SYS_PY` → `PY_ABS`；do_GET/do_POST 异常兜底；
+  `channel.js` 变量遮蔽（`t`→`ty`）修复备份页多渠道渲染中断。
+- **数据正确性**：GC T3 冷存方向反转修复（新增 `tests/test_gc.py`）；新建笔记毫秒 id + 按 type 落目录；
+  编辑接口 type/status 白名单；全项目原子写（`_atomic_write`，5 个模块）。
+- **桌面壳**：补自动收割线程（同进程）；F12 真实开发者工具；托盘创建移出页面加载回调。
+- **备份**：S3 保留策略双前缀修复；告警邮件密码解混淆；备份范围补 `update.json` 与块库 `chunks`；
+  归档包落系统临时目录。
+- **CLI/工具**：新增 `mem.py set-status`；`--llm` 移除、`--purge/--no-purge` 互斥；`backup.py --scope` 生效；
+  `recipes.py lock --project`；MCP 版本对齐 VERSION。
+- **清理**：移除死代码（`app.py` / `web/launcher.py` / `scripts/fluent_preview.py`）；文档纠错
+  （9 个一级模块、USAGE 入口改 desktop.py）；docs 一次性快照归档 `docs/archive/`。
+- **冻结态打包**：`Evermem.spec` 与 `build.yml` 补 `VERSION` + `scripts/` 进包（修复桌面程序版本显示、
+  收割、文档提取、热层同步四项功能）。
+
+### 内置下载与一键替换（P2/P3，2026-10-01，提交 2dc94e1）
+
+- **P2 内置下载**：`update.py download()`——Range 断点续传 + SHA256 必校验 + 镜像换源重试，
+  落 `<数据根>/updates/`；UI「版本与更新」新增下载进度条；`POST /api/update/download|sources/test`。
+- **P3 一键替换**：`apply_update()` 生成独立 `apply-update.bat`——延迟等待主进程退出 → 备份 `.old.exe` →
+  替换 → 失败自动回滚 → 重启（Windows 打包版）；`POST /api/update/apply`。
+- **同进程任务执行器**：新增 `_run_inline_task`（支持进度上报，规避冻结态子进程陷阱）。
+
+### 数据与调试分离（2026-10-01）
+
+- 正式数据根迁至 `<数据目录>/db`（用户级 `PMEM_HOME` 环境变量）；白名单复制保留源作回滚；
+  代码目录作为调试数据区（`.debug-data/`）。
+
+### 分发形态（2026-10-01）
+
+- `docs/CODE-SIGNING.md`：Windows 签名（EV/OV 无免费路径，单位 OV 为性价比选项）、macOS 公证
+  （$99/年，免费仅 xattr 引导）、Linux AppImage（免费，CI 已加 `continue-on-error` 步骤）。
+- codegraph 接入：`.githooks/pre-push` 增量同步索引（`codegraph sync --quiet`，绝不阻断推送）。
 
 ### 桌面常驻：开机自启动开关
 
