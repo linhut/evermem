@@ -45,8 +45,9 @@ CloseApplications=yes
 SetupMutex=EvermemSetupMutex
 
 [Languages]
-Name: "chinesesimplified"; MessagesFile: "compiler:Default.isl"
-Name: "english"; MessagesFile: "compiler:Languages\English.isl"
+Name: "chinesesimplified"; MessagesFile: "compiler:Languages\ChineseSimplified.isl"
+; 英文是 Inno 内置默认语言：没有 English.isl 文件，须用 Default.isl（新版 Inno 已移除 English.isl）
+Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
