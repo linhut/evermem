@@ -212,6 +212,7 @@ jobs:
 
       - name: 确保 GitHub Release 存在（tag 触发时自动创建）
         if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash  # 必需：Windows runner 默认 pwsh 不认 `if ! cmd` 语法
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
