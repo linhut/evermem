@@ -362,6 +362,72 @@ class UpdateCheckTest(unittest.TestCase):
         print("  PASS  清单只下发镜像，版本来自 GitHub（不会假最新）")
 
 
+class UpdateDownloadTest(unittest.TestCase):
+    """P2/P3 更新下载与替换（全部离线：只测纯函数与参数校验，不测真实网络）。"""
+
+    def test_safe_filename(self):
+        import update
+        cases = {"../../Evermem.exe": "Evermem.exe", "a/b/c.exe": "c.exe",
+                 "Evermem-windows-v0.2.3.exe": "Evermem-windows-v0.2.3.exe",
+                 "": "update.bin", "a..b": "a__b", "x\\y.exe": "y.exe"}
+        for raw, want in cases.items():
+            self.assertEqual(update._safe_filename(raw), want, f"{raw!r} → {want!r}")
+        print("  PASS  资产名安全化（防路径穿越）")
+
+    def test_url_candidates_order_and_dedup(self):
+        import update
+        urls = ["https://github.com/a/Evermem.exe", "https://ghproxy.net/g/a/Evermem.exe"]
+        cands = update._url_candidates(urls)
+        self.assertEqual(cands[0][1], urls[0])            # 直连在前
+        self.assertEqual(cands[1][1], urls[1])            # 镜像在后
+        self.assertEqual(cands[0][0], "直连")
+        self.assertEqual(cands[1][0], "镜像")
+        # 去重：重复直连不重复进列表
+        cands2 = update._url_candidates([urls[0], urls[0]])
+        self.assertEqual(len(cands2), 1)
+        print("  PASS  下载候选顺序与去重")
+
+    def test_sha256_of(self):
+        import update
+        p = Path(TMP) / "sample.bin"
+        p.write_bytes(b"evermem-sha256-probe" * 100)
+        want = update._sha256_of(p)
+        import hashlib
+        self.assertEqual(want, hashlib.sha256(b"evermem-sha256-probe" * 100).hexdigest())
+        print("  PASS  sha256 计算")
+
+    def test_download_params(self):
+        import update
+        r = update.download({})                       # 缺 name/urls
+        self.assertFalse(r["ok"])
+        r2 = update.download({"name": "x.exe", "urls": []})
+        self.assertFalse(r2["ok"])
+        print("  PASS  下载缺参即报错")
+
+    def test_download_cached_valid(self):
+        """已下载且 sha256 匹配 → 不重新下载（幂等）。"""
+        import update
+        name = "ok.exe"
+        payload = b"cached-bytes"
+        import hashlib
+        dst = update.updates_dir()
+        dst.mkdir(parents=True, exist_ok=True)
+        (dst / name).write_bytes(payload)
+        r = update.download({"name": name, "urls": ["https://x.invalid/ok.exe"],
+                             "sha256": hashlib.sha256(payload).hexdigest()})
+        self.assertTrue(r["ok"])
+        self.assertEqual(r["source"], "本机缓存")
+        print("  PASS  本机缓存在校验通过时直接复用")
+
+    def test_apply_requires_frozen_windows(self):
+        """源码态（未打包）调用 apply_update 必须明确拒绝并给出指引，不能假装成功。"""
+        import update
+        r = update.apply_update(str(Path(TMP) / "Evermem.exe"))
+        self.assertFalse(r["ok"])
+        self.assertIn("仅支持", r["error"])
+        print("  PASS  源码态 apply 明确拒绝（防假成功）")
+
+
 if __name__ == "__main__":
     try:
         unittest.main(verbosity=2)

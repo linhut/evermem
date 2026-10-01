@@ -123,6 +123,38 @@ jobs:
           if [ "$rc" -ne 0 ]; then echo "GUI 冒烟失败 rc=$rc"; exit 1; fi
           echo "GUI 冒烟通过（服务就绪并正常退出）"
 
+      - name: Linux AppImage（可选增强：自带 Qt 库；失败不阻塞发布，见 docs/CODE-SIGNING.md）
+        if: matrix.os == 'ubuntu-latest'
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -e
+          sudo apt-get install -y -qq file desktop-file-utils
+          wget -q https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage -O /tmp/appimagetool
+          wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage -O /tmp/linuxdeploy
+          wget -q https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage -O /tmp/linuxdeploy-plugin-qt
+          chmod +x /tmp/appimagetool /tmp/linuxdeploy /tmp/linuxdeploy-plugin-qt
+          mkdir -p AppDir/usr/bin
+          cp dist/Evermem AppDir/usr/bin/evermem
+          cat > AppDir/evermem.desktop <<'EOF'
+          [Desktop Entry]
+          Type=Application
+          Name=Evermem
+          Comment=恒忆 Evermem 个人记忆库
+          Exec=evermem
+          Icon=evermem
+          Categories=Utility;
+          EOF
+          # PySide6 的 Qt 库定位：linuxdeploy-plugin-qt 用 QMAKE 探测（WebEngine 体积大，AppImage 约 200-250MB）
+          export QMAKE="$(python -c 'import PySide6, os; print(os.path.join(os.path.dirname(PySide6.__file__), "qmake"))' 2>/dev/null || true)"
+          export PATH="/tmp:$PATH"
+          ./linuxdeploy --appdir AppDir --executable AppDir/usr/bin/evermem --plugin qt --output appimage \
+            -i assets/icon.png \
+            || { echo "[appimage] 构建失败（continue-on-error 放行，不影响发布；裸 ELF 仍随 Release 分发）"; exit 0; }
+          ls -1 *.AppImage 2>/dev/null || true
+          # 放进 dist/ 使其随 Release 上传（重命名步骤只处理 Evermem ELF，不影响 AppImage）
+          cp -f *.AppImage dist/ 2>/dev/null || true
+
       - name: 产物重命名（每平台单个运行包；macOS 打 .app.zip）
         shell: bash
         run: |

@@ -446,13 +446,61 @@ async function loadUpdate(force) {
     // 直连之外再给一个镜像加速入口：大文件走镜像通常更快
     const fast = urls.find(u => u && u !== url && !u.startsWith('https://github.com/'));
     const notes = (d.notes || '').split('\n').filter(x => x.trim()).slice(0, 3).join('<br>');
+    const sizeMb = asset.size ? '（' + (asset.size / 1048576).toFixed(1) + ' MB）' : '';
     info.innerHTML = `<b>${t('发现新版本：')}v${esc(d.latest || '')}</b>（${t('当前：')}v${esc(d.current || '')}）` +
-      ` <a href="${esc(url)}" target="_blank"><button class="btn primary small">${t('下载更新')}</button></a>` +
+      `<div style="margin:8px 0;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <button class="btn primary small" id="updDL">⬇ ${t('内置下载')}${sizeMb}</button>
+        <span style="flex:1;min-width:120px;height:6px;background:var(--surface2,#e8e8e8);border-radius:3px;display:inline-block;vertical-align:middle">
+          <span id="updBar" style="display:block;height:100%;width:0;background:var(--accent,#4a7dff);border-radius:3px"></span>
+        </span>
+        <span id="updPct" class="sub"></span>
+        <button class="btn small" id="updApply" style="display:none">↻ ${t('更新并重启')}</button>
+        <a href="${esc(url)}" target="_blank"><button class="btn ghost small">${t('手动下载')}</button></a>
+      </div>` +
       (fast ? ` <a href="${esc(fast)}" target="_blank"><button class="btn small">${t('镜像加速下载')}</button></a>` : '') +
       (notes ? `<br>${notes}` : '');
-  } else {
-    info.textContent = `${t('已是最新版本')}（v${d.latest || d.current || ''}）` + (d.cached ? ` · ${t('缓存结果')}` : '');
+    $('#updDL').onclick = () => startUpdateDl(asset);
+    return;
   }
+  info.textContent = `${t('已是最新版本')}（v${d.latest || d.current || ''}）` + (d.cached ? ` · ${t('缓存结果')}` : '');
+}
+
+/* P2 内置下载（带进度条）；下载完成后显示 P3「更新并重启」 */
+async function startUpdateDl(asset) {
+  const btn = $('#updDL'), bar = $('#updBar'), pct = $('#updPct');
+  if (!btn) return;
+  btn.disabled = true; btn.textContent = t('下载中…'); pct.textContent = '';
+  let r = { ok: false, error: '服务未响应' };
+  try { r = await post('/api/update/download', { asset }); } catch (e) { r = { ok: false, error: String(e) }; }
+  if (!r.ok) { pct.textContent = t('下载失败：') + (r.error || r.status); btn.disabled = false; btn.textContent = t('重试'); return; }
+  pollTask(r.task_id, () => {
+    pct.textContent = t('下载完成，可更新');
+    const a = $('#updApply');
+    if (a) { a.style.display = 'inline-block'; a.onclick = () => applyUpdate(asset.name); }
+  }, prog => {
+    if (bar && pct) {
+      const total = prog.total || 0;
+      bar.style.width = total ? Math.min(100, Math.round(prog.done / total * 100)) + '%' : '5%';
+      pct.textContent = total ? `${(prog.done / 1048576).toFixed(1)}/${(total / 1048576).toFixed(1)} MB` : '…';
+    }
+  });
+}
+
+/* P3 一键替换：确认后触发 apply（Windows 打包版），随后主进程退出交由脚本替换重启 */
+async function applyUpdate(name) {
+  const go = await askConfirm({
+    title: t('更新并重启'),
+    msg: t('将替换当前程序并重启；旧版备份为 .old.exe，可手动回滚。'),
+    ok: t('更新并重启'), danger: false,
+  });
+  if (!go) return;
+  const pct = $('#updPct');
+  let r = { ok: false };
+  try { r = await post('/api/update/apply', { name }); } catch (e) { r = { ok: false, error: String(e) }; }
+  if (!r.ok) { if (pct) pct.textContent = t('更新失败：') + (r.error || r.status); return; }
+  if (pct) pct.textContent = r.msg || t('更新已启动');
+  // 给替换脚本留出接管时间（脚本会等待主进程退出）
+  setTimeout(() => { try { window.close(); } catch (e) { /* 浏览器模式无需关闭 */ } }, 4000);
 }
 
 function bindBrowse() {
@@ -664,13 +712,14 @@ function filterBlocks(q) {
 /* 浏览 */
 let deb = null;
 /* 异步任务轮询（extract/harvest 后台运行不阻塞 UI） */
-function pollTask(taskId, onDone) {
+function pollTask(taskId, onDone, onProgress) {
   // 加了超时与异常兜底：任务卡死时不再无限轮询（此前 interval 永不清除、fetch 抛错即 unhandled）
   let n = 0;
   const iv = setInterval(async () => {
     n += 1;
     try {
       const d = await (await fetch('/api/task/status?task=' + encodeURIComponent(taskId))).json();
+      if (onProgress && d.progress) onProgress(d.progress);
       if (d.state === 'done') { clearInterval(iv); onDone(d.output || ''); }
       else if (d.state === 'error') { clearInterval(iv); toast('任务失败：' + (d.output || '').slice(0, 80)); }
       else if (n >= 120) { clearInterval(iv); toast('任务超时（约 3 分钟），请查看服务日志', 'warning'); }
