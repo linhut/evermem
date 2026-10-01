@@ -11,6 +11,8 @@ tmp_chk/
 nul
 *.log
 .lock
+.gitout.txt
+*.out.txt
 
 # 代码索引缓存（codegraph 本地索引，可由 codegraph init/index 重建）
 .codegraph/
@@ -45,10 +47,7 @@ evermem-*.tar.aes
 # ===== 打包构建中间产物（PyInstaller 本地 / CI 均不入仓） =====
 build/
 dist/
-*.spec
-# 构建描述属构建清单性质，单独放行；其余 *.spec 仍忽略
-!Evermem.spec
-# CI 从 VERSION 生成，不入库
+# 构建完全命令行化（--add-data/--icon 等参数写在 build.yml），不再需要 .spec 文件
 assets/version_info.txt
 .venv/
 venv/

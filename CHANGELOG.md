@@ -1,5 +1,26 @@
 # 变更日志
 
+## [0.2.7] - 2026-10-02（发布链路修复）
+
+### 真实缺陷修复
+
+- **统一校验清单（SHA256SUMS）上传统一清单任务缺少 checkout 修复**：`checksums` job 未执行
+  `actions/checkout`，`gh release upload` 因无 git 上下文报
+  `failed to run git: fatal: not a git repository`，导致 v0.2.6 的发布构建实际失败
+  （v0.2.6 Release 的 `SHA256SUMS.txt` 为人工补传）。已为 `checksums` job 补上
+  `actions/checkout@v4`（`fetch-depth: 0`），并排除 `*.log` 构建日志进入校验清单。
+  本次 v0.2.7 由 CI 全自动生成并上传统一清单，无需人工干预。
+- **v0.2.6 发布配套文档补提交**：`.gitignore`（补充 `.gitout.txt`、`*.out.txt`，
+  移除已不再使用的 `*.spec` 构建产物例外说明）、`docs/BRAND.md`（新增「工程落地对照表」章节）、
+  `docs/DISTRIBUTION-PLAN.md`（v0.2.6 实现状态、deb/AppImage/校验清单修复说明）、
+  `installers/windows/evermem.iss` 与 `scripts/gen_update_manifest.py` 注释版本号
+  同步至 0.2.7 —— 以上随 v0.2.6 改动但滞留工作区，本次随发布一并提交。
+
+### 工程与验证
+
+- 验证：`scripts/check_all.py` 38/38 全绿；`python -m unittest discover -s tests` 全绿。
+- 发布后验证：v0.2.7 Release 三平台产物齐全，CI 自动生成统一 `SHA256SUMS.txt` 并透传上传成功。
+
 ## [0.2.6] - 2026-10-01（缺陷修复 + 品牌视觉落地）
 
 ### 真实缺陷修复
