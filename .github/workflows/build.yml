@@ -177,7 +177,9 @@ jobs:
           [ -n "$ISCC" ] || { echo "[installer] Inno ISCC 未找到"; exit 1; }
           SRC="$(cygpath -w "$PWD/dist/Evermem")"
           OUT="$(cygpath -w "$PWD/dist")"
-          "$ISCC" installers/windows/evermem.iss \
+          # MSYS 会把以 / 开头的参数（/DMyAppVersion=...）当路径转换，iscc 会立即退出
+          # （只打印版本行）。禁用参数路径转换后再调用。
+          MSYS_NO_PATHCONV=1 "$ISCC" installers/windows/evermem.iss \
             /DMyAppVersion="$(cat VERSION)" /DMySourceDir="$SRC" /DMyOutputDir="$OUT"
           ls -1 dist
 
@@ -202,9 +204,10 @@ jobs:
             echo "tag 与 VERSION 不一致：tag=$VER VERSION=$FILE_VER"; exit 1
           fi
           if [ "${{ matrix.label }}" = "macos" ]; then
-            # 绿色版：.app 目录打 zip（onedir 直接产出 .app）
+            # 绿色版：.app 目录打 zip（onedir 直接产出 .app；裸二进制 Evermem 一并清理，
+            # 否则 sha256sum * 遇目录报错导致步骤失败）
             zip -qry "Evermem-macos-v$VER.app.zip" Evermem.app
-            rm -rf Evermem.app
+            rm -rf Evermem.app Evermem
           elif [ "${{ matrix.label }}" = "windows" ]; then
             # 绿色版：onedir 目录（Evermem.exe + _internal/）打 zip，解压即用
             zip -qry "Evermem-windows-v$VER-portable.zip" Evermem
