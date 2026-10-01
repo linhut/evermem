@@ -33,6 +33,13 @@
         'The current program will be replaced and restarted; the old build is backed up automatically for manual rollback.',
     '安装版更新将静默安装新版安装包，数据保留在系统数据目录。':
         'The installer will run silently in the background; your data stays in the system data folder.',
+    /* 关于（品牌落地） */
+    '关于恒忆': 'About Evermem',
+    '个人跨会话经验记忆系统': 'Personal Cross-Session Memory System',
+    '经验自动进库、跨会话复用、全本地零云端': 'Capture experience automatically, reuse across sessions, local-first & zero-cloud.',
+    '作者：': 'Author: ',
+    '官网：': 'Homepage: ',
+    '源码：': 'Source: ',
     /* 侧栏 */
     '记忆': 'Memory', '系统': 'System',
     '记忆浏览': 'Browse', '数据导入': 'Import Data',

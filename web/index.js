@@ -307,6 +307,21 @@ const updateHTML = () => `<div style="width:100%;max-width:820px">
       <div class="sub" id="updSrcInfo"></div>
     </div>
   </div>
+  <div class="pane about-pane">
+    <div style="display:flex;gap:14px;align-items:center">
+      <img src="/brand/png/evermem-logo-64.png" width="64" height="64" alt="恒忆 Evermem" style="flex-shrink:0">
+      <div>
+        <h3 style="margin:0 0 4px">${t('关于恒忆')}</h3>
+        <div style="font-size:14px;color:var(--text)">${t('个人跨会话经验记忆系统')}</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:2px">${t('经验自动进库、跨会话复用、全本地零云端')}</div>
+      </div>
+    </div>
+    <div class="sub" style="margin-top:10px">
+      ${t('作者：')}Jose-AI · MIT License<br>
+      ${t('官网：')}<a href="https://www.linhut.cn" target="_blank" rel="noopener">www.linhut.cn</a><br>
+      ${t('源码：')}<a href="https://github.com/linhut/evermem" target="_blank" rel="noopener">github.com/linhut/evermem</a>
+    </div>
+  </div>
 </div>`;
 
 async function loadAutostart() {

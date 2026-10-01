@@ -321,19 +321,35 @@ def run_gui(url: str, server: EmbeddedServer) -> int:
         os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--no-sandbox --disable-gpu --disable-dev-shm-usage"
 
     from PySide6.QtCore import Qt, QUrl, QTimer
-    from PySide6.QtGui import QKeySequence, QShortcut
-    from PySide6.QtWidgets import (QApplication, QMainWindow, QMenu, QMessageBox, QStyle, QSystemTrayIcon)
+    from PySide6.QtGui import QIcon, QKeySequence, QPixmap, QShortcut
+    from PySide6.QtWidgets import (QApplication, QMainWindow, QMenu, QMessageBox, QSplashScreen, QStyle,
+                                   QSystemTrayIcon)
     from PySide6.QtWebEngineWidgets import QWebEngineView  # noqa: F401
     from PySide6.QtWebEngineCore import QWebEnginePage, QWebEngineSettings
+
+    # 品牌图标：优先用仓库 assets/ 下的多尺寸 ICO；Qt 在 macOS 上也能读取 ICO
+    icon_path = ROOT / "assets" / "icon.ico"
+    if not icon_path.exists():
+        icon_path = ROOT / "brand" / "evermem.ico"
 
     QApplication.setAttribute(Qt.AA_ShareOpenGLContexts, True)
     app = QApplication(sys.argv)
     app.setApplicationName("Evermem")
     app.setApplicationDisplayName("恒忆 Evermem")
-    if app.style() is not None:
+    if icon_path.exists():
+        app.setWindowIcon(QIcon(str(icon_path)))
+    elif app.style() is not None:
         app.setWindowIcon(app.style().standardIcon(QStyle.StandardPixmap.SP_ComputerIcon))
 
     on_quit = lambda: app.quit()  # noqa: E731
+
+    # 启动页 / splash：非冒烟、非开机自启时显示 1.4s，改善"点完图标没反应"的体验
+    splash = None
+    splash_png = ROOT / "brand" / "png" / "evermem-logo-128.png"
+    if not SMOKE and not AUTOSTART and splash_png.exists():
+        splash = QSplashScreen(QPixmap(str(splash_png)), Qt.WindowType.WindowStaysOnTopHint)
+        splash.show()
+        app.processEvents()
 
     class Win(QMainWindow):
         def __init__(self):
@@ -386,6 +402,10 @@ def run_gui(url: str, server: EmbeddedServer) -> int:
             QShortcut(QKeySequence(Qt.Key_F12), self, activated=self._toggle_dev)
             QShortcut(QKeySequence(Qt.Key_F5), self, activated=self.web.reload)
 
+            # 帮助菜单：关于页，集中展示品牌 Logo、版本、官网与开源链接
+            mh = mb.addMenu("帮助")
+            mh.addAction("关于恒忆 Evermem", self._about)
+
             self._dev_open = False
             tm = QMenu(self)
             tm.addAction("打开恒忆 Evermem", self.show_and_raise)
@@ -419,6 +439,27 @@ def run_gui(url: str, server: EmbeddedServer) -> int:
                     self.web.page().setDevToolsPage(None)
                     self._dev.close()
                     self._dev = None
+
+        def _about(self):
+            box = QMessageBox(self)
+            box.setWindowTitle("关于恒忆 Evermem")
+            box.setTextFormat(Qt.TextFormat.RichText)
+            logo = ROOT / "brand" / "png" / "evermem-logo-64.png"
+            if logo.exists():
+                box.setIconPixmap(QPixmap(str(logo)))
+            try:
+                ver = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
+            except OSError:
+                ver = "0.0.0"
+            box.setText(
+                "<h3>恒忆 Evermem</h3>"
+                f"<p><b>版本：v{ver}</b></p>"
+                "<p>个人跨会话经验记忆系统 —— 经验自动进库、跨会话复用、全本地零云端。</p>"
+                "<p>作者：Jose-AI · MIT License<br>"
+                "官网：<a href='https://www.linhut.cn'>www.linhut.cn</a><br>"
+                "源码：<a href='https://github.com/linhut/evermem'>github.com/linhut/evermem</a></p>"
+            )
+            box.exec()
 
         def show_and_raise(self):
             self.showNormal(); self.raise_(); self.activateWindow()
@@ -456,6 +497,9 @@ def run_gui(url: str, server: EmbeddedServer) -> int:
         w._tray.show()
     else:
         w.show()
+    if splash:
+        # 主窗已显示，1.4s 后淡出启动页；过早关闭会造成视觉上"闪一下"
+        QTimer.singleShot(1400, splash.close)
     app.aboutToQuit.connect(server.stop)
     if SMOKE:
         # 冒烟：6s 后按「页面是否成功加载」判定退出码（0=渲染通过），os._exit 最可靠

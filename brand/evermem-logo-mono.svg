@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <!--
+    恒忆 Evermem 品牌 Logo · 单色版（正色 #4A7DFF / 反白用法见 docs/BRAND.md）
+    用于：单色印刷、水印、禁用不大于 24px 的彩色场景、灰度打印。
+  -->
+  <circle cx="256" cy="256" r="150" stroke="#4A7DFF" stroke-width="10" opacity="0.16"/>
+  <path d="M 221.3 453.0 A 200 200 0 0 1 68.1 187.6"
+        stroke="#4A7DFF" stroke-width="52" stroke-linecap="round"/>
+  <path d="M 102.8 127.4 A 200 200 0 0 1 409.2 127.4"
+        stroke="#4A7DFF" stroke-width="52" stroke-linecap="round"/>
+  <path d="M 443.9 187.6 A 200 200 0 0 1 290.7 453.0"
+        stroke="#4A7DFF" stroke-width="52" stroke-linecap="round"/>
+  <circle cx="221.3" cy="453.0" r="26" fill="#4A7DFF"/>
+  <circle cx="102.8" cy="127.4" r="26" fill="#4A7DFF"/>
+  <circle cx="443.9" cy="187.6" r="26" fill="#4A7DFF"/>
+  <rect x="196" y="196" width="120" height="120" rx="18"
+        transform="rotate(45 256 256)" fill="#4A7DFF"/>
+</svg>

@@ -35,6 +35,12 @@ OutputBaseFilename=Evermem-setup
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
+; 品牌图标：安装向导标题栏图标 + 程序卸载项图标源；指向仓库 assets/ 的多尺寸 ICO
+SetupIconFile=..\..\assets\icon.ico
+; 向导横幅（左侧大图）与右上角小图：PNG 透明底，Inno Setup 6.5.2+ 支持；CI 使用 choco 安装的 6.7.x。
+; 尺寸：横幅 246x471（比例 164:314，已按高 DPI 建议放大），小图 147x147（正方形）。
+WizardImageFile=wizard-image.png
+WizardSmallImageFile=wizard-small-image.png
 ; 卸载程序名（update.py 安装版检测依赖 unins000.exe 与 install.marker 双保险）
 UninstallDisplayIcon={app}\Evermem.exe
 UninstallDisplayName=恒忆 Evermem

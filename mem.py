@@ -248,7 +248,11 @@ def load_index(force: bool = False) -> dict:
             # 笔记目录比索引文件新 → 说明有外部写入未 reindex，自动重建
             if NOTES.exists() and INDEX_PATH.exists():
                 try:
-                    newest_note = max(p.stat().st_mtime for p in NOTES.rglob("*.md"))
+                    # default=0.0：空笔记目录（全新数据根 / 首次启动）时 max() 会抛
+                    # ValueError（max() iterable argument is empty）→ /api/stats 变 500。
+                    # 用 default 兜底，0.0 不可能大于索引 mtime，语义仍是"无需重建"。
+                    newest_note = max((p.stat().st_mtime for p in NOTES.rglob("*.md")),
+                                      default=0.0)
                     if newest_note > INDEX_PATH.stat().st_mtime + 1.0:
                         return build_index()
                 except OSError:

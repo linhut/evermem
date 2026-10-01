@@ -619,7 +619,8 @@ def cmd_scan(args) -> int:
             })
         for sig, items in groups.items():
             fails = [i for i in items if i["_failed"]]
-            if len(fails) < args.min_failures:
+            # not fails：--min-failures 0 时 fails 为空，下面的 max() 会抛 ValueError
+            if not fails or len(fails) < args.min_failures:
                 # 成功配方候选：无失败但命令复杂（一次成功的价值同样值得沉淀）
                 if looks_like_complex_cmd(sig):
                     rc = build_success_candidate(sig, items, session_id)

@@ -110,7 +110,7 @@ jobs:
         # --hidden-import paths：数据/代码目录唯一解析入口，被各模块动态引用，
         # 分析器扫不到会导致打包产物启动即 ModuleNotFoundError。
         # onedir 替代 onefile：消除"每次启动全量解包 219MB"造成的打开慢（杀软实时扫描叠加更甚）。
-        run: pyinstaller --onedir --windowed --name Evermem --paths web --hidden-import paths --add-data "web${{ matrix.sep }}web" --add-data "templates${{ matrix.sep }}templates" --add-data "VERSION${{ matrix.sep }}." --add-data "scripts${{ matrix.sep }}scripts" ${{ matrix.icon }} ${{ matrix.version_file }} desktop.py
+        run: pyinstaller --onedir --windowed --name Evermem --paths web --hidden-import paths --add-data "web${{ matrix.sep }}web" --add-data "templates${{ matrix.sep }}templates" --add-data "VERSION${{ matrix.sep }}." --add-data "scripts${{ matrix.sep }}scripts" --add-data "brand${{ matrix.sep }}brand" ${{ matrix.icon }} ${{ matrix.version_file }} desktop.py
 
       - name: GUI 冒烟（--smoke 自退并断言退出码 0）
         shell: bash
@@ -147,21 +147,28 @@ jobs:
           wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage -O /tmp/linuxdeploy
           wget -q https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage -O /tmp/linuxdeploy-plugin-qt
           chmod +x /tmp/appimagetool /tmp/linuxdeploy /tmp/linuxdeploy-plugin-qt
-          mkdir -p AppDir/usr/bin
-          cp dist/Evermem/Evermem AppDir/usr/bin/evermem
-          cat > AppDir/evermem.desktop <<'EOF'
+          mkdir -p AppDir/opt/evermem AppDir/usr/bin AppDir/usr/share/applications
+          # 必须拷整个 onedir 目录：只拷 Evermem 二进制会在 AppDir 里找不到 _internal，跑不起来
+          cp -r dist/Evermem/. AppDir/opt/evermem/
+          printf '#!/bin/sh\nexec /opt/evermem/Evermem "$@"\n' > AppDir/usr/bin/evermem
+          chmod 0755 AppDir/usr/bin/evermem
+          cat > AppDir/usr/share/applications/evermem.desktop <<'EOF'
           [Desktop Entry]
           Type=Application
-          Name=Evermem
-          Comment=恒忆 Evermem 个人记忆库
+          Name=恒忆 Evermem
+          Comment=个人跨会话经验记忆系统
           Exec=evermem
           Icon=evermem
           Categories=Utility;
+          Terminal=false
           EOF
           # PySide6 的 Qt 库定位：linuxdeploy-plugin-qt 用 QMAKE 探测（WebEngine 体积大，AppImage 约 200-250MB）
           export QMAKE="$(python -c 'import PySide6, os; print(os.path.join(os.path.dirname(PySide6.__file__), "qmake"))' 2>/dev/null || true)"
           export PATH="/tmp:$PATH"
-          ./linuxdeploy --appdir AppDir --executable AppDir/usr/bin/evermem --plugin qt --output appimage \
+          # 注意：工具在 /tmp，不是当前目录。原写法 ./linuxdeploy 必然 "No such file"（AppImage 从未产出过）。
+          # runner 上通常没有 FUSE，加 --appimage-extract-and-run 走解压执行。
+          linuxdeploy --appimage-extract-and-run --appdir AppDir \
+            --executable AppDir/opt/evermem/Evermem --plugin qt --output appimage \
             -i assets/icon.png \
             || { echo "[appimage] 构建失败（continue-on-error 放行，不影响发布；绿色版 tar.gz 仍随 Release 分发）"; exit 0; }
           ls -1 *.AppImage 2>/dev/null || true
@@ -228,6 +235,8 @@ jobs:
             if ls *.AppImage >/dev/null 2>&1; then mv -f *.AppImage "Evermem-linux-v$VER.AppImage"; fi
           fi
           # 生成校验文件（先压缩打包完再写，避免把自己算进去）
+          # 注意：这只是本平台的局部清单，会被后面 checksums 作业的统一清单覆盖；
+          # 因此不随本作业上传 Release（见下方上传步骤的排除列表），避免"只有 Windows 哈希"。
           if command -v sha256sum >/dev/null 2>&1; then
             sha256sum * > SHA256SUMS.txt
           else
@@ -261,6 +270,57 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           cd dist
-          # 只上传平台产物与校验文件：排除冒烟可能残留的运行时数据（与 find_asset 同名单，防御纵深）
-          ASSETS=$(ls -1 | grep -vE '^(index\.json|harvest_state\.json|corpus_spaces\.json|kb\.json|knowledge-base\.md|pmem_config\.json|pmem_backup\.json|\.pmem-backup-last\.json|\.recipe-lock\.json|update_state\.json|backup\.log)$')
+          # 只上传平台产物：排除冒烟可能残留的运行时数据（与 find_asset 同名单，防御纵深），
+          # 并排除本平台的 SHA256SUMS.txt —— 统一清单由 checksums 作业生成后上传，
+          # 否则三个平台互相 clobber，最终只剩最后一个平台（Windows）的哈希。
+          ASSETS=$(ls -1 | grep -vE '^(index\.json|harvest_state\.json|corpus_spaces\.json|kb\.json|knowledge-base\.md|pmem_config\.json|pmem_backup\.json|\.pmem-backup-last\.json|\.recipe-lock\.json|update_state\.json|backup\.log|SHA256SUMS\.txt)$')
           echo "$ASSETS" | xargs -r gh release upload "${GITHUB_REF_NAME}" --clobber
+
+  # 统一校验清单：三个平台各自的 SHA256SUMS.txt 只含本平台产物，必须汇总后覆盖上传。
+  checksums:
+    name: 统一 SHA256SUMS
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          # 不加 merge-multiple：三个平台各自落到 dist-all/<artifact-name>/，
+          # 同名文件（各平台的 SHA256SUMS.txt）不会互相覆盖。
+          pattern: Evermem-*
+          path: dist-all
+
+      - name: 生成跨平台统一清单
+        shell: bash
+        run: |
+          cd dist-all
+          rm -f */SHA256SUMS.txt
+          # 用 Python 而不是 sha256sum *：产物分散在子目录里，且要只写文件名
+          # （用户下载后在同一目录执行 sha256sum -c，路径必须平铺）
+          python3 - <<PY
+          import hashlib, pathlib
+          root = pathlib.Path('.')
+          lines = []
+          for p in sorted(root.rglob('*')):
+              if p.is_file():
+                  h = hashlib.sha256(p.read_bytes()).hexdigest()
+                  lines.append(f"{h}  {p.name}")
+          (root / 'SHA256SUMS.txt').write_text("\n".join(lines) + "\n", encoding='utf-8')
+          print("\n".join(lines))
+          PY
+          # 产物数为 0 说明三个平台都没出包，直接失败而不是上传空清单
+          if [ "$(grep -c . SHA256SUMS.txt)" -eq 0 ]; then echo "无产物可校验"; exit 1; fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Evermem-checksums
+          path: dist-all/SHA256SUMS.txt
+          if-no-files-found: error
+
+      - name: 上传统一清单到 Release（tag 触发时）
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd dist-all
+          gh release upload "${GITHUB_REF_NAME}" SHA256SUMS.txt --clobber
