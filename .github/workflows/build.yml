@@ -282,6 +282,11 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      # gh release upload 需要 git 上下文识别仓库；download-artifact 只拉产物，不会带 .git
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - uses: actions/download-artifact@v4
         with:
           # 不加 merge-multiple：三个平台各自落到 dist-all/<artifact-name>/，
@@ -295,13 +300,14 @@ jobs:
           cd dist-all
           rm -f */SHA256SUMS.txt
           # 用 Python 而不是 sha256sum *：产物分散在子目录里，且要只写文件名
-          # （用户下载后在同一目录执行 sha256sum -c，路径必须平铺）
+          # （用户下载后在同一目录执行 sha256sum -c，路径必须平铺）。
+          # 排除构建过程日志与旧清单文件本身。
           python3 - <<PY
           import hashlib, pathlib
           root = pathlib.Path('.')
           lines = []
           for p in sorted(root.rglob('*')):
-              if p.is_file():
+              if p.is_file() and p.name != 'SHA256SUMS.txt' and not p.name.endswith('.log'):
                   h = hashlib.sha256(p.read_bytes()).hexdigest()
                   lines.append(f"{h}  {p.name}")
           (root / 'SHA256SUMS.txt').write_text("\n".join(lines) + "\n", encoding='utf-8')
