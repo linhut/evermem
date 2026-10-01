@@ -128,12 +128,32 @@ import os as _os2, time as _time2
 _srv = subprocess.Popen([PY, "web/server.py"], cwd=str(BASE),
                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                         env={**_os2.environ, "PMEM_NO_AUTO_HARVEST": "1"})
-for _i in range(40):  # 最多等 10 秒就绪
+
+
+def _srv_ready() -> bool:
+    """就绪判定必须是"真实请求 /api/health 成功"：
+    纯 TCP 探测可能在 handler 进入服务循环前就通过（HTTPServer 构造即 bind+listen），
+    导致紧随其后的第一个 API 请求（health）连接被拒——时序性假失败。
+    """
     try:
-        _hc.HTTPConnection("127.0.0.1", 8765, timeout=2).close()
-        break
+        c = _hc.HTTPConnection("127.0.0.1", 8765, timeout=2)
+        c.request("GET", "/api/health")
+        r = c.getresponse()
+        body = r.read(200).decode("utf-8", "ignore")
+        c.close()
+        return r.status == 200 and "ok" in body
     except Exception:
-        _time2.sleep(0.25)
+        try:
+            c.close()
+        except Exception:
+            pass
+        return False
+
+
+for _i in range(60):  # 最多等 15 秒就绪（F 盘/杀软慢时留足余量）
+    if _srv_ready():
+        break
+    _time2.sleep(0.25)
 def api(path, method="GET", body=None):
     c = _hc.HTTPConnection("127.0.0.1", 8765, timeout=15)
     try:

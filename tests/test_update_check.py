@@ -33,21 +33,31 @@ import update  # noqa: E402
 PLAT = update.platform_key()
 BASE = PLAT.split("-")[0]
 
-# 清单是可选源：默认不启用（需要有人托管这个 JSON）。
+# 清单是默认启用的官方云服务器固定文件（www.linhut.cn 托管，镜像列表长期有效；见 update.py 注释）。
 # 要测清单行为就用真实域名占位（本项目自有站点），不用 *.example.com 造一个不存在的加速源。
-MANIFEST_URL = "https://www.linhut.cn/evermem/update-manifest.json"
+MANIFEST_URL = update.DEFAULT_MANIFEST_URL or "https://www.linhut.cn/evermem/update-manifest.json"
 
 
 def now_iso(offset_hours=0):
     return (datetime.now(timezone.utc) - timedelta(hours=offset_hours)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+def form_asset_name(version: str, form: str = "portable") -> str:
+    """按发行形态构造资产名（与 CI 打包产物命名约定一致）。"""
+    if BASE == "windows":
+        return f"Evermem-windows-v{version}-portable.zip" if form == "portable" \
+            else f"Evermem-setup-v{version}.exe"
+    if BASE == "macos":
+        return f"Evermem-macos-v{version}.app.zip"
+    return f"Evermem-linux-v{version}-portable.tar.gz"
+
+
 def manifest_payload(version="0.9.9", with_platform=True, mirrors=None, generated_at=None):
     assets = {}
     if with_platform:
-        assets[PLAT] = {"name": f"Evermem-{BASE}-v{version}.exe", "size": 123,
+        assets[PLAT] = {"name": form_asset_name(version), "size": 123,
                         "sha256": "a" * 64,
-                        "urls": [f"https://cdn.example.com/Evermem-{BASE}-v{version}.exe"]}
+                        "urls": [f"https://cdn.example.com/{form_asset_name(version)}"]}
     return {
         "schema": 1, "product": "evermem",
         "generated_at": generated_at if generated_at is not None else now_iso(),
@@ -57,11 +67,11 @@ def manifest_payload(version="0.9.9", with_platform=True, mirrors=None, generate
     }
 
 
-def github_payload(version="0.9.9", with_asset=True, sha_asset=False):
+def github_payload(version="0.9.9", with_asset=True, sha_asset=False, form="portable"):
     assets = []
     if with_asset:
-        assets.append({"name": f"Evermem-{BASE}-v{version}" + (".exe" if BASE == "windows" else ""),
-                       "size": 456,
+        name = form_asset_name(version, form)
+        assets.append({"name": name, "size": 456,
                        "browser_download_url": f"https://github.com/linhut/evermem/releases/download/v{version}/x"})
     if sha_asset:
         assets.append({"name": "SHA256SUMS.txt", "size": 10,
@@ -178,20 +188,29 @@ class UpdateCheckTest(unittest.TestCase):
     def test_07_config_roundtrip(self):
         print("\n七、更新源配置可切换并回读真实值")
         cfg = update.load_config()
-        self.assertEqual(cfg["sources"], ["github", "mirror"], "默认源不含清单（没托管位置就不参与）")
-        self.assertEqual(cfg["manifest_url"], "", "默认不编造清单地址")
+        self.assertEqual(cfg["sources"], ["github", "mirror"], "默认源：GitHub + 镜像（清单默认启用）")
+        self.assertEqual(cfg["manifest_url"], "https://www.linhut.cn/evermem/update-manifest.json",
+                         "默认清单 = 官方云服务器固定地址")
         saved = update.save_config({"sources": ["github", "mirror"], "mirrors": ["https://x/"]})
         self.assertEqual(saved["sources"], ["github", "mirror"])
         self.assertEqual(saved["mirrors"], ["https://x/"])
         # 回读必须一致（界面显示的就是实际生效配置）
         self.assertEqual(update.load_config()["mirrors"], ["https://x/"])
         print("  PASS  配置写入后回读一致")
-        # 没填清单地址就不该请求清单
+        # 默认启用官方云清单（2026-10-01 定案）：检查会先请求它
         with mock.patch.object(update, "http_json", return_value=(github_payload(), None, 60)) as m:
             r = update.check(force=True)
             self.assertTrue(r["ok"])
-            self.assertTrue(all(a["source"] != "manifest" for a in r["attempts"]))
-            print("  PASS  未填清单地址时不请求清单")
+            self.assertTrue(any(MANIFEST_URL in u for u in [c.args[0] for c in m.call_args_list]),
+                            "默认应请求官方云清单")
+            print("  PASS  默认请求官方云清单")
+        # 用户显式清空 → 不再请求清单（回退 GitHub 直连 + 镜像）
+        update.save_config({"manifest_url": ""})
+        with mock.patch.object(update, "http_json", return_value=(github_payload(), None, 60)) as m2:
+            r2 = update.check(force=True)
+            self.assertTrue(r2["ok"])
+            self.assertTrue(all(a["source"] != "manifest" for a in r2["attempts"]))
+            print("  PASS  清空清单地址后不再请求清单")
         # 填了就用
         update.save_config({"manifest_url": MANIFEST_URL})
         with mock.patch.object(update, "http_json", return_value=(manifest_payload(), None, 50)):
@@ -211,7 +230,7 @@ class UpdateCheckTest(unittest.TestCase):
             if "SHA256SUMS" in url:
                 raise AssertionError("SHA256SUMS 应走 http_text，不是 http_json")
             return github_payload(sha_asset=True), None, 70
-        sums = f"{'b' * 64}  Evermem-{BASE}-v0.9.9" + (".exe" if BASE == "windows" else "") + "\n"
+        sums = f"{'b' * 64}  {form_asset_name('0.9.9')}\n"
         with mock.patch.object(update, "http_json", side_effect=fake_json), \
              mock.patch.object(update, "http_text", return_value=(sums, None, 40)):
             r = update.check(force=True, )
@@ -222,17 +241,22 @@ class UpdateCheckTest(unittest.TestCase):
 
     # ---------- 平台资产匹配 ----------
     def test_09_platform_asset_match(self):
-        print("\n九、平台资产匹配不会串台")
+        print("\n九、平台资产匹配不会串台（平台 × 发行形态）")
         if BASE == "windows":
-            self.assertTrue(update._asset_matches("Evermem-windows-v0.2.3.exe", PLAT))
+            self.assertTrue(update._asset_matches("Evermem-windows-v0.2.3-portable.zip", PLAT, "portable"))
+            self.assertFalse(update._asset_matches("Evermem-setup-v0.2.3.exe", PLAT, "portable"))
+            self.assertTrue(update._asset_matches("Evermem-setup-v0.2.3.exe", PLAT, "installer"))
+            self.assertFalse(update._asset_matches("Evermem-windows-v0.2.3-portable.zip", PLAT, "installer"))
             self.assertFalse(update._asset_matches("Evermem-linux-v0.2.3", PLAT))
         elif BASE == "linux":
-            self.assertTrue(update._asset_matches("Evermem-linux-v0.2.3", PLAT))
-            self.assertFalse(update._asset_matches("Evermem-windows-v0.2.3.exe", PLAT))
+            self.assertTrue(update._asset_matches("Evermem-linux-v0.2.3-portable.tar.gz", PLAT, "portable"))
+            self.assertTrue(update._asset_matches("Evermem-linux-v0.2.3.deb", PLAT, "installer"))
+            self.assertFalse(update._asset_matches("Evermem-linux-v0.2.3.AppImage", PLAT, "installer"))
+            self.assertFalse(update._asset_matches("Evermem-windows-v0.2.3-portable.zip", PLAT))
         else:
             self.assertTrue(update._asset_matches("Evermem-macos-v0.2.3.app.zip", PLAT))
-            self.assertFalse(update._asset_matches("Evermem-linux-v0.2.3", PLAT))
-        print(f"  PASS  {PLAT} 匹配正确")
+            self.assertFalse(update._asset_matches("Evermem-linux-v0.2.3-portable.tar.gz", PLAT))
+        print(f"  PASS  {PLAT} 匹配正确（portable/installer 不串台）")
 
     # ---------- 清单生成脚本 ----------
     def test_10_manifest_generator(self):
@@ -307,26 +331,52 @@ class UpdateCheckTest(unittest.TestCase):
                              "只通文件的镜像不应出现在检查链里")
             print(f"  PASS  下载 {len(dl)} 个候选（含 2 个只通文件的镜像）")
 
-    # ---------- 默认不依赖任何自有托管 ----------
-    def test_13_no_manifest_by_default(self):
-        print("\n十三、默认不启用清单：没有服务器 / CDN 也能完成检查")
-        self.assertEqual(update.load_config()["manifest_url"], "", "默认不应编造清单地址")
-        with mock.patch.object(update, "http_json", return_value=(github_payload(), None, 100)) as m:
+    # ---------- 默认启用官方云清单（2026-10-01 定案：清单不进 Release，云服务器固定文件）----------
+    def test_13_cloud_manifest_is_default(self):
+        print("\n十三、默认启用官方云服务器固定清单；清单不可用时自动降级")
+        self.assertEqual(update.load_config()["manifest_url"],
+                         "https://www.linhut.cn/evermem/update-manifest.json",
+                         "默认清单 = 云服务器固定地址")
+        # 云清单 404 → 自动降级 GitHub 直连 + 镜像，不能静默失败
+        def fake_json(url, timeout=None):
+            if "linhut.cn" in url:
+                return None, "HTTP 404", 90
+            return github_payload(), None, 100
+        with mock.patch.object(update, "http_json", side_effect=fake_json):
             r = update.check(force=True)
-            self.assertTrue(r["ok"])
-            urls = [c.args[0] for c in m.call_args_list]
-            self.assertTrue(urls and all("api.github.com" in u for u in urls),
-                            "默认只请求 GitHub 直连与镜像前缀")
-            self.assertEqual(len(urls), 1 + len(update.DEFAULT_MIRRORS))
-            self.assertTrue(len(update.DEFAULT_MIRRORS) >= 3)
-            # gh.llkk.cc 2026-10-01 复测：API 403（镜像出口 IP 被 GitHub 限流），文件 206 正常
-            # → 移出检查链、保留在下载链。这条断言防它以后被误加回检查链。
-            self.assertNotIn("https://gh.llkk.cc/", update.DEFAULT_MIRRORS,
-                             "gh.llkk.cc 的 API 通道已限流，不能留在检查链")
-            self.assertIn("https://gh.llkk.cc/", update.DOWNLOAD_ONLY_MIRRORS,
-                          "文件通道仍可用，应留在下载链")
-            self.assertTrue(any(a["source"] == "github" for a in r["attempts"]))
-            print(f"  PASS  默认 {len(urls)} 个候选（直连 + {len(update.DEFAULT_MIRRORS)} 镜像），零自有托管")
+            self.assertTrue(r["ok"], "云清单不可用应降级 GitHub")
+            self.assertEqual(r["latest"], "0.9.9")
+            self.assertNotEqual(r["source"], "manifest")
+        print("  PASS  云清单默认启用，404 自动降级 GitHub/镜像")
+        # 云清单与 GitHub 全部不可用时仍必须明确失败
+        with mock.patch.object(update, "http_json", return_value=(None, "HTTP 404", 88)):
+            r2 = update.check(force=True)
+            self.assertFalse(r2["ok"])
+            self.assertTrue(any("linhut.cn" in a["url"] for a in r2["attempts"]),
+                            "失败明细必须包含云清单这一跳")
+        print("  PASS  全部源失败时清单跳有据可查")
+        # 只通文件的镜像不能混进检查链（防误加回）
+        self.assertNotIn("https://gh.llkk.cc/", update.DEFAULT_MIRRORS)
+        self.assertIn("https://gh.llkk.cc/", update.DOWNLOAD_ONLY_MIRRORS)
+        print("  PASS  只通文件的镜像留在下载链、不进检查链")
+
+    # ---------- 清单资产按发行形态分组 ----------
+    def test_15_manifest_form_groups(self):
+        print("\n十五、清单资产按发行形态分组（portable/installer）")
+        form = update.install_form()
+        other = "installer" if form == "portable" else "portable"
+        payload = manifest_payload(with_platform=False)
+        payload["channels"]["stable"]["assets"] = {
+            update.platform_key(): {
+                form: {"name": "Evermem-current", "size": 1, "urls": ["https://x/f"]},
+                other: {"name": "Evermem-other", "size": 2, "urls": ["https://y/f"]},
+            }
+        }
+        with mock.patch.object(update, "http_json", return_value=(payload, None, 80)):
+            r = update.check(force=True)
+        self.assertTrue(r["ok"])
+        self.assertEqual(r["asset"]["name"], "Evermem-current", "应命中当前形态资产，不串形态")
+        print(f"  PASS  命中当前形态（{form}），不串到 {other}")
 
     # ---------- 清单只下发镜像列表（不写版本）----------
     def test_14_manifest_mirrors_only(self):
@@ -367,12 +417,14 @@ class UpdateDownloadTest(unittest.TestCase):
 
     def test_safe_filename(self):
         import update
+        # 点号是安全字符（.exe/.zip 后缀必须保留），只替换真正危险的字符
         cases = {"../../Evermem.exe": "Evermem.exe", "a/b/c.exe": "c.exe",
                  "Evermem-windows-v0.2.3.exe": "Evermem-windows-v0.2.3.exe",
-                 "": "update.bin", "a..b": "a__b", "x\\y.exe": "y.exe"}
+                 "": "update.bin", "a..b": "a..b", "x\\y.exe": "y.exe",
+                 "a b*c?.exe": "a_b_c_.exe"}
         for raw, want in cases.items():
             self.assertEqual(update._safe_filename(raw), want, f"{raw!r} → {want!r}")
-        print("  PASS  资产名安全化（防路径穿越）")
+        print("  PASS  资产名安全化（防路径穿越，保留点号）")
 
     def test_url_candidates_order_and_dedup(self):
         import update

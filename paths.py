@@ -13,10 +13,13 @@
 #   「核心检索读 A 目录、界面配置写 B 目录、导入写 C 目录、备份恢复写 D 目录」的分裂。
 #   全项目必须只认本文件，别处不得再用 __file__ 推导数据位置。
 #
-# 优先级：环境变量 > 持久化配置 > 可移植默认目录
+# 优先级：环境变量 > 持久化配置 > 安装版系统数据目录 > 可移植默认目录
 #   · PMEM_HOME                显式指定，最高优先级
 #   · <数据目录>/pmem_config.json 的 home 字段（界面「数据位置」写入，跨会话一致）
-#   · 冻结态：可执行文件同级目录（可移植：exe 与数据放一起即可）
+#   · 安装版（程序目录有 install.marker，由安装器写入）：
+#       数据落在系统数据目录——Windows %APPDATA%\EvermemData、
+#       macOS ~/Library/Application Support/Evermem、Linux $XDG_DATA_HOME/evermem
+#   · 冻结态（无标记）：可执行文件同级目录（可移植：exe 与数据放一起即可）
 #     源码态：本文件所在目录
 #
 # 代码目录（code_root）只用于定位模板、脚本与前端资源；冻结态下可能是临时解包目录，
@@ -37,23 +40,54 @@ def code_root() -> Path:
     return Path(__file__).resolve().parent
 
 
+def install_marker() -> Path:
+    """安装版标记文件：程序目录下 install.marker（由安装器写入）。
+
+    绿色版（解压即用）不存在该文件；源码态恒为空路径（不是安装版）。
+    """
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent / "install.marker"
+    return Path()
+
+
+def is_installed() -> bool:
+    """当前是否安装版（Windows Inno / Linux deb、rpm 安装器安装）。"""
+    m = install_marker()
+    return bool(m) and m.is_file()
+
+
+def _installed_data_root() -> Path:
+    """安装版默认数据目录（系统数据区，与程序安装目录分离，卸载不丢数据）。"""
+    if sys.platform == "win32":
+        base = os.environ.get("APPDATA") or str(Path.home() / "AppData" / "Roaming")
+        return Path(base) / "EvermemData"
+    if sys.platform == "darwin":
+        return Path.home() / "Library" / "Application Support" / "Evermem"
+    xdg = os.environ.get("XDG_DATA_HOME") or str(Path.home() / ".local" / "share")
+    return Path(xdg) / "evermem"
+
+
 def _default_data_root() -> Path:
-    """可移植默认数据目录：打包产物用 exe 同级目录，源码用代码目录。
+    """默认数据目录：安装版用系统数据区；打包产物用 exe 同级目录；源码用代码目录。
 
     不用 cwd —— 双击 exe、开机自启、从资源管理器启动时 cwd 各不相同，
     用 cwd 会让同一份数据在不同启动方式下落到不同位置。
     """
+    if is_installed():
+        return _installed_data_root()
     if getattr(sys, "frozen", False):
         return Path(sys.executable).resolve().parent
     return code_root()
 
 
 def config_search_paths() -> list[Path]:
-    """配置文件读取顺序：数据目录优先，其次代码目录（兼容旧版本写在代码目录的配置）。"""
+    """配置文件读取顺序：环境变量优先，其次安装版数据区/数据目录，最后代码目录（兼容旧版本）。"""
     roots: list[Path] = []
     env = os.environ.get("PMEM_HOME", "").strip()
     if env:
         roots.append(Path(env).expanduser())
+    if is_installed():
+        roots.append(_installed_data_root())
     roots.append(_default_data_root())
     legacy = code_root()
     if legacy not in roots:

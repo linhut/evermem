@@ -54,43 +54,45 @@
 改 VERSION → 更新 CHANGELOG → 提交 main
 → git tag -a v0.2.4 -m "release: v0.2.4 — 中文摘要"
 → git push origin main --tags
-→ CI：三平台构建 → GUI 冒烟 → 生成 SHA256SUMS → 创建/复用 Release → 上传
-→ CI：三平台构建 → 生成 SHA256SUMS → 创建/复用 Release → 上传产物与 `update-manifest.json`
-→ 自建源（可选）：把 Release 附件里的 update-manifest.json 传到自己的静态服务器，界面填地址
+→ CI：三平台构建（onedir 绿色版 zip/tar.gz/.app.zip + 安装版 setup/dmg/deb/rpm）
+→ GUI 冒烟 → SHA256SUMS → 创建/复用 Release → 上传全部产物
+（2026-10-01 起：update-manifest.json 不进 Release、不由 CI 生成）
+→ 云清单（可选，固定文件）：需要更新镜像列表时手动跑 gen_update_manifest.py merge，
+   上传到 www.linhut.cn/evermem/update-manifest.json（长期有效，无需每次发版）
 ```
 
 本地禁止构建后手动上传产物（沿用 DSH-manager `RELEASE.md` 的硬规定）。
 
 ### 2.4 回滚
 
-- manifest 中同时给出 `previous` 版本下载项；
-- P3 自动替换时在程序目录保留 `Evermem.old.exe`（macOS 为 `Evermem.app.old`），启动自检失败自动还原；
+- 更新检查返回的资产带 sha256；绿色版 P3 替换时在程序目录上级保留 `Evermem.old` 备份
+  （安装版由安装器卸载/重装兜底），启动自检失败自动还原；
 - **回滚只动程序文件，不动数据目录**（这是数据目录必须独立设置的第二个理由）。
 
 ---
 
 ## 三、可访问性：多源更新检查
 
-### 3.1 自建更新清单 `update-manifest.json`（可选源，默认不启用）
+### 3.1 官方云服务器固定清单 `update-manifest.json`（默认启用，2026-10-01 定案）
 
-一次请求同时拿到「最新版本号 + 各平台下载直链 + 镜像链 + SHA256 + 更新说明」。
+一次请求同时拿到「镜像列表 + 下载专用镜像」；**版本号始终由 GitHub Release 说了算**。
 
-> **它不是必需项**：默认路径是「GitHub 直连 + 镜像并行竞速」，不需要任何自有服务器。
-> 只有维护者自己托管了清单文件、并在界面填了清单地址时才作为第一跳；
-> 清单 404 / 缺 channel / 缺当前平台资产，一律自动降级到 GitHub 与镜像。
-
+> 定案（用户拍板）：清单**不进 GitHub Releases、不由 CI 生成**，改为官网云服务器上的
+> **固定文件** `https://www.linhut.cn/evermem/update-manifest.json`，维护者手动生成一次、
+> 长期有效。客户端检查默认先请求它；404 / 缺 channel / 缺当前平台资产一律自动降级到
+> GitHub 直连 + 镜像竞速，云清单挂了不阻塞检查。
+>
 > 文件名为 `update-manifest.json`，**不叫 `update.json`**——后者是客户端的更新源配置文件
 > （存数据目录），两者重名会在开发态同目录互相覆盖。
 >
-> **清单由 Release 附件分发，不进版本库**（仓库里躺着过期版本比没有更危险：
-> 清单一旦被读到就是版本真相源，忘了更新会让客户端一直显示"已是最新"）。
+> **清单只应写低频信息（镜像列表），不写版本号**——仓库/服务器里躺着过期版本比没有更危险：
+> 清单一旦被读到就是版本真相源，忘了更新会让客户端一直显示"已是最新"（已实测复现）。
 
-### 两种用法，推荐第二种
+### 唯一用法：只下发镜像
 
-| 用法 | 清单内容 | 维护成本 | 风险 |
-|---|---|---|---|
-| 完整版 | `channels.stable.version` + 各平台资产 + 镜像 | 每次发版都要重新生成并覆盖上传 | **忘了上传 = 假最新**（已实测复现：GitHub 上是 0.2.9、清单停在 0.2.3，界面仍显示"已是最新"） |
-| **只下发镜像（推荐）** | 只有 `sources.mirrors` / `sources.download_only_mirrors` | **上传一次，长期有效** | 无。版本始终来自 GitHub |
+| 清单内容 | 维护成本 | 风险 |
+|---|---|---|
+| 只有 `sources.mirrors` / `sources.download_only_mirrors` | **上传一次，长期有效** | 无。版本始终来自 GitHub |
 
 只下发镜像的清单约 400 字节、`channels` 整段不写：客户端读到后只采用它的镜像列表，
 版本号继续走 GitHub 直连 + 镜像竞速。代价是不再省那一次 API 请求，换来"永不假最新"。

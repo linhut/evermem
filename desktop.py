@@ -62,7 +62,14 @@ def pick_free_port(preferred: int = 8765) -> int:
 
 # ---------- 单实例锁（跨平台，零三方依赖） ----------
 class SingleInstance:
-    LOCK = Path(tempfile.gettempdir()) / "pmem-desktop.lock"
+    # 锁文件按数据根哈希区分：绿色版与安装版（数据根不同）可以并存不互斥；
+    # 同一数据根无论从哪个形态启动，都只允许一个实例（防双写索引）。
+    @staticmethod
+    def lock_path() -> Path:
+        import hashlib
+        root = str(_paths.data_root())
+        h = hashlib.sha1(root.encode("utf-8")).hexdigest()[:12]
+        return Path(tempfile.gettempdir()) / f"pmem-desktop-{h}.lock"
 
     @staticmethod
     def _alive(pid: int) -> bool:
@@ -86,22 +93,24 @@ class SingleInstance:
 
     def acquire(self) -> bool:
         try:
-            if self.LOCK.exists():
+            lock = self.lock_path()
+            if lock.exists():
                 try:
-                    old = int(self.LOCK.read_text(encoding="utf-8").strip() or "0")
+                    old = int(lock.read_text(encoding="utf-8").strip() or "0")
                 except (ValueError, OSError):
                     old = 0
                 if old > 0 and self._alive(old):
                     return False
-            self.LOCK.write_text(str(os.getpid()), encoding="utf-8")
+            lock.write_text(str(os.getpid()), encoding="utf-8")
             return True
         except OSError:
             return True  # 拿不到锁也放行，避免环境异常导致无法启动
 
     def release(self) -> None:
         try:
-            if self.LOCK.exists():
-                self.LOCK.unlink()
+            lock = self.lock_path()
+            if lock.exists():
+                lock.unlink()
         except OSError:
             pass
 

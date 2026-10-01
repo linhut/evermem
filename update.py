@@ -4,17 +4,18 @@
 # 官网: https://www.linhut.cn
 # 许可: MIT License（SPDX-License-Identifier: MIT，详见根目录 LICENSE）
 
-# update - 多源更新检查（自建清单 → GitHub 直连 → 镜像）
+# update - 多源更新检查（云清单 → GitHub 直连 → 镜像）与 P2/P3 更新应用
 #
 # 为什么单独一个模块：
 #   更新检查是"网络不可靠"场景，必须能被单独测试、单独降级，不能和 Web 路由搅在一起。
 #   策略层参考 DSH-manager 已上线验证的实现（多源候选 + 最快胜出 + 失败明示），
 #   实现层按 Python 标准库重写（urllib + 线程竞速，无第三方依赖）。
 #
-# 三条硬约束：
-#   1. 不依赖直连 GitHub：自建清单是首选源，镜像是可切换的兜底。
+# 四条硬约束：
+#   1. 默认先请求官方云服务器固定清单（镜像列表），清单 404/无版本时降级 GitHub 直连 + 镜像。
 #   2. 全部源不可用必须明确报错：返回每个源的 URL/耗时/错误，绝不静默返回"已是最新"。
-#   3. 只检查不安装：本模块不下载、不替换任何文件（下载与替换属 P2/P3）。
+#   3. 按发行形态分流资产：安装版（install.marker）下载 setup/dmg/deb，绿色版下载 zip/tar.gz。
+#   4. 更新应用（download / apply_update）按形态执行：绿色版目录替换、安装版 setup 静默升级。
 
 from __future__ import annotations
 
@@ -26,6 +27,7 @@ import shutil
 import subprocess
 import re
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.request
@@ -40,14 +42,16 @@ REPO = "linhut/evermem"
 GITHUB_API_LATEST = f"https://api.github.com/repos/{REPO}/releases/latest"
 RELEASES_PAGE = f"https://github.com/{REPO}/releases/latest"
 
-# 自建清单（可选，默认关闭）。
+# 自建清单（云服务器固定地址，默认启用）。
 #
-# 参考 DSH-manager 的已验证做法：「GitHub 直连 + 镜像代理 + DoH 解析」三件套
-# 已经能解决"访问不到 GitHub"，且不需要任何自有服务器 / CDN。
-# 自建清单只是额外的可运维层（能远程下发镜像列表、能带 SHA256），
-# 但它需要有人托管这个 JSON 文件；没托管位置就不启用，不因此引入任何外部依赖。
-# 想用时在配置里填 manifest_url（填了才参与检查），留空即不参与。
-DEFAULT_MANIFEST_URL = ""
+# 2026-10-01 定案：update-manifest.json 不再进 GitHub Releases、也不由 CI 生成——
+# 改为官网云服务器上的固定文件（www.linhut.cn/evermem/update-manifest.json），
+# 由维护者手动生成一次、长期有效（内容只下发镜像列表等低频信息，见下）。
+# 客户端每次检查都会先请求它；404 / 解析失败自动降级到 GitHub 直连 + 镜像竞速，
+# 因此云清单挂了也不会让更新检查失效。
+# 关键约束（防"假最新"）：清单文件只应写 sources（镜像列表），不要写死版本号——
+# 版本判断始终由 GitHub Release 说了算。文件写死版本号 + 忘记更新 = 用户永远看不到新版本。
+DEFAULT_MANIFEST_URL = "https://www.linhut.cn/evermem/update-manifest.json"
 
 # 镜像前缀：2026-09-30 实测 + 2026-10-01 复测（curl 真实请求 release 资产与 API）。
 # 检查链（API 通）2026-10-01 复测：edgeone.gh-proxy.org 160ms < cdn.gh-proxy.org 354ms
@@ -121,7 +125,7 @@ def compare_semver(a: str, b: str) -> int:
     return (ta > tb) - (ta < tb)
 
 
-# ---------- 平台 ----------
+# ---------- 平台与发行形态 ----------
 def platform_key() -> str:
     """当前平台资产键：windows-x64 / macos-arm64 / macos-x64 / linux-x64。"""
     sysname = sys.platform
@@ -137,15 +141,38 @@ def platform_key() -> str:
     return f"{base}-{arch}"
 
 
-def _asset_matches(name: str, key: str) -> bool:
-    """判定 GitHub Release 资产是否属于当前平台（名字里带平台关键字）。"""
+def install_form() -> str:
+    """当前发行形态：installer（安装版，检测到 install.marker）/ portable（绿色版）。
+
+    安装版（Windows Inno / Linux deb、rpm 安装器）会在程序目录写 install.marker，
+    表明数据根应落在系统数据目录（%APPDATA% 等）而非 exe 同级（见 paths.py）。
+    """
+    return "installer" if _paths.is_installed() else "portable"
+
+
+# 资产命名约定（必须与 CI 打包脚本保持一致）：
+#   Windows 绿色版  Evermem-windows-vX.Y.Z-portable.zip
+#   Windows 安装版  Evermem-setup-vX.Y.Z.exe
+#   macOS   绿色版  Evermem-macos-vX.Y.Z.app.zip
+#   macOS   安装版  Evermem-macos-vX.Y.Z.dmg（暂未落地，macOS 仅绿色版）
+#   Linux   绿色版  Evermem-linux-vX.Y.Z-portable.tar.gz
+#   Linux   安装版  Evermem-linux-vX.Y.Z.deb / .rpm
+def _asset_matches(name: str, key: str, form: str = "portable") -> bool:
+    """判定 GitHub Release 资产是否属于（当前平台 + 当前发行形态）。"""
     n = str(name or "").lower()
     base = key.split("-")[0]
+    if form == "installer":
+        if base == "windows":
+            return "setup" in n and n.endswith(".exe")
+        if base == "macos":
+            return "macos" in n and n.endswith(".dmg")
+        return "linux" in n and n.endswith((".deb", ".rpm"))
+    # portable（绿色版）
     if base == "windows":
-        return "windows" in n and n.endswith(".exe")
+        return "windows" in n and "portable" in n and n.endswith(".zip")
     if base == "macos":
         return "macos" in n and (n.endswith(".app.zip") or n.endswith(".zip"))
-    return "linux" in n and not n.endswith((".exe", ".zip"))
+    return "linux" in n and "portable" in n and n.endswith((".tar.gz", ".zip"))
 
 
 # ---------- 配置与状态 ----------
@@ -309,9 +336,17 @@ def from_manifest(cfg: dict, url: str = ""):
         return None, attempt
     assets = ch.get("assets") or {}
     key = platform_key()
-    raw = assets.get(key) or assets.get(key.split("-")[0])
+    form = install_form()
+    entry = assets.get(key) or assets.get(key.split("-")[0])
+    raw = None
+    if isinstance(entry, dict) and "name" in entry:
+        # 旧格式：该键直接就是资产对象（2026-10-01 前的单形态清单）
+        raw = entry
+    elif isinstance(entry, dict) and isinstance(entry.get(form), dict):
+        # 新格式：按发行形态分组 {portable: {...}, installer: {...}}
+        raw = entry[form]
     if not isinstance(raw, dict):
-        attempt["error"] = f"清单无当前平台资产（{key}），仅采用其镜像列表"
+        attempt["error"] = f"清单无当前平台资产（{key}·{form}），仅采用其镜像列表"
         return None, attempt
 
     eff_mirrors = mirrors or list(cfg.get("mirrors") or [])
@@ -345,13 +380,14 @@ def from_github(cfg: dict, url: str = GITHUB_API_LATEST, mirror: str = ""):
 
     assets = [a for a in (data.get("assets") or []) if isinstance(a, dict)]
     key = platform_key()
+    form = install_form()
     hit = None
     for a in assets:
-        if _asset_matches(str(a.get("name") or ""), key):
+        if _asset_matches(str(a.get("name") or ""), key, form):
             hit = a
             break
     if hit is None:
-        attempt["error"] = f"Release 无当前平台资产（{key}）"
+        attempt["error"] = f"Release 无当前平台资产（{key}·{form}）"
         return None, attempt
 
     dl = str(hit.get("browser_download_url") or "").strip()
@@ -407,7 +443,8 @@ def check(force: bool = False, timeout: float = SOURCE_TIMEOUT) -> dict:
     cfg = load_config()
     current = current_version()
     base = {"ok": False, "current": current, "channel": cfg.get("channel"),
-            "manual_url": RELEASES_PAGE, "platform": platform_key()}
+            "manual_url": RELEASES_PAGE, "platform": platform_key(),
+            "form": install_form()}
 
     # 只缓存成功结果：失败缓存会让用户没法重试
     if not force:
@@ -503,7 +540,8 @@ def sources_info() -> dict:
     return {"config": load_config(), "defaults": dict(DEFAULT_CONFIG),
             "download_only_mirrors": list(DOWNLOAD_ONLY_MIRRORS),
             "github_api": GITHUB_API_LATEST, "releases_page": RELEASES_PAGE,
-            "platform": platform_key(), "current": current_version()}
+            "platform": platform_key(), "current": current_version(),
+            "form": install_form(), "installed": _paths.is_installed()}
 
 
 # ---------- 下载与安装（P2 内置下载 / P3 一键替换+回滚） ----------
@@ -611,57 +649,102 @@ def download(asset: dict, progress_cb=None, force: bool = False) -> dict:
     return {"ok": False, "error": "所有下载源均失败", "attempts": attempts}
 
 
-def apply_update(package: str) -> dict:
-    """P3 一键替换（Windows 打包版）：独立脚本延迟替换 + 备份 .old + 失败回滚 + 重启。
+def _launch_bat(script: Path, cwd: Path) -> None:
+    """后台启动 .bat（不阻塞、不弹窗）。"""
+    subprocess.Popen(["cmd", "/c", "start", "", str(script)],
+                     cwd=str(cwd), close_fds=True, shell=False)
 
-    只有 sys.frozen + win32 支持自动替换；源码态/浏览器模式返回明确指引（手动替换）。
+
+def apply_update(package: str) -> dict:
+    """P3 一键更新（Windows 打包版，按发行形态分流）。
+
+    安装版（install.marker 存在）→ 更新包是 setup 安装器：静默安装新版
+    （数据在 %APPDATA%\\EvermemData，安装器只替换程序文件，天然保留数据）；
+    绿色版（onedir）→ 更新包是 zip：延迟备份程序目录 → 替换 → 失败回滚 → 重启。
+    只有 sys.frozen + win32 支持自动更新；源码态/其他平台返回明确指引（手动替换）。
     """
     if not getattr(sys, "frozen", False) or sys.platform != "win32":
         return {"ok": False,
-                "error": "自动替换仅支持 Windows 打包版（Evermem.exe）；源码态 / 其他平台请手动替换，"
+                "error": "自动更新仅支持 Windows 打包版（Evermem.exe）；源码态 / 其他平台请手动替换，"
                          "见 docs/USER-GUIDE.md"}
     src = Path(package)
     if not src.is_file():
         return {"ok": False, "error": f"更新包不存在：{package}"}
-    if not src.name.lower().endswith(".exe"):
-        return {"ok": False, "error": f"更新包不是可执行文件：{src.name}"}
     exe = Path(sys.executable).resolve()
-    exe_dir = exe.parent
-    staged = exe_dir / (exe.stem + "-new" + exe.suffix)   # 先放同盘才能原子 move
-    bak = exe.with_name(exe.name + ".old.exe")            # 回滚点
     try:
-        shutil.copy2(src, staged)
+        if _paths.is_installed():
+            return _apply_installer_update(src, exe.parent)
+        return _apply_portable_update(src, exe.parent)
     except OSError as exc:
-        return {"ok": False, "error": f"暂存更新包失败：{exc}"}
+        return {"ok": False, "error": f"准备更新失败：{exc}"}
+
+
+def _apply_installer_update(src: Path, exe_dir: Path) -> dict:
+    """安装版：静默运行 setup 安装器（Inno /VERYSILENT），完成后由脚本重启应用。"""
+    if not src.name.lower().endswith(".exe") or "setup" not in src.name.lower():
+        return {"ok": False, "error": f"安装版更新包应为 setup 安装器：{src.name}"}
     script = exe_dir / "apply-update.bat"
     script.write_text(
         "@echo off\r\n"
         "chcp 65001 >nul\r\n"
-        "rem 恒忆 Evermem 自动更新：等待主进程退出后替换，失败自动回滚\r\n"
+        "rem 恒忆 Evermem 安装版自动更新：等待主进程退出后静默安装新版\r\n"
         "timeout /t 3 /nobreak >nul\r\n"
-        f'cd /d "{exe_dir}"\r\n'
-        f'if exist "{bak.name}" del /q "{bak.name}"\r\n'
-        f'move /y "{exe.name}" "{bak.name}" >nul 2>&1\r\n'
-        f'move /y "{staged.name}" "{exe.name}" >nul 2>&1\r\n'
-        f'if not exist "{exe.name}" (\r\n'
+        f'start "" /wait "{src}" /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-\r\n'
+        f'echo OK > "{exe_dir}\\update-result.txt"\r\n'
+        f'start "" "{exe_dir}\\Evermem.exe"\r\n',
+        encoding="utf-8", newline="\r\n")
+    _launch_bat(script, exe_dir)
+    return {"ok": True,
+            "msg": "更新脚本已启动：3 秒后静默安装新版（数据保留在系统数据目录）",
+            "backup": ""}
+
+
+def _apply_portable_update(src: Path, exe_dir: Path) -> dict:
+    """绿色版（onedir）：解压 zip 到临时区 → 延迟备份程序目录 → 替换 → 失败回滚 → 重启。"""
+    if not src.name.lower().endswith(".zip"):
+        return {"ok": False, "error": f"绿色版更新包应为 zip 压缩包：{src.name}"}
+    ver = current_version()
+    parent = exe_dir.parent
+    staged = parent / f"Evermem-new-{ver}"
+    shutil.rmtree(staged, ignore_errors=True)
+    try:
+        # 解压到程序目录上级的临时目录（同盘，随后 move 才是原子替换）
+        with tempfile.TemporaryDirectory(dir=str(parent), prefix=".pmem-update-") as td:
+            shutil.unpack_archive(str(src), td)  # zip 顶层目录应为 Evermem/
+            top = Path(td) / "Evermem"
+            if not (top / "Evermem.exe").is_file():
+                cands = [d for d in Path(td).iterdir()
+                         if d.is_dir() and (d / "Evermem.exe").is_file()]
+                if len(cands) != 1:
+                    return {"ok": False, "error": "更新包结构异常（未找到 Evermem.exe）"}
+                top = cands[0]
+            shutil.move(str(top), str(staged))
+    except Exception as exc:  # noqa: BLE001 - 解压失败要给可读错误
+        return {"ok": False, "error": f"解压更新包失败：{exc}"}
+    script = exe_dir / "apply-update.bat"
+    script.write_text(
+        "@echo off\r\n"
+        "chcp 65001 >nul\r\n"
+        "rem 恒忆 Evermem 绿色版自动更新：备份程序目录 → 替换 → 失败回滚 → 重启\r\n"
+        "timeout /t 5 /nobreak >nul\r\n"
+        f'cd /d "{parent}"\r\n'
+        f'if exist "Evermem.old" rmdir /s /q "Evermem.old"\r\n'
+        f'move /y "{exe_dir}" "Evermem.old" >nul 2>&1\r\n'
+        f'move /y "{staged}" "{exe_dir}" >nul 2>&1\r\n'
+        f'if not exist "{exe_dir}\\Evermem.exe" (\r\n'
         f'  rem 替换失败：恢复旧版\r\n'
-        f'  move /y "{bak.name}" "{exe.name}" >nul 2>&1\r\n'
-        f'  echo FAILED > "{exe_dir}\\update-result.txt"\r\n'
+        f'  if exist "{exe_dir}" rmdir /s /q "{exe_dir}"\r\n'
+        f'  move /y "Evermem.old" "{exe_dir}" >nul 2>&1\r\n'
+        f'  echo FAILED > "{parent}\\update-result.txt"\r\n'
         f') else (\r\n'
-        f'  echo OK > "{exe_dir}\\update-result.txt"\r\n'
-        f'  start "" "{exe.name}"\r\n'
+        f'  echo OK > "{parent}\\update-result.txt"\r\n'
+        f'  start "" "{exe_dir}\\Evermem.exe"\r\n'
         f')\r\n',
         encoding="utf-8", newline="\r\n")
-    try:
-        subprocess.Popen(["cmd", "/c", "start", "", str(script)],
-                         cwd=str(exe_dir), close_fds=True, shell=False)
-    except OSError as exc:
-        return {"ok": False, "error": f"启动替换脚本失败：{exc}"}
-    # 替换期间主进程自己退出（前端收到 ok 后延迟退出；若未退出，脚本会等 3 秒后 start 新实例时文件仍被锁，
-    # move 失败走回滚分支——失败安全）
+    _launch_bat(script, exe_dir)
     return {"ok": True,
-            "msg": "更新脚本已启动：3 秒后自动替换并重启（旧版已备份为 .old.exe，可手动回滚）",
-            "backup": str(bak)}
+            "msg": "更新脚本已启动：5 秒后替换程序目录并重启（旧版备份为 Evermem.old，可手动回滚）",
+            "backup": str(parent / "Evermem.old")}
 
 
 if __name__ == "__main__":

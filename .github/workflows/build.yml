@@ -10,6 +10,10 @@ permissions:
   contents: write
 
 # 仓库根 = 项目根（恒忆源码直接位于仓库根）
+# 产物约定（客户端 update.py _asset_matches 与此保持一致）：
+#   绿色版：Evermem-<plat>-vX-portable.zip / .app.zip / .tar.gz（onedir，解压即用）
+#   安装版：Evermem-setup-vX.exe（Inno）/ Evermem-macos-vX.dmg / Evermem-linux-vX.deb、.rpm
+# 更新清单 update-manifest.json 不进 Release、不由 CI 生成：云服务器固定文件（见 update.py 注释）
 jobs:
   build:
     name: 打包 ${{ matrix.label }}
@@ -25,6 +29,7 @@ jobs:
             artifact: Evermem-windows
             icon: "--icon assets/icon.ico"
             version_file: "--version-file assets/version_info.txt"
+            smoke: "Evermem/Evermem.exe"
           - os: ubuntu-latest
             label: linux
             plat: linux-x64
@@ -33,6 +38,7 @@ jobs:
             artifact: Evermem-linux
             icon: ""
             version_file: ""
+            smoke: "Evermem/Evermem"
           - os: macos-latest
             label: macos
             plat: macos-arm64
@@ -41,6 +47,7 @@ jobs:
             artifact: Evermem-macos
             icon: "--icon assets/icon.icns"
             version_file: ""
+            smoke: "Evermem.app/Contents/MacOS/Evermem"
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -97,19 +104,19 @@ jobs:
           Path('assets/version_info.txt').write_text(text, encoding='utf-8')
           PY
 
-      - name: 构建桌面壳（PySide6 + QtWebEngine，内嵌 Web 服务；单包即完整产品）
+      - name: 构建桌面壳（onedir 绿色版：免安装、解压即用、不写注册表/系统服务）
         # 单行书写（Windows Git Bash 不吃 \ 续行）；--paths web 让分析器找到 import server；
         # add-data 打包前端资源与模板（冻结态定位见 server.py / desktop.py）。
         # --hidden-import paths：数据/代码目录唯一解析入口，被各模块动态引用，
         # 分析器扫不到会导致打包产物启动即 ModuleNotFoundError。
-        run: pyinstaller --onefile --windowed --name Evermem --paths web --hidden-import paths --add-data "web${{ matrix.sep }}web" --add-data "templates${{ matrix.sep }}templates" --add-data "VERSION${{ matrix.sep }}." --add-data "scripts${{ matrix.sep }}scripts" ${{ matrix.icon }} ${{ matrix.version_file }} desktop.py
+        # onedir 替代 onefile：消除"每次启动全量解包 219MB"造成的打开慢（杀软实时扫描叠加更甚）。
+        run: pyinstaller --onedir --windowed --name Evermem --paths web --hidden-import paths --add-data "web${{ matrix.sep }}web" --add-data "templates${{ matrix.sep }}templates" --add-data "VERSION${{ matrix.sep }}." --add-data "scripts${{ matrix.sep }}scripts" ${{ matrix.icon }} ${{ matrix.version_file }} desktop.py
 
       - name: GUI 冒烟（--smoke 自退并断言退出码 0）
         shell: bash
         run: |
           # 桌面壳带 --smoke：内嵌服务就绪 + 窗口加载 6s 后自动退出，退出码 0 才算通过
-          # 数据根指向临时目录：冻结态默认数据根=exe 同级（dist/），冒烟会重建 index.json，
-          # 曾因此把数据文件误传进 Release（见 2026-10-01 发布事故）。
+          # 数据根指向临时目录：避免冒烟把运行时数据写进 dist/ 混入 Release（2026-10-01 发布事故）。
           export PMEM_HOME="$RUNNER_TEMP/pmem-smoke-${{ github.run_id }}"
           mkdir -p "$PMEM_HOME"
           export PMEM_NO_AUTO_HARVEST=1
@@ -117,7 +124,7 @@ jobs:
             export QT_QPA_PLATFORM=offscreen
             export QTWEBENGINE_CHROMIUM_FLAGS="--no-sandbox --disable-gpu --disable-dev-shm-usage"
           fi
-          ./dist/Evermem${{ matrix.exe }} --smoke &
+          ./dist/${{ matrix.smoke }} --smoke &
           PID=$!
           rc=""
           i=0
@@ -141,7 +148,7 @@ jobs:
           wget -q https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage -O /tmp/linuxdeploy-plugin-qt
           chmod +x /tmp/appimagetool /tmp/linuxdeploy /tmp/linuxdeploy-plugin-qt
           mkdir -p AppDir/usr/bin
-          cp dist/Evermem AppDir/usr/bin/evermem
+          cp dist/Evermem/Evermem AppDir/usr/bin/evermem
           cat > AppDir/evermem.desktop <<'EOF'
           [Desktop Entry]
           Type=Application
@@ -156,12 +163,33 @@ jobs:
           export PATH="/tmp:$PATH"
           ./linuxdeploy --appdir AppDir --executable AppDir/usr/bin/evermem --plugin qt --output appimage \
             -i assets/icon.png \
-            || { echo "[appimage] 构建失败（continue-on-error 放行，不影响发布；裸 ELF 仍随 Release 分发）"; exit 0; }
+            || { echo "[appimage] 构建失败（continue-on-error 放行，不影响发布；绿色版 tar.gz 仍随 Release 分发）"; exit 0; }
           ls -1 *.AppImage 2>/dev/null || true
-          # 放进 dist/ 使其随 Release 上传（重命名步骤只处理 Evermem ELF，不影响 AppImage）
+          # 放进 dist/ 使其随 Release 上传（重命名步骤会改成 Evermem-linux-vX.AppImage）
           cp -f *.AppImage dist/ 2>/dev/null || true
 
-      - name: 产物重命名（每平台单个运行包；macOS 打 .app.zip）
+      - name: Windows 安装版（Inno Setup 安装向导 + 卸载数据保留对话框）
+        if: matrix.os == 'windows-latest'
+        shell: bash
+        run: |
+          choco install innosetup -y --no-progress
+          ISCC="$(ls -d /c/Program\ Files*/Inno*Setup*/ISCC.exe 2>/dev/null | head -1)"
+          [ -n "$ISCC" ] || { echo "[installer] Inno ISCC 未找到"; exit 1; }
+          SRC="$(cygpath -w "$PWD/dist/Evermem")"
+          OUT="$(cygpath -w "$PWD/dist")"
+          "$ISCC" installers/windows/evermem.iss \
+            /DMyAppVersion="$(cat VERSION)" /DMySourceDir="$SRC" /DMyOutputDir="$OUT"
+          ls -1 dist
+
+      - name: macOS dmg / Linux deb、rpm（可选增强，失败不阻塞发布）
+        if: matrix.os != 'windows-latest'
+        continue-on-error: true
+        shell: bash
+        run: |
+          bash scripts/make_installers.sh "${{ matrix.label }}" "$(cat VERSION)" dist
+          ls -1 dist
+
+      - name: 产物重命名与绿色版打包（onedir 目录 → zip/tar.gz + 校验文件）
         shell: bash
         run: |
           cd dist
@@ -174,13 +202,25 @@ jobs:
             echo "tag 与 VERSION 不一致：tag=$VER VERSION=$FILE_VER"; exit 1
           fi
           if [ "${{ matrix.label }}" = "macos" ]; then
-            # macOS onefile 同时产出裸可执行文件与 .app 目录；gh 不能上传目录，把 .app 打成 zip
-            zip -qry Evermem-macos-v$VER.app.zip Evermem.app
-            rm -rf Evermem.app Evermem
+            # 绿色版：.app 目录打 zip（onedir 直接产出 .app）
+            zip -qry "Evermem-macos-v$VER.app.zip" Evermem.app
+            rm -rf Evermem.app
+          elif [ "${{ matrix.label }}" = "windows" ]; then
+            # 绿色版：onedir 目录（Evermem.exe + _internal/）打 zip，解压即用
+            zip -qry "Evermem-windows-v$VER-portable.zip" Evermem
+            rm -rf Evermem
           else
-            mv -f Evermem${{ matrix.exe }} Evermem-${{ matrix.label }}-v$VER${{ matrix.exe }}
+            # 绿色版：onedir 目录打 tar.gz
+            tar -czf "Evermem-linux-v$VER-portable.tar.gz" Evermem
+            rm -rf Evermem
           fi
-          # 生成校验文件（先写清单，避免把自己算进去）
+          # 安装版产物带版本名（Inno 输出 Evermem-setup.exe；dmg/deb/rpm 已带版本名）
+          if [ -f "Evermem-setup.exe" ]; then mv -f "Evermem-setup.exe" "Evermem-setup-v$VER.exe"; fi
+          # Linux AppImage 改名（可选增强，失败不影响）
+          if [ "${{ matrix.label }}" = "linux" ]; then
+            if ls *.AppImage >/dev/null 2>&1; then mv -f *.AppImage "Evermem-linux-v$VER.AppImage"; fi
+          fi
+          # 生成校验文件（先压缩打包完再写，避免把自己算进去）
           if command -v sha256sum >/dev/null 2>&1; then
             sha256sum * > SHA256SUMS.txt
           else
@@ -188,26 +228,12 @@ jobs:
           fi
           ls -1
 
-      - name: 生成更新清单片段（本平台资产 + sha256）
-        shell: bash
-        # 片段写在仓库根，不写进 dist/：dist/* 会整体上传为 Release 资产，不能混入清单文件
-        run: |
-          python scripts/gen_update_manifest.py fragment \
-            --platform ${{ matrix.plat }} --dist dist \
-            --version "$(cat VERSION)" --out update-fragment.json
-
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
           # uses 步骤不受 defaults.working-directory 影响，路径相对仓库根
           path: |
             dist/*
-          if-no-files-found: error
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: manifest-${{ matrix.label }}
-          path: update-fragment.json
           if-no-files-found: error
 
       - name: 确保 GitHub Release 存在（tag 触发时自动创建）
@@ -231,45 +257,3 @@ jobs:
           # 只上传平台产物与校验文件：排除冒烟可能残留的运行时数据（与 find_asset 同名单，防御纵深）
           ASSETS=$(ls -1 | grep -vE '^(index\.json|harvest_state\.json|corpus_spaces\.json|kb\.json|knowledge-base\.md|pmem_config\.json|pmem_backup\.json|\.pmem-backup-last\.json|\.recipe-lock\.json|update_state\.json|backup\.log)$')
           echo "$ASSETS" | xargs -r gh release upload "${GITHUB_REF_NAME}" --clobber
-
-  # 更新清单必须等三平台都构建完才能汇总（要拿齐全平台的 sha256）
-  manifest:
-    name: 汇总更新清单
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: manifest-*
-          path: fragments
-          merge-multiple: true
-
-      - name: 合成更新清单 update-manifest.json
-        run: |
-          ls -1 fragments
-          # 输出名带前缀：避免与客户端的更新源配置 update.json 同名（开发态两者会落在同一目录）
-          # 清单不进仓库：它由 Release 附件分发，需要自建源时由维护者上传到自己的静态服务器
-          python scripts/gen_update_manifest.py merge \
-            --fragments fragments --version "$(cat VERSION)" \
-            --out update-manifest.json --changelog CHANGELOG.md \
-            --mirror https://gh-proxy.com/ --mirror https://cdn.gh-proxy.org/
-          cat update-manifest.json
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: Evermem-update-manifest
-          path: update-manifest.json
-          if-no-files-found: error
-
-      - name: 上传清单到 Release（tag 触发时）
-        if: startsWith(github.ref, 'refs/tags/v')
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release upload "${GITHUB_REF_NAME}" update-manifest.json --clobber
-      # 到此为止。清单不再提交回仓库（此前为"让 jsDelivr 直读"而 commit back，
-      # 既污染仓库历史，又把发布流程绑在第三方 CDN 上；项目没有 CDN，也不需要）。
-      # 自建源的用法：把本步骤产出的附件传到自己的静态服务器，再在界面填清单地址。
