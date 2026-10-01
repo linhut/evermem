@@ -34,6 +34,13 @@ REPO = "linhut/evermem"
 GITHUB_DOWNLOAD = f"https://github.com/{REPO}/releases/download"
 # 片段文件与校验清单不是"可下载资产"，扫描时要排除
 NON_ASSET_NAMES = {"SHA256SUMS.txt", "update-fragment.json", "update-manifest.json"}
+# GUI 冒烟可能在 exe 同级目录（dist/）留下运行时数据（历史上自动线程写入 index.json 等）。
+# 这些不是发布资产，出现时应忽略而不是报"资产不止一个"（若未来真正混入其他文件仍会报错）。
+DATA_FILE_NAMES = {
+    "index.json", "harvest_state.json", "corpus_spaces.json", "kb.json", "knowledge-base.md",
+    "pmem_config.json", "pmem_backup.json", ".pmem-backup-last.json", ".recipe-lock.json",
+    "update_state.json", "backup.log",
+}
 
 
 def sha256_of(path: Path, chunk: int = 1 << 20) -> str:
@@ -49,7 +56,9 @@ def sha256_of(path: Path, chunk: int = 1 << 20) -> str:
 
 def find_asset(dist: Path) -> Path:
     """dist 里应该只剩一个平台产物（CI 已移除 .app 与裸二进制）。"""
-    items = [p for p in dist.iterdir() if p.is_file() and p.name not in NON_ASSET_NAMES]
+    items = [p for p in dist.iterdir()
+             if p.is_file() and p.name not in NON_ASSET_NAMES
+             and not p.name.startswith(".") and p.name not in DATA_FILE_NAMES]
     if not items:
         raise SystemExit(f"[manifest] dist 中没有可发布资产：{dist}")
     if len(items) > 1:
