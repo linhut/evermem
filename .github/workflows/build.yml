@@ -65,6 +65,7 @@ jobs:
 
       - name: 生成 Windows 版本信息
         if: matrix.os == 'windows-latest'
+        shell: bash  # 必需：Windows runner 默认 pwsh 不认 heredoc（曾报 Missing file specification）
         run: |
           python - <<'PY'
           from pathlib import Path
