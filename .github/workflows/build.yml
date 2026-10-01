@@ -82,7 +82,7 @@ jobs:
               StringFileInfo([
                 StringTable('040904B0', [
                   StringStruct('CompanyName', 'Jose-AI'),
-                  StringStruct('FileDescription', '恒忆 Evermem 桌面壳'),
+                  StringStruct('FileDescription', '恒忆 Evermem'),
                   StringStruct('FileVersion', '{vs}'),
                   StringStruct('InternalName', 'Evermem'),
                   StringStruct('LegalCopyright', 'Copyright (c) 2026 Jose-AI · MIT License'),
@@ -218,7 +218,7 @@ jobs:
         run: |
           TAG="${GITHUB_REF_NAME}"
           if ! gh release view "$TAG" >/dev/null 2>&1; then
-            gh release create "$TAG" --title "Evermem (恒忆) v${TAG#v} · 桌面壳" --generate-notes
+            gh release create "$TAG" --title "Evermem (恒忆) v${TAG#v}" --generate-notes
           fi
 
       - name: 上传二进制到 Release（tag 触发时）
