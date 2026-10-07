@@ -111,7 +111,7 @@
 
 ```bash
 git rm --cached docs/AUDIT-2026-09.md docs/REVIEW-2026-09.md docs/MONTHLY-2026-09.md
-mkdir -p docs/archive && git mv <上述文件> docs/archive/   # 或移到<工作区> notes/
+mkdir -p docs/archive && git mv <上述文件> docs/archive/   # 或移到工作区的 notes/ 目录
 ```
 
 `git rm --cached` 只把文件移出索引，**本地文件仍在**，随时可 `git add` 恢复。
@@ -178,7 +178,7 @@ git log --all --pretty=format: --name-only | sort -u \
 ## 七、测试与冒烟
 
 ```bash
-python scripts/check_all.py          # 38 项整体自检（含 Web API、前端契约、Python 语法）
+python scripts/check_all.py          # 41 项整体自检（含 Web API、前端契约、Python 语法）
 python scripts/frontend_smoke.py     # 前端元素/路由/事件委托契约
 python -m unittest discover -s tests # 全部单元测试（18 项）
 ```

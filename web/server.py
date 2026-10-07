@@ -1220,6 +1220,9 @@ class Handler(BaseHTTPRequestHandler):
             note = (f"---\nid: {nid}\ntype: {ntype}\nstatus: {status}\ntitle: {title}\n"
                     f"tags: [{', '.join(tags)}]\ncreated: {time.strftime('%Y-%m-%d')}\n---\n\n{body}\n")
             target = mem.NOTES / ntype_dir / f"web-{nid}.md"
+            # 类型目录按需创建（双保险）：数据根由旧版本创建、或用户手工指定了空目录时，
+            # 这里没有子目录就会 FileNotFoundError → 界面显示「内部错误」，表现为"新装就用不了"。
+            target.parent.mkdir(parents=True, exist_ok=True)
             if target.exists():
                 self._json({"error": "id 冲突，请重试"}, 409)
                 return

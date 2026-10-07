@@ -139,6 +139,12 @@ def ensure_data_root(create: bool = True) -> tuple[bool, str]:
 
     返回 (ok, reason)。失败场景（exe 被放到只读目录、磁盘满等）必须由调用方
     明确提示并阻止继续——否则会出现「界面正常但什么都存不进去」的假成功。
+
+    探测文件**只写不删**：探测目的是「能不能写」而不是「能不能删」。
+    在删除受限的环境里（沙箱安全守卫、只读/管控策略），删除会被拦，
+    极端情况守卫直接终止进程 → 服务**静默启动失败**（本机实测：任何删除动作都会让
+    safe-delete 守卫写账本失败并 kill 进程，且不留 traceback）。
+    留一个 0 字节级标记文件的代价极小，已被 .gitignore 的 `.pmem-*` 覆盖。
     """
     root = data_root()
     try:
@@ -146,12 +152,12 @@ def ensure_data_root(create: bool = True) -> tuple[bool, str]:
             root.mkdir(parents=True, exist_ok=True)
             for sub in ("notes", "events", "updates"):
                 (root / sub).mkdir(parents=True, exist_ok=True)
+            # 笔记类型子目录一并预建：只建 notes/ 时，全新数据根上首次保存笔记会
+            # FileNotFoundError（界面显示「内部错误」，表现为新装即不可用）。
+            for sub in ("lessons", "procedures", "facts"):
+                (root / "notes" / sub).mkdir(parents=True, exist_ok=True)
         probe = root / ".pmem-write-probe"
         probe.write_text("ok", encoding="utf-8")
-        try:
-            probe.unlink()
-        except OSError:
-            pass
         return True, ""
     except OSError as exc:
         return False, (f"数据目录不可用：{root}（{exc.__class__.__name__}）。"

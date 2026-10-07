@@ -15,7 +15,7 @@ abstract: >-
 keywords:
   - 记忆系统
   - 跨会话记忆
-  - <工作区>
+  - 知识库
   - AI Agent
   - local-first
   - BM25
