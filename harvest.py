@@ -254,18 +254,27 @@ def load_state() -> dict:
             pass
     return {"processed_callids": [], "last_run": None}
 
-def save_state(state: dict) -> None:
-    state["last_run"] = time.strftime("%Y-%m-%d %H:%M:%S")
-    # 原子写：收割常驻后台线程，直接覆盖中断会留下截断游标（下次重复收割）
-    tmp = STATE_PATH.with_name(STATE_PATH.name + f".tmp-{os.getpid()}")
+def _atomic_write(path: Path, text: str) -> None:
+    """原子写：tmp + os.replace。
+
+    收割是常驻后台的写者，界面（web/server.py）是并发读者。非原子写会让读者
+    读到被截断的多字节字符（UnicodeDecodeError）→ /api/candidates 整表 500，
+    界面上表现为「候选列表加载失败：服务未响应」，收割结束后又自己恢复。
+    """
+    tmp = path.with_name(path.name + f".tmp-{os.getpid()}")
     try:
-        tmp.write_text(json.dumps(state, ensure_ascii=False, indent=1), encoding="utf-8")
-        os.replace(tmp, STATE_PATH)
+        tmp.write_text(text, encoding="utf-8")
+        os.replace(tmp, path)
     finally:
         try:
             tmp.unlink(missing_ok=True)
         except OSError:
             pass
+
+def save_state(state: dict) -> None:
+    """保存收割游标。原子写：收割是常驻后台线程，直接覆盖中断会留下截断游标。"""
+    state["last_run"] = time.strftime("%Y-%m-%d %H:%M:%S")
+    _atomic_write(STATE_PATH, json.dumps(state, ensure_ascii=False, indent=1))
 
 def write_events(events: list[dict]) -> int:
     EVENTS.mkdir(parents=True, exist_ok=True)
@@ -687,7 +696,8 @@ def cmd_scan(args) -> int:
             "---\n\n"
             f"{body}\n"
         )
-        fp.write_text(text, encoding="utf-8")
+        # 必须原子写：界面此刻正并发 glob 同一目录，write_text 的中间态会被读到
+        _atomic_write(fp, text)
         written += 1
 
     state["processed_callids"] = list(seen | {e["callId"] for e in events})[-5000:]

@@ -99,7 +99,7 @@ def tool_record(title: str, body: str = "", note_type: str = "lesson",
     out_dir = BASE / "notes" / "lessons" if note_type == "lesson" else BASE / "notes" / note_type
     out_dir.mkdir(parents=True, exist_ok=True)
     fp = out_dir / f"mcp-{nid}.md"
-    fp.write_text(note, encoding="utf-8")
+    mem.atomic_write(fp, note)  # 原子写：服务端界面会并发读同一目录
 
     # 替代：把被替代的旧笔记标记 superseded
     if sup_ids:
@@ -115,7 +115,7 @@ def tool_record(title: str, body: str = "", note_type: str = "lesson",
                         raw = _re.sub(r"^status:\s*\S+", "status: superseded", raw, count=1, flags=_re.M)
                     else:
                         raw = raw.replace("---\n", "---\nstatus: superseded\n", 1)
-                    p.write_text(raw, encoding="utf-8")
+                    mem.atomic_write(p, raw)
                 except OSError:
                     pass
     mem.build_index()
@@ -145,10 +145,9 @@ def tool_update(note_id: str, status: str | None = None, hot: bool | None = None
                 raw = re.sub(r"^hot:\s*\S+", "hot: true", raw, count=1, flags=re.M)
         else:
             raw = re.sub(r"^hot:\s*(true|1|yes)\s*\n", "", raw, flags=re.M)
-    path.write_text(raw, encoding="utf-8")
+    mem.atomic_write(path, raw)  # 原子写：状态更新不能留下半成品被界面读到
     mem.build_index()
     return {"ok": True, "id": note_id, "status": status or d.get("status"), "hot": hot if hot is not None else bool(d.get("hot"))}
-
 def tool_hot(limit: int = 20) -> dict:
     """返回当前热层（对标 dsh-memoir 的 Hot Memory 预览）。"""
     idx = cached_index()

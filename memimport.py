@@ -391,7 +391,8 @@ def run_import(rows: list[dict], status: str = "staged", dry_run: bool = False) 
             skipped.append((nid, "目标文件已存在"))
             continue
         try:
-            target.write_text(text, encoding="utf-8")
+            import mem  # noqa: PLC0415  （写笔记统一走 mem 的原子写）
+            mem.atomic_write(target, text)
         except OSError as exc:  # noqa: BLE001
             skipped.append((nid, f"写入失败：{exc}"))
             continue

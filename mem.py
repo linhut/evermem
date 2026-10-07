@@ -153,6 +153,10 @@ def parse_note(path: Path) -> dict | None:
         raw = path.read_text(encoding="utf-8")
     except OSError:
         return None
+    except UnicodeDecodeError:
+        # 并发写入（非原子写）时读者会撞上被截断的多字节字符。
+        # 这条按"读不到"处理交给调用方跳过，不能让整个列表接口 500。
+        return None
     meta: dict = {}
     body = raw
     if raw.startswith("---"):
@@ -205,6 +209,10 @@ def _atomic_write(path, text: str, encoding: str = "utf-8") -> None:
             tmp.unlink(missing_ok=True)
         except OSError:
             pass
+
+# 对外公开名：其它写笔记本的模块（MCP / 导入器）统一走这里。
+# 非原子写会让并发读者看到被截断的多字节字符（UnicodeDecodeError）→ 接口 500。
+atomic_write = _atomic_write
 
 
 def build_index() -> dict:

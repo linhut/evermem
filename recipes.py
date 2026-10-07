@@ -47,6 +47,9 @@ def parse_note(path: Path) -> dict | None:
         raw = path.read_text(encoding="utf-8")
     except OSError:
         return None
+    except UnicodeDecodeError:
+        # 并发写入留下的半成品文件：按"读不到"处理，调用方跳过即可。
+        return None
     meta: dict = {}
     body = raw
     if raw.startswith("---"):
