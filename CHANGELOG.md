@@ -1,6 +1,33 @@
 # 变更日志
 
-## [未发布]
+## [0.2.10] - 2026-10-07（仓库去敏与规范化 + 首启可用性修复 + Marvis 宿主接入）
+
+### 安全与隐私
+
+- **清除代码与全部提交历史中的真实单位名、姓氏称谓与本地绝对路径**，统一改为中性占位符：
+  政务单位、业务部门、活动组委会、负责人、指挥中心；`<数据目录>`、`<工作区>`、`<项目目录>`、`python`。
+  命名空间标识 `org:yjxt` / `org:mzw` 改为 `org:gov-a` / `org:org-b`。
+  历史侧用 `git filter-repo --replace-text` / `--replace-message` 重写 **50 个提交与全部 tag**；
+  12 组关键词全历史扫描 **0 命中**。重写前的完整镜像与 bundle 已离线备份。
+
+### 跨平台
+
+- **路径判定改为盘符无关**，不再假设 `C:` / `F:` 存在：`web/server.py` 的「来源是否本地文档」判定
+  改按三类前缀（Windows 盘符 / UNC 共享 / POSIX 绝对路径）识别；`backup.py` 的目标盘枚举改为
+  运行时探测（Windows 逐盘符、POSIX 走 `/`、`/Volumes`、`/media`、`/mnt`），openssl 由环境变量推导；
+  `scripts/knowledge_scan.py` 的顶层目录识别、`scripts/scan_spaces.py`、`web/i18n.js`、`web/index.js`
+  同步去盘符。
+
+### 仓库结构
+
+- 目录按 GitHub 规范整理：`docs/` 按 **design / guides / dev** 三分组（`git mv` 20 篇）并新增
+  `docs/README.md` 文档索引；`docs/design/ARCHITECTURE.md` **整篇重写**——原文描述的是从未实现的
+  PySide6 分层方案，现改为描述已实现架构（零依赖 Python + Web UI）。新增 `.gitattributes`
+  （统一换行符、标注二进制与第三方资源）与 `.editorconfig`。
+- 补齐开源社区文件：`CONTRIBUTING.md`、`SECURITY.md`、`CODE_OF_CONDUCT.md`、`CITATION.cff`，
+  以及 `.github/` 下的 bug / feature issue 表单、PR 模板与 `dependabot.yml`。
+- README 双语重写：改用动态徽章、补三类文档导航、环境变量表补全至 11 项；
+  修正「私人库」这一事实性错误（仓库实为公开）。
 
 ### 修复
 

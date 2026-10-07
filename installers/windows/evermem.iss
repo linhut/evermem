@@ -2,7 +2,7 @@
 ; 卸载时询问是否保留记忆数据（%APPDATA%\EvermemData）。
 ;
 ; 构建（路径按你本机实际位置传参，不绑定任何盘符）：
-;   ISCC.exe evermem.iss /DMyAppVersion="0.2.9" /DMySourceDir="<仓库>\dist\Evermem" /DMyOutputDir="<仓库>\dist"
+;   ISCC.exe evermem.iss /DMyAppVersion="0.2.10" /DMySourceDir="<仓库>\dist\Evermem" /DMyOutputDir="<仓库>\dist"
 ; 数据策略：数据恒在 %APPDATA%\EvermemData（paths.py 安装版默认数据根），与程序目录分离；
 ; 卸载默认保留数据（六-6：卸载页询问，选择"否"即保留，重装继续使用）。
 
