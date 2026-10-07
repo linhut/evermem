@@ -15,7 +15,7 @@
 
 ### 2.1 覆盖
 - **领域**：不限。机制不预设领域，按使用自然沉淀（当前集中在政务/公文/信息化项目）。
-- **场景**：AI 会话内调用（注入+检索+回写）、会话外人工检索（Web/CLI）、跨宿主（WorkBuddy/Claude Code/DSH/CodeBuddy）。
+- **场景**：AI 会话内调用（注入+检索+回写）、会话外人工检索（Web/CLI）、跨宿主（WorkBuddy/Claude Code/DSH/CodeBuddy/Marvis）。
 - **角色**：AI Agent（主消费者）、用户本人（策展/审核/查询）。
 
 ### 2.2 边界（明确不做什么）

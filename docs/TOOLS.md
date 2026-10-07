@@ -30,7 +30,7 @@
 
 | 通道 | 落点 | 状态 |
 |------|------|:---:|
-| skill | `~/.workbuddy/skills/personal-memory`（4 宿主已装） | ✅ |
+| skill | `~/.workbuddy/skills/personal-memory` 等 5 处（WorkBuddy / Claude Code / CodeBuddy / DSH / Marvis） | ✅ |
 | 热层 | WorkBuddy 项目 MEMORY.md（20 条）/ DSH ~/.dsh/AGENTS.md（12 条） | ✅ |
 | 工作纪律 | 项目 MEMORY.md「工作纪律」节（每次会话自动注入） | ✅ |
 | MCP | WorkBuddy（mcp.json+.mcp.json 双写）/ Claude ~/.claude.json / DSH settings.yaml | ✅ 已配置 |

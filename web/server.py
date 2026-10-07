@@ -151,8 +151,34 @@ HOSTS = [
     ("Claude Code", str(Path.home() / ".claude" / "skills" / "personal-memory" / "SKILL.md")),
     ("CodeBuddy", str(Path.home() / ".codebuddy" / "skills" / "personal-memory" / "SKILL.md")),
     ("DSH (DeepSeek Harness)", str(Path.home() / ".dsh" / "skills" / "personal-memory" / "SKILL.md")),
+    ("Marvis (腾讯马维斯)", str(Path.home() / ".marvis" / "skills" / "custom" / "personal-memory" / "SKILL.md")),
 ]
 SKILL_TEMPLATE = CODE_ROOT / "templates" / "personal-memory.SKILL.md"
+
+# 宿主前置条件：不是所有技能目录都"建出来就能用"。
+# Marvis 的 ~/.marvis 是指向 %APPDATA%\Tencent\Marvis\User\<openid> 的符号链接，未登录客户端时不存在。
+# 此时若照着 dest 直接 mkdir，会凭空造出 C:\Users\<you>\.marvis 真目录：界面显示「已安装」但 Marvis 读不到，
+# 而且会挡住客户端日后建立同名链接 —— 属于"假成功 + 破坏环境"，必须前置拦下。
+HOST_PREREQ = {
+    "Marvis (腾讯马维斯)": (
+        Path.home() / ".marvis",
+        "未检测到 Marvis 用户目录（~/.marvis）：请先安装并登录腾讯马维斯客户端。"
+        "若已登录仍看不到，重启一次客户端再回本页。",
+    ),
+}
+
+def host_prereq(name: str) -> tuple[bool, str]:
+    """宿主是否具备安装条件。返回 (ok, 不满足时的原因)；无前置要求的宿主恒为 True。"""
+    req = HOST_PREREQ.get(name)
+    if not req:
+        return True, ""
+    root, hint = req
+    try:
+        if root.exists():
+            return True, ""
+    except OSError:  # 断链符号链接 / 权限不足，一律按不满足处理
+        pass
+    return False, hint
 
 # ---------- MCP 一键安装配置（各宿主） ----------
 def _default_py() -> str:
@@ -821,7 +847,9 @@ class Handler(BaseHTTPRequestHandler):
             for name, dest in HOSTS:
                 installed = Path(dest).exists()
                 ts = time.strftime("%m-%d %H:%M", time.localtime(Path(dest).stat().st_mtime)) if installed else None
-                hosts.append({"name": name, "path": dest, "installed": installed, "updated": ts})
+                ready, hint = host_prereq(name)
+                hosts.append({"name": name, "path": dest, "installed": installed, "updated": ts,
+                              "ready": ready, "hint": hint})
             self._json({"hosts": hosts, "template": SKILL_TEMPLATE.exists()})
             return
         if p == "/api/task/status":
@@ -1329,14 +1357,25 @@ class Handler(BaseHTTPRequestHandler):
             if not dest or not SKILL_TEMPLATE.exists():
                 self._json({"error": "host 或模板不存在"}, 400)
                 return
+            ready, hint = host_prereq(name)
+            if not ready:
+                # 409：宿主环境未就绪，拒绝创建 —— 见 HOST_PREREQ 注释（Marvis 的 .marvis 是符号链接）
+                self._json({"error": hint, "prereq": False}, 409)
+                return
             dpath = Path(dest)
             try:
+                text = SKILL_TEMPLATE.read_text(encoding="utf-8")
                 dpath.parent.mkdir(parents=True, exist_ok=True)
-                _atomic_write(dpath, SKILL_TEMPLATE.read_text(encoding="utf-8"), encoding="utf-8")
+                _atomic_write(dpath, text, encoding="utf-8")
+                # 回读校验：只写不验会出现"提示成功但实际没落盘"（磁盘满、被杀软拦、被重定向）
+                if dpath.read_text(encoding="utf-8") != text:
+                    self._json({"error": "写入后回读不一致：" + str(dpath)}, 500)
+                    return
             except OSError as exc:
                 self._json({"error": str(exc)}, 500)
                 return
-            self._json({"ok": True, "host": name, "path": dest})
+            self._json({"ok": True, "host": name, "path": dest,
+                        "bytes": len(text.encode("utf-8"))})
             return
         if p == "/api/mcpinstall":
             b = self._body()

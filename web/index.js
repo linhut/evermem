@@ -259,7 +259,7 @@ const integHTML = () => `<div style="width:100%">
       <label class="ck" style="font-size:13px;color:var(--text)" for="autoStart"><input type="checkbox" id="autoStart" disabled><span>${t('开机自启动')}</span></label>
     </div>
     <div class="sub" id="autoStartInfo" style="margin-top:6px">${t('读取中…')}</div></div>
-  <div class="pane"><h3>${t('④ 兼容说明')}</h3><div class="sub">· WorkBuddy 桌面端禁用第三方插件钩子（宿主信任模型），自建能力走技能 + MCP。<br>· DSH：从 $DSH_HOME/skills（用户级）发现技能文件，目录被监视、热刷新。<br>· MCP 工具：evermem_mcp.py 标准 stdio，4 个工具，多助手通用。<br>· 核心经验注入：MEMORY.md 核心经验区 → 新会话上下文（上限 20，有进有出）。</div></div>
+  <div class="pane"><h3>${t('④ 兼容说明')}</h3><div class="sub">· ${t('WorkBuddy 桌面端禁用第三方插件钩子（宿主信任模型），自建能力走技能 + MCP。')}<br>· ${t('DSH：从 $DSH_HOME/skills（用户级）发现技能文件，目录被监视、热刷新。')}<br>· ${t('Marvis（腾讯马维斯）：技能放 ~/.marvis/skills/custom/&lt;技能名&gt;/SKILL.md，需已登录客户端；其 MCP 定义由客户端以私有加密格式保存，恒忆不写它，需在客户端内手动添加。')}<br>· ${t('MCP 工具：evermem_mcp.py 标准 stdio，4 个工具，多助手通用。')}<br>· ${t('核心经验注入：MEMORY.md 核心经验区 → 新会话上下文（上限 20，有进有出）。')}</div></div>
 </div>`;
 
 /* 数据与维护（一级模块）：从「接入设置」分出来的三张卡——数据位置是本机设置、
@@ -1201,18 +1201,25 @@ async function loadGc() {
 /* 会话集成 */
 async function loadInteg() {
   const h = await (await fetch('/api/hosts')).json();
-  $('#hostList').innerHTML = h.hosts.map(x => `<div class="host-row">
-    <span class="host-dot ${x.installed ? 'dot-ok' : 'dot-no'}"></span>
-    <span style="min-width:110px;font-weight:500">${esc(x.name)}</span>
-    <span class="sub" style="flex:1">${x.installed ? '已安装（' + x.updated + '）' : '未安装'} · ${esc(x.path)}</span>
-    <button class="btn ${x.installed ? 'ghost' : 'primary'} small" onclick="installHost('${esc(x.name)}')">${x.installed ? '更新' : '安装'}</button></div>`).join('');
-  // MCP 安装卡
+  $('#hostList').innerHTML = h.hosts.map(x => {
+    // ready=false：宿主环境未就绪（如 Marvis 未登录，~/.marvis 尚不存在）。
+    // 此时必须禁用按钮并说明原因——照着路径 mkdir 会造出客户端永远读不到的假目录。
+    const blocked = x.ready === false;
+    const state = x.installed ? `${t('已安装')}（${x.updated}）` : t('未安装');
+    return `<div class="host-row">
+      <span class="host-dot ${x.installed ? 'dot-ok' : 'dot-no'}"></span>
+      <span style="min-width:110px;font-weight:500">${esc(x.name)}</span>
+      <span class="sub" style="flex:1">${state} · ${esc(x.path)}</span>
+      <button class="btn ${x.installed ? 'ghost' : 'primary'} small" onclick="installHost('${esc(x.name)}')"${blocked ? ` disabled title="${esc(x.hint)}"` : ''}>${x.installed ? t('更新') : t('安装')}</button>
+    </div>${blocked ? `<div class="sub" style="margin:-2px 0 8px 18px;color:var(--danger)">${esc(x.hint)}</div>` : ''}`;
+  }).join('');
+  // MCP 安装卡（回调参数别叫 t——会遮蔽 i18n 的 t()）
   const m = await (await fetch('/api/mcpsetup')).json();
-  $('#mcpList').innerHTML = m.targets.map(t => `<div class="host-row">
-    <span class="host-dot ${t.any_installed ? 'dot-ok' : 'dot-no'}"></span>
-    <span style="min-width:110px;font-weight:500">${esc(t.label)}</span>
-    <span class="sub" style="flex:1">${t.any_installed ? '已配置' : '未配置'} · ${t.files[0].path}</span>
-    <button class="btn ${t.any_installed ? 'ghost' : 'primary'} small" onclick="mcpInstall('${t.key}')">${t.any_installed ? '更新' : '安装'}</button></div>`).join('');
+  $('#mcpList').innerHTML = m.targets.map(x => `<div class="host-row">
+    <span class="host-dot ${x.any_installed ? 'dot-ok' : 'dot-no'}"></span>
+    <span style="min-width:110px;font-weight:500">${esc(x.label)}</span>
+    <span class="sub" style="flex:1">${x.any_installed ? t('已配置') : t('未配置')} · ${x.files[0].path}</span>
+    <button class="btn ${x.any_installed ? 'ghost' : 'primary'} small" onclick="mcpInstall('${x.key}')">${x.any_installed ? t('更新') : t('安装')}</button></div>`).join('');
   // 开机启动（开机自启开关）：浏览器模式下自动禁用
   loadAutostart();
 }
@@ -1267,7 +1274,7 @@ async function mcpInstall(key) {
   showInfo(d.host + ' · MCP 安装结果', esc(lines) + (d.note ? '\n\n' + esc(d.note) : ''));
   loadInteg();
 }
-async function installHost(name) { const d = await post('/api/installhost', { host: name }); toast(d.ok ? '已安装到 ' + d.host : '失败：' + (d.error || '')); loadInteg(); }
+async function installHost(name) { const d = await post('/api/installhost', { host: name }); toast(d.ok ? '已安装到 ' + d.host + '（' + d.bytes + ' B）' : '失败：' + (d.error || '')); loadInteg(); }
 
 /* 新建 / 编辑 */
 $('#newBtn').onclick = () => { EDIT_ID = null; $('#modalTitle').textContent = '新建记忆'; $('#fTitle').value = ''; $('#fBody').value = ''; $('#fTags').value = ''; $('#fType').value = 'lesson'; $('#fStatus').value = 'staged'; $('#modalMask').classList.add('show'); };

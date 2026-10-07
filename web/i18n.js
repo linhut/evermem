@@ -187,6 +187,19 @@
     /* 接入设置（只留对外接入 + 本机运行方式） */
     '① 技能安装': '① Skill install', '② MCP 工具接入': '② MCP tools',
     '③ 开机启动': '③ Launch at login', '④ 兼容说明': '④ Compatibility',
+    /* 接入设置 · 宿主行（技能安装 / MCP 列表共用；此前硬编码中文，英文界面残留） */
+    '已安装': 'Installed', '未安装': 'Not installed', '安装': 'Install', '更新': 'Update',
+    /* 接入设置 · ④ 兼容说明正文（此前未翻译，英文界面整段残留中文） */
+    'WorkBuddy 桌面端禁用第三方插件钩子（宿主信任模型），自建能力走技能 + MCP。':
+      'The WorkBuddy desktop app blocks third-party plugin hooks (host trust model), so self-built capabilities use skills + MCP.',
+    'DSH：从 $DSH_HOME/skills（用户级）发现技能文件，目录被监视、热刷新。':
+      'DSH: discovers skill files from $DSH_HOME/skills (user level); the directory is watched and hot-reloaded.',
+    'Marvis（腾讯马维斯）：技能放 ~/.marvis/skills/custom/&lt;技能名&gt;/SKILL.md，需已登录客户端；其 MCP 定义由客户端以私有加密格式保存，恒忆不写它，需在客户端内手动添加。':
+      'Marvis (Tencent): skills live in ~/.marvis/skills/custom/<skill-name>/SKILL.md and require the client to be signed in; its MCP definitions are stored by the client in a private encrypted format, so Evermem never writes them — add the MCP server manually inside the client.',
+    'MCP 工具：evermem_mcp.py 标准 stdio，4 个工具，多助手通用。':
+      'MCP tools: evermem_mcp.py over standard stdio, 4 tools, shared by every assistant.',
+    '核心经验注入：MEMORY.md 核心经验区 → 新会话上下文（上限 20，有进有出）。':
+      'Hot-layer injection: the hot section of MEMORY.md lands in each new session context (cap 20, entries rotate).',
     /* 数据与维护（一级模块） */
     '数据与维护': 'Data & Maintenance',
     '① 数据位置（可自由选择）': '① Data location',
