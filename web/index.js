@@ -28,7 +28,16 @@ function btnBusy(sel, on) { const b = typeof sel === 'string' ? $(sel) : sel; if
 /* 统一请求：失败给可见的错误态而不是静默 */
 async function api(u, o) {
   const r = await fetch(u, o);
-  if (!r.ok) throw new Error('HTTP ' + r.status);
+  if (!r.ok) {
+    // 服务端出错时 body 里带着真实原因（如「内部错误：UnicodeDecodeError」）。
+    // 只报 "HTTP 500" 用户无法判断是网络问题还是数据问题，等于给了假信息。
+    let msg = 'HTTP ' + r.status;
+    try {
+      const j = await r.json();
+      if (j && j.error) msg = String(j.error);
+    } catch (e) { /* 非 JSON 响应，保留状态码 */ }
+    throw new Error(msg);
+  }
   return r.json();
 }
 async function apiOr(u, o, fallback) { try { return await api(u, o); } catch (e) { console.warn(u, e); return fallback; } }
@@ -606,18 +615,19 @@ async function loadProfilePrompt() {
   const pre = $('#miPrompt'); if (!pre) return;
   pre.textContent = t('读取中…');
   try {
-    const d = await fetch('/api/profile/prompt').then(r => r.json());
+    const d = await api('/api/profile/prompt');
     if (d && d.ok && d.text) {
       _miPromptText = d.text;
       pre.textContent = d.text;
       $('#miPromptInfo').textContent = `${d.text.length} ${t('字')} · ${t('提示词只有一份，改模板即生效')}`;
     } else {
       $('#miPromptInfo').textContent = '❌ ' + t('未能读取提示词模板');
-      pre.textContent = '（templates/usage-profile.prompt.md 未找到或 COPY 区间缺失）';
+      // 把服务端实际查找的路径显示出来：否则用户只能看到"未找到"，无从判断查的是哪儿
+      pre.textContent = `（${t('未找到模板或 COPY 区间缺失：')}${(d && d.path) || 'templates/usage-profile.prompt.md'}）`;
     }
   } catch (e) {
-    $('#miPromptInfo').textContent = '❌ ' + t('读取失败：服务未响应');
-    pre.textContent = '（服务未响应）';
+    $('#miPromptInfo').textContent = '❌ ' + t('读取失败：') + ((e && e.message) || t('服务未响应'));
+    pre.textContent = '（' + ((e && e.message) || t('服务未响应')) + '）';
   }
 }
 function selectNode(el) {
@@ -960,15 +970,24 @@ function renderTriage() {
 }
 
 async function loadTriage() {
-  const d = await apiOr('/api/candidates', {}, null);
-  if (!d) { const b = $('#triList'); if (b) b.innerHTML = `<div class="errbox">${t('候选列表加载失败：服务未响应')}</div>`; return; }
+  let d;
+  try {
+    d = await api('/api/candidates');
+  } catch (e) {
+    // 如实报出服务端给的原因，不再一律归因于"服务未响应"（那会把数据问题误导成服务没起）
+    const b = $('#triList');
+    if (b) b.innerHTML = `<div class="errbox">${t('候选列表加载失败：')}${esc((e && e.message) || e)}</div>`;
+    return;
+  }
+  if (!d) { const b = $('#triList'); if (b) b.innerHTML = `<div class="errbox">${t('候选列表加载失败：')}${t('响应格式异常')}</div>`; return; }
   _triAll = d.items || [];
   // 刷新后清掉已经不存在的候选（可能已被归档/转正移走），避免勾选幽灵条目
   const alive = new Set(_triAll.map(n => n.id));
   [..._triSel].forEach(id => { if (!alive.has(id)) _triSel.delete(id); });
   const full = d.total >= d.cap;
+  const skipped = Number(d.skipped || 0);
   const head = $('#triHead');
-  if (head) head.innerHTML = `${d.total} ${t('候选')}（${t('多角色评审')} + ${t('人工终审')}）· ${t('上限')} ${d.cap}${full ? ` · <b style="color:var(--danger)">${t('已满')}</b>` : ''} <button class="btn primary small" style="margin-left:8px" title="${t('多角色评审并自动处理')}" onclick="triAutoReview()">${t('多角色评审并自动处理')}</button> <button class="btn ghost small" onclick="triageArchive()">${t('归档超期(≥60天)')}</button>`;
+  if (head) head.innerHTML = `${d.total} ${t('候选')}（${t('多角色评审')} + ${t('人工终审')}）· ${t('上限')} ${d.cap}${full ? ` · <b style="color:var(--danger)">${t('已满')}</b>` : ''}${skipped ? ` · <b style="color:var(--danger)">${skipped} ${t('条读取失败已跳过')}</b>` : ''} <button class="btn primary small" style="margin-left:8px" title="${t('多角色评审并自动处理')}" onclick="triAutoReview()">${t('多角色评审并自动处理')}</button> <button class="btn ghost small" onclick="triageArchive()">${t('归档超期(≥60天)')}</button>`;
   renderTriage();
 }
 

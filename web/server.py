@@ -256,6 +256,31 @@ def _atomic_write(path: Path, text: str, encoding: str = "utf-8") -> None:
             pass
 
 
+def _parse_note_or_none(path):
+    """读笔记/候选文件；读不到返回 None，调用方必须跳过而不是当成空笔记。
+
+    并发写者（收割 / MCP / 导入器 / CLI）可能在读者眼皮底下改文件。只要有一个
+    文件读失败就让整个列表接口 500，界面会误报「服务未响应」；更糟的是自动评审
+    会把"读空"的候选判为低质而错误归档。所以单文件失败一律降级为跳过。
+    """
+    try:
+        return mem.parse_note(path)
+    except Exception:  # noqa: BLE001 - 单个文件异常不能打死整表
+        return None
+
+
+def _read_note_text(path) -> str | None:
+    """读笔记原文；读失败返回 None，调用方必须**放弃本次写**。
+
+    这是 read-modify-write 的前置读：读到被并发写截断的内容又落盘，笔记正文会被
+    永久截短——不是报错，是内容无声消失。宁可返回 409 让用户重试。
+    """
+    try:
+        return path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return None
+
+
 def _run_task(task_id: str, fn, retries: int = 1) -> None:
     import subprocess as _sp
 
@@ -614,7 +639,9 @@ class Handler(BaseHTTPRequestHandler):
             cand_files = sorted(cand_dir.glob("cand-*.md")) if cand_dir.exists() else []
             cand_over = 0
             for f in cand_files:
-                d = mem.parse_note(f) or {}
+                d = _parse_note_or_none(f)
+                if not d:
+                    continue
                 if mem.cand_age_days(str(d.get("created", "")), now) >= mem.GC_CAND_DAYS:
                     cand_over += 1
             arch_files = sorted(archive_dir.glob("*.md")) if archive_dir.exists() else []
@@ -658,11 +685,16 @@ class Handler(BaseHTTPRequestHandler):
         if p == "/api/candidates":
             cand_dir = mem.NOTES / "candidates"
             items = []
+            skipped = 0
             idx = cached_index()
             if cand_dir.exists():
                 now = time.time()
                 for f in sorted(cand_dir.glob("cand-*.md")):
-                    d = mem.parse_note(f) or {}
+                    d = _parse_note_or_none(f)
+                    if not d:
+                        # 并发写入留下的半成品文件：跳过这一条，不能让整表 500
+                        skipped += 1
+                        continue
                     age = mem.cand_age_days(str(d.get("created", "")), now)
                     rv = mem.multi_role_review(d, idx)
                     items.append({"id": d.get("id", f.stem), "type": d.get("type", "fact"),
@@ -674,6 +706,7 @@ class Handler(BaseHTTPRequestHandler):
                                   "roles": [{"k": k, "n": n, "score": r["score"], "v": r["verdict"]}
                                             for k, n, r in rv["roles"]]})
             self._json({"items": items, "total": len(items), "cap": mem.DEFAULT_CAND_CAP,
+                        "skipped": skipped,
                         "over30": sum(1 for i in items if i["age"] >= 30),
                         "over60": sum(1 for i in items if i["age"] >= 60)})
             return
@@ -858,7 +891,9 @@ class Handler(BaseHTTPRequestHandler):
         if p == "/api/profile/prompt":
             # 「其他记忆导入」页的「导出记忆提示词」卡片数据源：直接读模板里的 COPY 区间。
             # 提示词只有一份事实源（templates/usage-profile.prompt.md），前端不硬编码。
-            tpl = mem.ROOT / "templates" / "usage-profile.prompt.md"
+            # 必须用 CODE_ROOT（代码目录）：mem.ROOT 是**数据根**，模板不在那里，
+            # 写错会永远报「模板未找到」——曾实际发生。
+            tpl = CODE_ROOT / "templates" / "usage-profile.prompt.md"
             text = ""
             try:
                 raw = tpl.read_text(encoding="utf-8")
@@ -1019,7 +1054,10 @@ class Handler(BaseHTTPRequestHandler):
             held = []  # 结构/资质不足被挡下留人工的（附原因，前端可展示）
             if cand_dir.exists():
                 for f in sorted(cand_dir.glob("cand-*.md")):
-                    d = mem.parse_note(f) or {}
+                    d = _parse_note_or_none(f)
+                    if not d:
+                        # 读到半成品会被判成"空/过短"→ 错误归档，必须跳过
+                        continue
                     rv = mem.multi_role_review(d, idx)
                     bucket, why = mem.promotion_decision(d, rv)
                     if bucket == "promote":
@@ -1045,7 +1083,9 @@ class Handler(BaseHTTPRequestHandler):
                 archive_dir = cand_dir / "archive"
                 archive_dir.mkdir(parents=True, exist_ok=True)
                 for f in sorted(cand_dir.glob("cand-*.md")):
-                    d = mem.parse_note(f) or {}
+                    d = _parse_note_or_none(f)
+                    if not d:
+                        continue
                     if str(d.get("id")) in rejected:
                         target = archive_dir / f.name
                         if target.exists():
@@ -1073,7 +1113,9 @@ class Handler(BaseHTTPRequestHandler):
             moved = []
             if cand_dir.exists():
                 for f in sorted(cand_dir.glob("cand-*.md")):
-                    d = mem.parse_note(f) or {}
+                    d = _parse_note_or_none(f)
+                    if not d:
+                        continue
                     if str(d.get("id")) in ids:
                         f.rename(archive_dir / f.name)
                         moved.append(f.stem)
@@ -1099,12 +1141,18 @@ class Handler(BaseHTTPRequestHandler):
             updated, failed = [], []
             if cand_dir.exists():
                 for f in sorted(cand_dir.glob("cand-*.md")):
-                    d = mem.parse_note(f) or {}
+                    d = _parse_note_or_none(f)
+                    if not d:
+                        continue
                     nid = str(d.get("id"))
                     if nid not in want:
                         continue
+                    raw = _read_note_text(f)
+                    if raw is None:
+                        # 读不到原文就不能改写：否则会把半成品当成新正文落盘
+                        failed.append(nid)
+                        continue
                     try:
-                        raw = f.read_text(encoding="utf-8")
                         if _re.search(r"^status:\s*\S+", raw, _re.M):
                             raw = _re.sub(r"^status:\s*\S+", f"status: {status}", raw, count=1, flags=_re.M)
                         else:
@@ -1161,7 +1209,10 @@ class Handler(BaseHTTPRequestHandler):
                     self._json({"error": "bad status"}, 400)
                     return
                 import re as _re
-                raw = path.read_text(encoding="utf-8")
+                raw = _read_note_text(path)
+                if raw is None:
+                    self._json({"error": "原笔记读取失败（可能正被并发写入），请稍后重试"}, 409)
+                    return
                 if _re.search(r"^status:\s*\S+", raw, _re.M):
                     raw = _re.sub(r"^status:\s*\S+", f"status: {status}", raw, count=1, flags=_re.M)
                 else:
@@ -1172,7 +1223,10 @@ class Handler(BaseHTTPRequestHandler):
                 return
             if action == "unhot":
                 import re as _re
-                raw = path.read_text(encoding="utf-8")
+                raw = _read_note_text(path)
+                if raw is None:
+                    self._json({"error": "原笔记读取失败（可能正被并发写入），请稍后重试"}, 409)
+                    return
                 new = _re.sub(r"^hot:\s*(true|1|yes)\s*\n", "", raw, flags=_re.M)
                 if new != raw:
                     _atomic_write(path, new)
@@ -1182,7 +1236,10 @@ class Handler(BaseHTTPRequestHandler):
             if action == "edit":
                 b = self._body()
                 import re as _re
-                raw = path.read_text(encoding="utf-8")
+                raw = _read_note_text(path)
+                if raw is None:
+                    self._json({"error": "原笔记读取失败（可能正被并发写入），请稍后重试"}, 409)
+                    return
                 head, _, rest = raw.partition("---\n")
                 meta: dict[str, str] = {}
                 for line in rest.split("\n---\n", 1)[0].splitlines():
@@ -1206,7 +1263,12 @@ class Handler(BaseHTTPRequestHandler):
                     clean_tag = lambda t: t.strip().replace('"', "").replace("\n", " ").replace("\r", " ")
                     tags_clean = [clean_tag(t) for t in str(b["tags"]).split(",") if clean_tag(t)]
                     meta["tags"] = "[" + ", ".join(f'"{t}"' for t in tags_clean) + "]"
-                body_old = (mem.parse_note(path) or {}).get("body", "")
+                snap = _parse_note_or_none(path)
+                if snap is None:
+                    # 读不到原文件就绝不能落盘：body_old 会变空串，把正文清空
+                    self._json({"error": "原笔记读取失败（可能正被并发写入），请稍后重试"}, 409)
+                    return
+                body_old = snap.get("body", "")
                 # 索引瘦身后 docs 不存正文全文（仅 snippet 200 字）；未传 body 时禁止用
                 # d.get("body") 兜底——会拿截断摘要覆盖全文导致笔记内容丢失。改读原文件保留。
                 body_new = b.get("body") if "body" in b else body_old
@@ -1217,7 +1279,10 @@ class Handler(BaseHTTPRequestHandler):
                 return
             if action == "hot":
                 import re as _re
-                raw = path.read_text(encoding="utf-8")
+                raw = _read_note_text(path)
+                if raw is None:
+                    self._json({"error": "原笔记读取失败（可能正被并发写入），请稍后重试"}, 409)
+                    return
                 if not _re.search(r"^hot:\s*", raw, _re.M):
                     raw = raw.replace("---\n", "---\nhot: true\n", 1)
                 else:
