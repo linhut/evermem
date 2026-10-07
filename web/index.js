@@ -271,7 +271,7 @@ const maintHTML = () => `<div style="width:100%;max-width:820px">
     <div class="btnrow" style="margin-bottom:6px">
       <label style="min-width:52px;font-size:12px;color:var(--text2);align-self:center">${t('记忆库')}</label><input id="cfgHome" placeholder="${t('记忆库目录（笔记/index）')}" style="flex:2;min-width:140px">
       <label style="min-width:52px;font-size:12px;color:var(--text2);align-self:center">${t('块库')}</label><input id="cfgChunks" placeholder="${t('文本块目录')}" style="flex:2;min-width:140px">
-      <label style="min-width:52px;font-size:12px;color:var(--text2);align-self:center">${t('扫描根')}</label><input id="cfgSpaces" placeholder="${t('扫描根目录（如 F:/）')}" style="flex:2;min-width:140px">
+      <label style="min-width:52px;font-size:12px;color:var(--text2);align-self:center">${t('扫描根')}</label><input id="cfgSpaces" placeholder="${t('扫描根目录（如 D:/资料 或 /home/you/docs）')}" style="flex:2;min-width:140px">
       <button class="btn primary" id="cfgSave">${t('保存')}</button>
     </div>
     <div class="sub" id="cfgInfo">${t('读取配置中…')}</div></div>

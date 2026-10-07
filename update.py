@@ -666,7 +666,7 @@ def apply_update(package: str) -> dict:
     if not getattr(sys, "frozen", False) or sys.platform != "win32":
         return {"ok": False,
                 "error": "自动更新仅支持 Windows 打包版（Evermem.exe）；源码态 / 其他平台请手动替换，"
-                         "见 docs/USER-GUIDE.md"}
+                         "见 docs/guides/USER-GUIDE.md"}
     src = Path(package)
     if not src.is_file():
         return {"ok": False, "error": f"更新包不存在：{package}"}

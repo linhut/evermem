@@ -7,7 +7,7 @@
 # pmem backup v3 - 恒忆多渠道数据备份（零依赖 + 可选 ssh/scp、smtplib）
 #
 #
-# 规格见 docs/BACKUP-DESIGN.md。要点：
+# 规格见 docs/design/BACKUP-DESIGN.md。要点：
 #   - 本地数据 = 唯一事实源，所有渠道为副本，方向默认 upload（单向，无跨渠道冲突）
 #   - 渠道：local(增量镜像) / archive(全量快照保留N份) / remote(ssh/scp 增量镜像) / mail(SMTP 附件)
 #   - 每渠道独立频率、失败记录、连续失败告警（邮件可选）
@@ -33,6 +33,7 @@ import json
 import os
 import shutil
 import smtplib
+import string
 import subprocess
 import sys
 import tarfile
@@ -394,14 +395,53 @@ def _openssl_path() -> str:
     found = shutil.which("openssl")
     if found:
         return found
-    local_appdata = Path(os.environ.get("LOCALAPPDATA", "") or "C:/")
-    for cand in ("C:/Program Files/Git/usr/bin/openssl.exe",
-                 "C:/Program Files (x86)/Git/usr/bin/openssl.exe",
-                 "C:/Program Files/Git/bin/openssl.exe",
-                 str(local_appdata / "Programs" / "Git" / "usr" / "bin" / "openssl.exe")):
-        if Path(cand).exists():
-            return cand
+    # Windows 常见安装位：全部由环境变量推导，不写死盘符
+    # （Git for Windows 装在 C:、D: 还是自定义目录，都能命中）
+    cands: list[Path] = []
+    for env_name in ("ProgramFiles", "ProgramFiles(x86)", "ProgramW6432"):
+        base = (os.environ.get(env_name) or "").strip()
+        if base:
+            cands += [Path(base) / "Git" / "usr" / "bin" / "openssl.exe",
+                      Path(base) / "Git" / "bin" / "openssl.exe"]
+    local_appdata = (os.environ.get("LOCALAPPDATA") or "").strip()
+    if local_appdata:
+        cands.append(Path(local_appdata) / "Programs" / "Git" / "usr" / "bin" / "openssl.exe")
+    # 包管理器安装位（scoop / chocolatey）与常见自装目录，同样从用户目录推导
+    cands += [Path.home() / "scoop" / "apps" / "git" / "current" / "usr" / "bin" / "openssl.exe",
+              Path.home() / "Programs" / "Git" / "usr" / "bin" / "openssl.exe"]
+    for cand in cands:
+        if cand.exists():
+            return str(cand)
     raise RuntimeError("未找到 openssl（Git for Windows 自带）。可设置 PMEM_OPENSSL 指定路径。")
+
+def drive_roots() -> list[Path]:
+    """本机可枚举的盘/挂载点根 —— 盘符无关。
+
+    Windows：动态探测已挂载盘符（不写死 C:–H:，I: 之后的盘也能发现）；
+    macOS / Linux：用标准挂载点（/ 与 /Volumes、/media、/mnt 下的子目录）。
+    """
+    roots: list[Path] = []
+    if sys.platform == "win32":
+        for letter in string.ascii_uppercase:
+            p = Path(f"{letter}:/")
+            try:
+                if p.exists():
+                    roots.append(p)
+            except OSError:
+                continue
+        return roots
+    for base in ("/", "/Volumes", "/media", "/mnt"):
+        b = Path(base)
+        try:
+            if not b.is_dir():
+                continue
+            if base == "/":
+                roots.append(b)
+            else:
+                roots += [c for c in sorted(b.iterdir()) if c.is_dir()]
+        except OSError:
+            continue
+    return roots
 
 def _archive_password(ch: dict) -> str:
     pw = deobscure(ch.get("archive_password") or "") or os.environ.get("PMEM_ARCHIVE_PASS", "")
@@ -604,30 +644,35 @@ def run_channel(ch: dict) -> dict:
 # ---------------- 全局流程 ----------------
 
 def discover_targets() -> list[dict]:
-    """自动探测本机可作为备份目标的位置（网盘同步夹/可写磁盘），供 UI 下拉选择，无需手填路径。"""
+    """自动探测本机可作为备份目标的位置（网盘同步夹/可写磁盘），供 UI 下拉选择，无需手填路径。
+
+    盘符无关：候选盘/挂载点由 drive_roots() 动态枚举，不写死 C:/ D:/ E:/。
+    """
     out = []
     seen = set()
     home = Path.home()
+    roots = drive_roots()
     cloud_dirs = ("OneDrive", "OneDrive - 个人", "坚果云", "Nutstore", "百度网盘",
                   "BaiduNetdiskWorkspace", "Dropbox", "iCloud Drive", "iCloud 云盘", "阿里云盘")
     for name in cloud_dirs:
-        for root in (home, home / "Documents", Path("C:/"), Path("D:/"), Path("E:/")):
+        for root in (home, home / "Documents", *roots):
             p = root / name
             if p.is_dir() and str(p) not in seen:
                 seen.add(str(p))
                 out.append({"name": f"网盘同步夹：{name}", "path": str(p),
                             "writable": bool(os.access(p, os.W_OK))})
     # 剩余空间 ≥5G 的可写盘根
-    for d in ("C:/", "D:/", "E:/", "F:/", "G:/", "H:/"):
-        p = Path(d)
-        if not p.exists() or not os.access(p, os.W_OK) or str(p) in seen:
+    for p in roots:
+        d = str(p)
+        if not os.access(p, os.W_OK) or d in seen:
             continue
         try:
             free = shutil.disk_usage(p).free / 2**30
         except OSError:
             continue
         if free >= 5:
-            out.append({"name": f"磁盘 {d.rstrip('/:')}（剩余 {free:.0f}G）", "path": str(p), "writable": True})
+            label = p.drive.rstrip("/:") if p.drive else (p.name or d)
+            out.append({"name": f"磁盘 {label}（剩余 {free:.0f}G）", "path": d, "writable": True})
     return out
 
 def check_channel(ch: dict) -> dict:
@@ -1056,7 +1101,7 @@ def main() -> int:
             ch_name = sys.argv[i + 1]
 
     if not cfg["channels"]:
-        print("⚠️  未配置备份渠道。编辑 pmem_backup.json（见 docs/BACKUP-DESIGN.md）或 Web「数据备份」页设置。")
+        print("⚠️  未配置备份渠道。编辑 pmem_backup.json（见 docs/design/BACKUP-DESIGN.md）或 Web「数据备份」页设置。")
         return 1
 
     if "--restore" in sys.argv:

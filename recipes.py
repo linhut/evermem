@@ -12,7 +12,7 @@
   python recipes.py resolve project:evermem
   python recipes.py lock
 
-规范见 docs/RECIPES.md。不改动 mem.py 核心；索引重建照常走 mem.py reindex。
+规范见 docs/design/RECIPES.md。不改动 mem.py 核心；索引重建照常走 mem.py reindex。
 """
 from __future__ import annotations
 
@@ -274,7 +274,7 @@ def _atomic_write(path, text: str, encoding: str = "utf-8") -> None:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(prog="recipes", description="恒忆配方管理（规范见 docs/RECIPES.md）")
+    ap = argparse.ArgumentParser(prog="recipes", description="恒忆配方管理（规范见 docs/design/RECIPES.md）")
     sub = ap.add_subparsers(dest="cmd", required=True)
 
     p = sub.add_parser("scan", help="盘点配方分层与冲突")

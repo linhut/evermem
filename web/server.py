@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -353,12 +354,19 @@ def _run_inline_task(task_id: str, fn) -> None:
 
 TYPE_LABEL = {"fact": "事实", "lesson": "经验", "procedure": "配方"}
 
+# 「来源是本地绝对路径」判定 —— 盘符无关。
+#   ① Windows 盘符前缀（C:\ / D:/，任意位置）
+#   ② UNC 共享（\\host\share）
+#   ③ POSIX 绝对路径（只认行首或分隔符之后，避免把 URL 片段 /api/xxx 误判成文件路径）
+# 旧实现写死 "F:/"，换个盘符或换到 macOS/Linux 就整体失效，也违反「代码不得出现用户盘符」的发布约定。
+_ABS_PATH_RE = re.compile(r"[A-Za-z]:[\\/]|\\\\[^\\/\s]+[\\/]|(?:^|[;、,，\n])/[^\s/*]")
+
 def provenance_of(source: str, tags: list, note_id: str) -> str:
     """判定记忆来源通道（界面显示来源图标）。"""
     s = source or ""
     t = "".join(tags or [])
-    if "F:/" in s or "F:\\" in s or s.startswith("F:"):
-        return "doc"        # 文档提炼（F 盘语料）
+    if _ABS_PATH_RE.search(s):
+        return "doc"        # 文档提炼（来源为本地资料文件/目录）
     if ".dsh" in s:
         return "dsh"        # DSH 会话
     if ".atomcode" in s:

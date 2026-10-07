@@ -1,7 +1,8 @@
 ; 恒忆 Evermem 安装版（Inno Setup）—— 安装向导 / 开始菜单快捷方式 / 卸载 /
 ; 卸载时询问是否保留记忆数据（%APPDATA%\EvermemData）。
 ;
-; 构建：ISCC.exe evermem.iss /DMyAppVersion="0.2.9" /DMySourceDir="C:\...\dist\Evermem" /DMyOutputDir="C:\...\dist"
+; 构建（路径按你本机实际位置传参，不绑定任何盘符）：
+;   ISCC.exe evermem.iss /DMyAppVersion="0.2.9" /DMySourceDir="<仓库>\dist\Evermem" /DMyOutputDir="<仓库>\dist"
 ; 数据策略：数据恒在 %APPDATA%\EvermemData（paths.py 安装版默认数据根），与程序目录分离；
 ; 卸载默认保留数据（六-6：卸载页询问，选择"否"即保留，重装继续使用）。
 

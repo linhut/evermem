@@ -14,8 +14,7 @@ description: 个人跨会话经验记忆。当任务涉及重复踩坑、命令�
 ```bash
 # 跨平台写法：数据目录用环境变量，Python 用当前环境的解释器
 export PMEM_HOME="<你的数据目录>"      # Windows 用 set PMEM_HOME=...
-PY="python3"                          # macOS/Linux
-# Windows 示例：PY="python"
+PY="python3"                          # macOS/Linux；Windows 用 python / py 或你环境的解释器路径
 MEM="$PMEM_HOME/mem.py"
 ```
 

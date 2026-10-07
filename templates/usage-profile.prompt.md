@@ -56,4 +56,4 @@ python mem.py add --type fact --title "输出偏好：先给结论再给依据" 
 ```
 
 标签建议命中 `mem.py profile` 的分类关键词（纪律/规范、身份/单位、公文/应急、项目/系统、偏好/习惯），
-分类会更准。方法详见 `docs/PROFILE-EXPORT.md`。
+分类会更准。方法详见 `docs/guides/PROFILE-EXPORT.md`。

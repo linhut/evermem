@@ -238,7 +238,7 @@
     '记忆库': 'Memory root', '块库': 'Chunk store', '扫描根': 'Scan root',
     '读取配置中…': 'Loading config…',
     '记忆库目录（笔记/index）': 'memory dir (notes/index)',
-    '文本块目录': 'chunk dir', '扫描根目录（如 F:/）': 'scan root (e.g. F:/)',
+    '文本块目录': 'chunk dir', '扫描根目录（如 D:/资料 或 /home/you/docs）': 'scan root (e.g. D:/docs or /home/you/docs)',
     /* 备份（channel.js 主要文案） */
     '备份与同步': 'Backup & Sync', '渠道': 'Channels',
     '镜像': 'Mirror', '快照': 'Snapshot', '远端': 'Remote', '邮箱': 'Mail', '对象存储': 'Object storage', '网盘冷备': 'Cloud cold backup',

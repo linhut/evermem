@@ -4,7 +4,8 @@
 # 官网: https://www.linhut.cn
 # 许可: MIT License（SPDX-License-Identifier: MIT，详见根目录 LICENSE）
 
-# 批量读取测试赛每日运行报告（.doc，通过 editor_sdk），提取关键单元格。
+# 批量读取「每日运行报告」（.doc，通过 editor_sdk），提取关键单元格。
+# 环境专用工具脚本：文件名模式可用 PMEM_DOC_GLOB 覆盖，默认匹配 *每日运行报告*。
 import json
 import subprocess
 import os
@@ -55,7 +56,8 @@ def get_texts(full_path: str):
     return fid, "\n".join(texts)
 
 def main():
-    files = sorted(BASE.glob("项目场馆*每日运行报告*"))
+    pattern = os.environ.get("PMEM_DOC_GLOB", "*每日运行报告*")
+    files = sorted(BASE.glob(pattern))
     print(f"共 {len(files)} 份运行报告\n")
     for f in files:
         fid, text = get_texts(str(f))

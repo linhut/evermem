@@ -87,7 +87,7 @@ if health_ok:
     import json as _j
     from urllib.parse import quote as _q
     for path in ["/api/notes", "/api/search?q=" + _q("公文") + "&limit=2", "/api/hot", "/api/stats",
-                 "/api/spaces", "/api/hosts", "/api/blocks?space=" + _q("某指挥中心")]:
+                 "/api/spaces", "/api/hosts", "/api/blocks?space=" + _q("示例空间")]:
         t0 = time.perf_counter()
         c = http.client.HTTPConnection("127.0.0.1", 8765, timeout=10)
         try:

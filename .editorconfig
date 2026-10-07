@@ -1,0 +1,32 @@
+# 恒忆 Evermem · 编辑器统一约定
+# 目的：让不同编辑器 / IDE 打开本项目时缩进与换行一致，减少无意义的 diff。
+# 换行符规则以 .gitattributes 为准（见该文件顶部说明）。
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# Python：4 空格
+[*.py]
+indent_style = space
+indent_size = 4
+
+# 前端与配置：2 空格
+[*.{js,html,css,json,yml,yaml}]
+indent_style = space
+indent_size = 2
+
+# Markdown：保留行尾空格（两个空格 = 软换行），不做修剪
+[*.md]
+trim_trailing_whitespace = false
+
+# Shell / Inno Setup：按各自惯例
+[*.sh]
+indent_style = space
+indent_size = 4
+[*.{iss,isl}]
+end_of_line = crlf

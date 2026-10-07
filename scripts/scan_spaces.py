@@ -8,8 +8,8 @@
 #
 #
 # 用法：
-#   python scan_spaces.py F:/                    # 扫描并打印摘要
-#   python scan_spaces.py F:/ --json out.json    # 另存为 JSON
+#   python scan_spaces.py <根目录>                 # 扫描并打印摘要（如 D:/资料、/home/you/docs）
+#   python scan_spaces.py <根目录> --json out.json # 另存为 JSON
 
 from __future__ import annotations
 
@@ -79,7 +79,7 @@ def scan_space(root: Path) -> dict:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="扫描项目/单位目录，生成知识空间地图")
-    ap.add_argument("root", help="要扫描的根目录，例如 F:/")
+    ap.add_argument("root", help="要扫描的根目录，例如 D:/资料 或 /home/you/docs")
     ap.add_argument("--min-docs", type=int, default=3, help="文档数少于此值的目录不列入")
     ap.add_argument("--json", dest="json_out", help="另存为 JSON 文件")
     args = ap.parse_args()

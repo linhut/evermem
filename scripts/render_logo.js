@@ -40,7 +40,7 @@ function render(svgText, width, height) {
 
 /**
  * 把 logo 居中放进指定画布（透明底）。
- * 留白按 docs/BRAND.md：logo 占容器宽度 82%~86%，四周留白 ≥25%。
+ * 留白按 docs/dev/BRAND.md：logo 占容器宽度 82%~86%，四周留白 ≥25%。
  */
 function compose(canvasW, canvasH, logoRatio, offsetYRatio, out) {
   const logoW = Math.round(canvasW * logoRatio);

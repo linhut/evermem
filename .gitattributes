@@ -1,0 +1,78 @@
+# =====================================================================
+# 恒忆 Evermem · 换行符与文件类型规则
+# ---------------------------------------------------------------------
+# 背景：仓库曾出现 LF / CRLF 混用（39 个 LF + 31 个 CRLF 并存），
+#       在 Windows 与 macOS/Linux 之间同步时会产生整文件"伪改动"。
+# 约定：仓库内统一按文本规范化存储（索引里是 LF），
+#       检出时由 git 按平台自动转换；必须保持原样的格式单独钉住。
+# 生效方式：新增 / 修改本文件后执行一次 `git add --renormalize .`
+# =====================================================================
+
+# 默认：自动识别文本并按平台换行检出（禁止对二进制做转换）
+* text=auto
+
+# ----- 源码与文档：明确为文本，交给 git 做换行规范化 -----
+*.py       text diff=python
+*.js       text diff=javascript
+*.html     text diff=html
+*.css      text diff=css
+*.md       text diff=markdown
+*.json     text
+*.yml      text
+*.yaml     text
+*.toml     text
+*.cff      text
+*.txt      text
+*.iss      text eol=crlf
+*.isl      text eol=crlf
+.gitignore     text
+.gitattributes text
+.editorconfig  text
+VERSION    text
+LICENSE    text
+
+# ----- 必须在 Unix 下带 LF 才能执行（首行 shebang 解释器） -----
+*.sh    text eol=lf
+pre-push text eol=lf
+
+# ----- 必须保持 CRLF 的格式（Windows 工具链：批处理 / Inno Setup） -----
+*.bat   text eol=crlf
+*.cmd   text eol=crlf
+*.ps1   text eol=crlf
+
+# ----- 二进制：不做任何转换、不参与文本 diff -----
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.webp  binary
+*.ico   binary
+*.icns  binary
+*.woff  binary
+*.woff2 binary
+*.ttf   binary
+*.otf   binary
+*.pdf   binary
+*.zip   binary
+*.tar   binary
+*.gz    binary
+*.tgz   binary
+*.aes   binary
+*.dmg   binary
+*.deb   binary
+*.rpm   binary
+*.AppImage binary
+*.exe   binary
+*.dll   binary
+*.so    binary
+*.dylib binary
+*.pyc   binary
+*.db    binary
+*.sqlite binary
+
+# SVG 是文本，保留 diff（品牌源文件需要可审查的改动记录）
+*.svg   text diff=xml
+
+# ----- 语言统计：第三方随附文件不计入本仓库语言占比 -----
+# Inno Setup 简体中文语言包来自上游 kira-96/Inno-Setup-Chinese-Simplified-Translation
+installers/windows/languages/*.isl linguist-vendored

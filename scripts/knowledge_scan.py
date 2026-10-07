@@ -22,6 +22,27 @@ if str(BASE) not in sys.path:
     sys.path.insert(0, str(BASE))
 import harvest  # noqa: E402
 
+# ---------- 顶层目录（项目 / 知识空间）识别：盘符无关 ----------
+# 只认「绝对路径的根」，不绑定任何具体盘符（旧实现写死 F:/，换盘或换平台即失效）：
+#   · Windows 盘符（C:\ / D:/）与 UNC 共享（\\host\share）：形态明确，任意位置都认；
+#   · POSIX 根（/）：仅认行首，避免把 URL 片段（/api/notes）误判成目录；
+#   · 另加用户目录（Path.home()，可带一层 Documents），覆盖 macOS/Linux 与 Windows 文档区。
+# 命中后取根之后的第一段作为项目名，系统目录（Users / usr / home…）不计入。
+_TOP_SEG = r"([A-Za-z0-9_\u4e00-\u9fff][A-Za-z0-9_.\u4e00-\u9fff-]*)"
+_WIN_ROOT_RE = re.compile(r"(?:[A-Za-z]:[\\/]|\\\\[^\\/\s]+[\\/])" + _TOP_SEG)
+_POSIX_ROOT_RE = re.compile(r"^[ \t]*/" + _TOP_SEG, re.M)
+_HOME_ROOT_RE = re.compile(re.escape(str(Path.home())) + r"[\\/](?:Documents[\\/])?" + _TOP_SEG)
+_TOP_IGNORE = {"Users", "Windows", "ProgramFiles", "tmp", "temp", "usr", "var", "etc",
+               "opt", "bin", "lib", "sbin", "home", "root", "dev", "proc", "sys", "run",
+               "srv", "mnt", "media", "Volumes", "Applications", "System", "Library"}
+
+def top_dirs(text: str) -> list[str]:
+    """提取文本中被提及的顶层目录名 —— 盘符无关。"""
+    if not text:
+        return []
+    names = _WIN_ROOT_RE.findall(text) + _POSIX_ROOT_RE.findall(text) + _HOME_ROOT_RE.findall(text)
+    return [n for n in names if n and n not in _TOP_IGNORE]
+
 # ---------- 会话解析 ----------
 def session_label(path: Path) -> str:
     return path.parent.name + "/" + path.stem[:12]
@@ -78,11 +99,10 @@ def extract_commands(seq: list) -> list[tuple[str, bool]]:
     return out
 
 def extract_projects(texts: list[str]) -> Counter:
-    """统计提及的 F:/ 项目目录。"""
+    """统计被提及的顶层项目/知识空间目录（盘符无关，见 top_dirs）。"""
     c = Counter()
     for t in texts:
-        for m in re.findall(r"F:/([A-Za-z0-9_\u4e00-\u9fff]+)", t):
-            c[m] += 1
+        c.update(top_dirs(t))
     return c
 
 # ---------- DSH 会话（~/.dsh/sessions/<工作区>/<session>/session.jsonl.zstd） ----------
@@ -149,10 +169,9 @@ def extract_file_projects(items: list) -> Counter:
             continue
         if not p:
             continue
-        # 路径前缀动态构造（勿硬编码用户机器路径）：F:/ 数据盘 + <home>/Documents/
-        _home_docs = re.escape(str(Path.home())) + r"/Documents/"
-        for m in re.findall(r"(?:F:/|" + _home_docs + r")([A-Za-z0-9_\u4e00-\u9fff]+)", p):
-            c[m] += 1
+        # 盘符无关：按「绝对路径根」提取顶层目录，不写死任何盘符（见 top_dirs）
+        for name in top_dirs(p):
+            c[name] += 1
     return c
 
 # ---------- atomcode 会话（~/.atomcode/sessions） ----------
@@ -282,7 +301,7 @@ def main():
     for c in issue_cmds[:12]:
         lines.append(f"| `{c['cmd'][:70]}` | {c['count']} |")
 
-    lines.append("\n## 四、活跃项目（F:/ 提及频次）\n")
+    lines.append("\n## 四、活跃项目（本地路径提及频次）\n")
     lines.append("| 项目 | 提及 |")
     lines.append("|---|---|")
     for p in kb["active_projects"][:12]:
