@@ -9,12 +9,25 @@
 <p align="center">
   <img alt="License MIT" src="https://img.shields.io/badge/License-MIT-yellow.svg">
   <img alt="Python 3.10+" src="https://img.shields.io/badge/Python-3.10%2B-blue">
-  <img alt="Version 0.2.9" src="https://img.shields.io/badge/Version-0.2.9-green">
   <img alt="Zero Dependency" src="https://img.shields.io/badge/Dependencies-Zero-orange">
   <img alt="Platform Win/macOS/Linux" src="https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey">
 </p>
 
-<p align="center"><b>零依赖 · 全本地 · 无云端。</b><br><a href="README.en.md">English</a></p>
+<p align="center">
+  <a href="https://github.com/linhut/evermem/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/linhut/evermem?label=release"></a>
+  <a href="https://github.com/linhut/evermem/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/linhut/evermem"></a>
+  <a href="https://github.com/linhut/evermem/issues"><img alt="Issues" src="https://img.shields.io/github/issues/linhut/evermem"></a>
+  <a href="https://github.com/linhut/evermem/commits/main"><img alt="Last commit" src="https://img.shields.io/github/last-commit/linhut/evermem"></a>
+</p>
+
+<p align="center">
+  <b>零依赖 · 全本地 · 无云端。</b><br>
+  <a href="README.en.md">English</a> ·
+  <a href="docs/guides/USER-GUIDE.md">零基础使用说明</a> ·
+  <a href="docs/README.md">文档索引</a> ·
+  <a href="CONTRIBUTING.md">贡献指南</a> ·
+  <a href="SECURITY.md">安全策略</a>
+</p>
 
 ---
 
@@ -64,24 +77,26 @@
 
 ```
 .
-├── README.md (ZH 默认) / README.en.md (EN)   # 项目文档（默认中文）
-├── CHANGELOG.md / LICENSE / VERSION / .gitignore
+├── README.md (ZH 默认) / README.en.md (EN) / CHANGELOG.md / LICENSE / VERSION
+├── CONTRIBUTING.md / SECURITY.md / CODE_OF_CONDUCT.md / CITATION.cff
 ├── mem.py            # CLI 引擎：recall / add / show / set-status / gc / hot / candidates / reindex / stats
+├── harvest.py        # 会话收割：命令级 + 任务级经验候选（无需钩子）
 ├── memimport.py      # 外部记忆导入引擎（画像 / Markdown / JSON / 目录，内容哈希判重）
-├── harvest.py        # 会话收割：命令级 + 任务级经验候选
 ├── recipes.py        # 配方治理（四层作用域 / 求值链 / 依赖锁）
 ├── update.py         # 多源更新检查（自建清单 → GitHub 直连 → 镜像竞速）
 ├── evermem_mcp.py    # MCP 服务（查记忆 / 存记忆 / 更新 / 核心经验）
-├── backup.py / s3client.py   # 多渠道数据备份（对象存储 / SMTP / 快照/加密）
-├── desktop.py        # 桌面壳（内嵌 Web 服务 + QtWebEngine，跨平台）
+├── backup.py / s3client.py   # 多渠道数据备份（对象存储 / SMTP / 快照 / 加密归档）
+├── desktop.py        # 桌面壳（内嵌 Web 服务 + QtWebEngine，跨平台，可选）
 ├── paths.py          # 数据目录 / 代码目录唯一解析入口（env > 持久化配置 > 安装版数据区 > 可移植默认）
-├── installers/       # 安装版安装器脚本（windows/evermem.iss，Inno Setup 入库）
-├── assets/           # 应用图标（icon.ico / icon.icns / icon.png，由 scripts/make_icon.py 生成）
-├── web/              # 零依赖 Web 界面（server.py 启动，前端内嵌资源）
-├── scripts/          # 开发与运维工具（批量读 / 基准 / 自检 / 空间扫描 / 知识扫描 / 热预览 / 图标生成）
+├── web/              # 零依赖 Web 界面（server.py + 原生 JS/CSS）
 ├── templates/        # 技能与提示词模板（唯一事实源）
+├── scripts/          # 开发与运维工具（自检 / 冒烟 / 基准 / 知识扫描 / 图标生成）
 ├── tests/            # 回归测试
-└── docs/             # 架构 / 备份 / 审计 / 平台文档 / 零基础使用说明
+├── installers/       # 安装器脚本与向导图（Inno Setup 等）
+├── assets/           # 打包用应用图标（icon.ico / icon.icns / icon.png）
+├── brand/            # 品牌源（SVG）与多尺寸 PNG，运行时经 /brand/ 路由提供
+├── .github/          # CI 工作流与社区健康文件
+└── docs/             # design 设计 · guides 使用与运维 · dev 维护与发布 · ui 界面截图
 ```
 
 ## 界面预览 · System Diagram
@@ -157,7 +172,7 @@ python desktop.py            # 桌面壳（单实例 / 托盘 / 关闭即最小�
 
 > 数据目录解析顺序：`PMEM_HOME` 环境变量 > 数据目录 `pmem_config.json` 的 `home` 字段 > 可移植默认目录
 > （打包产物为可执行文件同级目录；不用当前工作目录，避免双击 / 托盘 / 开机自启三种启动方式落到不同位置）。
-> 从开发环境迁移数据到桌面版，见 [docs/DESKTOP-MIGRATION.md](docs/DESKTOP-MIGRATION.md)。
+> 从开发环境迁移数据到桌面版，见 [docs/guides/DESKTOP-MIGRATION.md](docs/guides/DESKTOP-MIGRATION.md)。
 
 > 也可直接用发布产物（GitHub Release，每平台提供「绿色版」与「安装版」两种）：
 
@@ -171,7 +186,7 @@ python desktop.py            # 桌面壳（单实例 / 托盘 / 关闭即最小�
 >   - 绿色版：`Evermem-linux-v*-portable.tar.gz` —— 解压后进入 `Evermem/` 目录执行 `./Evermem`（GitHub 下载会丢执行位，先 `chmod +x Evermem`）
 >   - 安装版：`Evermem-linux-v*.deb` —— Debian / Ubuntu 系 `sudo dpkg -i` 安装
 >
-> **完全不懂技术的用户请直接看**：[docs/USER-GUIDE.md](docs/USER-GUIDE.md)（零基础使用说明：下载哪一个文件、
+> **完全不懂技术的用户请直接看**：[docs/guides/USER-GUIDE.md](docs/guides/USER-GUIDE.md)（零基础使用说明：下载哪一个文件、
 > 双击后没反应/被杀软拦截/白屏怎么办、首次运行如何设置数据位置、如何更新不丢数据）。
 
 ### 1. 启动 Web 界面
@@ -254,12 +269,12 @@ python backup.py                   # 执行增量同步
 python backup.py --restore         # 从渠道恢复
 ```
 
-详见 [docs/BACKUP-DESIGN.md](docs/BACKUP-DESIGN.md)。
+详见 [docs/design/BACKUP-DESIGN.md](docs/design/BACKUP-DESIGN.md)。
 
 跨机器或「开发环境 → 桌面版」的数据迁移（白名单、禁止项、校验与回滚）见
-[docs/DESKTOP-MIGRATION.md](docs/DESKTOP-MIGRATION.md)；
+[docs/guides/DESKTOP-MIGRATION.md](docs/guides/DESKTOP-MIGRATION.md)；
 仓库同步范围、提交规范与发布检查清单见
-[docs/REPO-RELEASE-CHECKLIST.md](docs/REPO-RELEASE-CHECKLIST.md)。
+[docs/dev/REPO-RELEASE-CHECKLIST.md](docs/dev/REPO-RELEASE-CHECKLIST.md)。
 
 ### 分层清理（Retention）
 
@@ -280,7 +295,7 @@ python mem.py gc --apply --prune   # 连已冷存/压缩的原文一起删（默
 ```
 
 四条保障：受保护条目（`hot/keep/protect/pin`）永不清理；冷存前必写摘要；默认只压缩不删；
-正式笔记永不自动删。详见 [docs/RETENTION.md](docs/RETENTION.md)。
+正式笔记永不自动删。详见 [docs/design/RETENTION.md](docs/design/RETENTION.md)。
 
 ### 导出使用画像（跨工具一致体验）
 
@@ -290,7 +305,7 @@ python mem.py profile --limit 5 --out 画像.md
 
 本地按分类（指令/身份/职业/项目/偏好）挑候选，输出 `[YYYY-MM-DD] - 条目内容` 并附**覆盖率说明**
 （明确哪些维度本地无依据，杜绝模型编造）。模板见 `templates/usage-profile.prompt.md`，
-方法见 [docs/PROFILE-EXPORT.md](docs/PROFILE-EXPORT.md)。
+方法见 [docs/guides/PROFILE-EXPORT.md](docs/guides/PROFILE-EXPORT.md)。
 
 ## 架构设计
 
@@ -316,7 +331,7 @@ AI 会话落盘 JSONL
 
 ### 双轨制
 
-- **代码** → Git 仓库（GitHub 私人库 `linhut/evermem`），含平台文档；
+- **代码** → Git 仓库（GitHub 公开仓库 `linhut/evermem`），含平台文档；
 - **数据**（notes / events / 索引 / 配置）→ 永不进 Git，只经 `backup.py` 加密备份到对象存储 / 邮件 / 本地镜像 / 网盘冷备。
 
 ## 配置
@@ -325,14 +340,28 @@ AI 会话落盘 JSONL
 
 | 变量 | 说明 | 默认 |
 | --- | --- | --- |
-| `PMEM_HOME` | 数据目录（代码与数据彻底分离） | 脚本所在目录 |
+| `PMEM_HOME` | **数据目录**（代码与数据彻底分离） | 见下方解析顺序 |
+| `PMEM_CHUNKS` | 文档块库目录（文档导入切块产物） | `<数据目录>/chunks` |
+| `PMEM_SPACES` | 知识空间扫描根（界面「扫描根」） | `<数据目录>` |
+| `PMEM_WEB_PORT` | Web 服务端口 | `8765` |
+| `PMEM_SYS_PY` | 调用外部脚本所用的 Python 解释器 | 当前解释器 |
+| `PMEM_NODE` | node 可执行文件（自检的 JS 语法检查用） | PATH 探测 |
+| `PMEM_OPENSSL` | openssl 路径（备份加密归档用） | PATH → 常见安装位 |
+| `PMEM_ARCHIVE_PASS` | 归档加密密码（≥16 位，等价于渠道字段；**勿写入脚本**） | 无（必填） |
+| `PMEM_SMTP_PASS` | 邮件渠道 SMTP 密码 | 无（必填） |
+| `PMEM_AUTO_HARVEST_SECONDS` | 自动收割间隔（秒） | `3600` |
+| `PMEM_NO_AUTO_HARVEST` | 设为 `1` 关闭自动收割线程 | 未设（即开启） |
 
-> 本机数据与调试分离（2026-10-01 落地）：正式数据根 `<数据目录>/db`（用户级环境变量 `PMEM_HOME` 已设）；
-> 源码目录 `notes/` 等为**调试数据区**（未设 `PMEM_HOME` 时的默认回退），临时调试数据放 `.memory/.debug-data/`
-> （均已 `.gitignore`）。迁移回滚点：代码目录源数据未删。
-| `PMEM_WEB_PORT` | Web 服务端口 | 8765 |
-| `PMEM_AUTO_HARVEST_SECONDS` | 自动收割间隔 | 3600 |
-| `PMEM_NO_AUTO_HARVEST` | 设为 `1` 禁用自动收割线程 | 开启 |
+**数据目录解析顺序**（全走 `paths.py` 单一入口，代码中不存在写死的绝对路径）：
+
+1. `PMEM_HOME` 环境变量（最高优先级）；
+2. 数据目录下 `pmem_config.json` 的 `home` 字段（界面「数据位置」写入，跨会话一致）；
+3. 安装版：系统数据目录（Windows `%APPDATA%\EvermemData`、macOS `~/Library/Application Support/Evermem`、Linux `$XDG_DATA_HOME/evermem`）；
+4. 绿色版 / 源码态：程序（或脚本）所在目录。
+
+> 刻意**不使用当前工作目录**——双击 exe、托盘启动、开机自启三种方式的 cwd 各不相同，
+> 用 cwd 会让同一份数据在不同启动方式下落到不同位置。
+> 数据目录与代码目录分离后，源码目录里的 `notes/` 等可作**调试数据区**（`.gitignore` 已排除，不进版本库）。
 
 ### 备份渠道（`pmem_backup.json`）
 
@@ -349,27 +378,59 @@ AI 会话落盘 JSONL
 
 ## 文档
 
+> 完整索引见 [docs/README.md](docs/README.md)。
+
+**使用与运维**
+
 | 文档 | 说明 |
 | --- | --- |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | 架构设计 |
-| [docs/BACKUP-DESIGN.md](docs/BACKUP-DESIGN.md) | 备份与同步设计规格 |
-| [docs/STATUS-FLOW.md](docs/STATUS-FLOW.md) | 记忆生命周期状态流转 |
-| [docs/MULTI-MACHINE.md](docs/MULTI-MACHINE.md) | 多机部署指南 |
-| [USAGE.md](USAGE.md) | 详细使用手册 |
+| [docs/guides/USER-GUIDE.md](docs/guides/USER-GUIDE.md) | 零基础使用说明（下载哪个文件、首次运行、排障） |
+| [docs/guides/USAGE.md](docs/guides/USAGE.md) | 详细使用手册（命令流水线与文件布局） |
+| [docs/guides/DESKTOP-MIGRATION.md](docs/guides/DESKTOP-MIGRATION.md) | 数据迁移（开发环境 → 桌面版，白名单与回滚） |
+| [docs/guides/MULTI-MACHINE.md](docs/guides/MULTI-MACHINE.md) | 多机部署指南 |
+| [docs/guides/PROFILE-EXPORT.md](docs/guides/PROFILE-EXPORT.md) | 使用画像导出 |
+
+**设计与规格**
+
+| 文档 | 说明 |
+| --- | --- |
+| [docs/design/ARCHITECTURE.md](docs/design/ARCHITECTURE.md) | 架构设计（分层、目录、路径解析、宿主集成） |
+| [docs/design/BACKUP-DESIGN.md](docs/design/BACKUP-DESIGN.md) | 备份与同步设计规格 |
+| [docs/design/STATUS-FLOW.md](docs/design/STATUS-FLOW.md) | 记忆生命周期状态流转 |
+| [docs/design/RETENTION.md](docs/design/RETENTION.md) | 分层清理（保留策略） |
+| [docs/design/DISTILL-RULES.md](docs/design/DISTILL-RULES.md) | 记忆提取规范（什么该进库） |
+| [docs/design/RECIPES.md](docs/design/RECIPES.md) | 配方治理（四层作用域与版本化） |
+
+**维护与发布**
+
+| 文档 | 说明 |
+| --- | --- |
+| [docs/dev/REPO-RELEASE-CHECKLIST.md](docs/dev/REPO-RELEASE-CHECKLIST.md) | 仓库同步范围、提交规范与发布检查清单 |
+| [docs/dev/PLATFORM.md](docs/dev/PLATFORM.md) | 平台总纲与运营治理 |
+| [docs/dev/TOOLS.md](docs/dev/TOOLS.md) | 脚本与工具清单 |
+| [docs/dev/CODE-SIGNING.md](docs/dev/CODE-SIGNING.md) | 代码签名与分发注意事项 |
 | [CHANGELOG.md](CHANGELOG.md) | 变更日志 |
 
 ## 贡献指南
 
 欢迎任何形式的贡献——使用反馈、Issue、功能建议、Pull Request。
+**完整规范见 [CONTRIBUTING.md](CONTRIBUTING.md)**，要点如下：
 
 1. **Fork** 本仓库并创建特性分支：`git checkout -b feat/xxx`
-2. **提交规范（中英双语）**：标题用 `type(scope): English summary — 中文摘要`（如 `fix(web): fix promote 404 — 修复转正假成功`）；重要变更在 body 里分中/英各写一段说明。
+2. **提交规范（中英双语）**：标题用 `type(scope): English summary — 中文摘要`
+   （如 `fix(web): fix promote 404 — 修复转正假成功`）；重要变更在 body 里分中/英各写一段说明。
 3. **质量门槛**（提交前必须全部通过）：
-   - `python -m py_compile mem.py harvest.py backup.py web/server.py`
-   - `node --check web/index.js web/channel.js`
-   - `python scripts/frontend_smoke.py`（契约冒烟 5/5）
-   - `python tests/test_recall.py`（回归）
-4. **纪律**：不得将任何记忆数据、密钥、涉密内容提交入库；新功能需同步更新 README 与 CHANGELOG。
+   - `python -m py_compile mem.py harvest.py backup.py paths.py web/server.py`
+   - `node --check web/index.js && node --check web/channel.js && node --check web/i18n.js`
+   - `python scripts/frontend_smoke.py`（前端契约冒烟）
+   - `python -m unittest discover -s tests`（回归测试）
+   - `python scripts/check_all.py`（完整自检，需允许本地端口绑定）
+4. **零依赖是硬约束**：核心引擎与 Web 后端只能用 Python 标准库。
+5. **纪律**：不得将任何记忆数据、密钥、涉密内容提交入库；不得写死本机盘符与用户目录；
+   文档示例中的单位 / 人名一律用占位符；新功能需同步更新 README 与 CHANGELOG。
+
+参与本项目即表示同意遵守 [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)；
+安全类问题请按 [SECURITY.md](SECURITY.md) 的私密通道报告。
 
 ## 许可
 

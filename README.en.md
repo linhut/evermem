@@ -9,12 +9,25 @@
 <p align="center">
   <img alt="License MIT" src="https://img.shields.io/badge/License-MIT-yellow.svg">
   <img alt="Python 3.10+" src="https://img.shields.io/badge/Python-3.10%2B-blue">
-  <img alt="Version 0.2.9" src="https://img.shields.io/badge/Version-0.2.9-green">
   <img alt="Zero Dependency" src="https://img.shields.io/badge/Dependencies-Zero-orange">
   <img alt="Platform Win/macOS/Linux" src="https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey">
 </p>
 
-<p align="center"><b>Zero-dependency · Fully local · No cloud.</b><br><a href="README.md">中文文档</a></p>
+<p align="center">
+  <a href="https://github.com/linhut/evermem/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/linhut/evermem?label=release"></a>
+  <a href="https://github.com/linhut/evermem/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/linhut/evermem"></a>
+  <a href="https://github.com/linhut/evermem/issues"><img alt="Issues" src="https://img.shields.io/github/issues/linhut/evermem"></a>
+  <a href="https://github.com/linhut/evermem/commits/main"><img alt="Last commit" src="https://img.shields.io/github/last-commit/linhut/evermem"></a>
+</p>
+
+<p align="center">
+  <b>Zero-dependency · Fully local · No cloud.</b><br>
+  <a href="README.md">中文文档</a> ·
+  <a href="docs/guides/USER-GUIDE.md">Beginner's guide</a> ·
+  <a href="docs/README.md">Docs index</a> ·
+  <a href="CONTRIBUTING.md">Contributing</a> ·
+  <a href="SECURITY.md">Security</a>
+</p>
 
 ---
 
@@ -158,7 +171,7 @@ python desktop.py            # desktop shell (single instance / tray / close = m
 > Data root resolution: `PMEM_HOME` env var > `home` field in `<data dir>/pmem_config.json` > portable
 > default (for packaged builds: the directory containing the executable — never the current working
 > directory, which differs between double-click, tray and autostart launches).
-> To migrate data from a dev environment to the desktop build, see [docs/DESKTOP-MIGRATION.md](docs/DESKTOP-MIGRATION.md).
+> To migrate data from a dev environment to the desktop build, see [docs/guides/DESKTOP-MIGRATION.md](docs/guides/DESKTOP-MIGRATION.md).
 
 > Or grab the release artifact (each platform ships a **portable** and an **installer** build):
 
@@ -172,7 +185,7 @@ python desktop.py            # desktop shell (single instance / tray / close = m
 >   - Portable: `Evermem-linux-v*-portable.tar.gz` — unzip, then `chmod +x Evermem/Evermem && ./Evermem/Evermem`
 >   - Installer: `Evermem-linux-v*.deb` — Debian/Ubuntu: `sudo dpkg -i`
 >
-> **For non-technical users**: see [docs/USER-GUIDE.md](docs/USER-GUIDE.md) (Chinese, zero-beginner guide:
+> **For non-technical users**: see [docs/guides/USER-GUIDE.md](docs/guides/USER-GUIDE.md) (Chinese, zero-beginner guide:
 > which file to download, what to do when nothing happens / antivirus blocks it / the window is blank,
 > how to set the data location on first run, how to upgrade without losing data).
 
@@ -257,7 +270,7 @@ python backup.py                   # run incremental sync
 python backup.py --restore         # restore from a channel
 ```
 
-See [docs/BACKUP-DESIGN.md](docs/BACKUP-DESIGN.md) for details.
+See [docs/design/BACKUP-DESIGN.md](docs/design/BACKUP-DESIGN.md) for details.
 
 ## Architecture
 
@@ -314,43 +327,88 @@ Official notes (notes/<type>s/) → retrieval pool / hot layer / backup
 
 ```
 evermem/
-├── mem.py                 Core engine: retrieval / note management / hot-layer sync / candidate governance
+├── paths.py               Single entry point for code-dir / data-dir resolution
+├── mem.py                 CLI engine: recall / add / show / set-status / gc / hot / candidates / reindex / stats
 ├── harvest.py             Session harvesting: command-level fragments + task-level distillation (hook-free)
-├── backup.py              Backup domain layer: channel contract / projection / status (single source of truth)
+├── memimport.py           External memory import (profile / Markdown / JSON / directory)
+├── recipes.py             Recipe governance (four scopes / evaluation chain / dependency lock)
+├── backup.py              Multi-channel backup (object storage / SMTP / local mirror / snapshot / encrypted archive)
 ├── s3client.py            Zero-dependency S3-compatible client (AWS SigV4)
-├── web/                   Zero-dependency web UI (server.py / index.js / channel.js)
-├── notes/                 Memory data (**not in Git**): facts / lessons / procedures / candidates
-├── events/                Evidence-layer JSONL (append-only, for tracing & falsification)
-├── docs/                  Architecture / backup design / status flow / audit docs
+├── update.py              Multi-source update check (self-hosted manifest → GitHub → mirrors)
+├── evermem_mcp.py         MCP server (query / record / update / hot layer)
+├── desktop.py             Optional desktop shell (embedded web server + QtWebEngine)
+├── web/                   Zero-dependency web UI (server.py + plain JS/CSS)
+├── templates/             Skill and prompt templates (single source of truth)
+├── scripts/               Dev & ops tooling (self-check / smoke / benchmark / icon generation)
 ├── tests/                 Regression tests
-├── templates/             Skill templates
+├── installers/            Installer scripts and wizard images (Inno Setup etc.)
+├── assets/                App icons for packaging (icon.ico / icon.icns / icon.png)
+├── brand/                 Brand sources (SVG) and multi-size PNGs, served via the /brand/ route
+├── .github/               CI workflows and community health files
+├── CONTRIBUTING.md / SECURITY.md / CODE_OF_CONDUCT.md / CITATION.cff
 ├── LICENSE                MIT license
-└── CHANGELOG.md / VERSION / USAGE.md
+├── CHANGELOG.md / VERSION
+└── docs/                  design · guides · dev · ui
 ```
+
+> Memory data (`notes/`, `events/`, `index.json`, `pmem_config.json`) lives **outside the repo** in your
+> data directory and is never committed — see [Configuration](#configuration).
 
 ## Documentation
 
+> Full index: [docs/README.md](docs/README.md).
+
+**Usage & operations**
+
 | Doc | Description |
 | --- | --- |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Architecture design |
-| [docs/BACKUP-DESIGN.md](docs/BACKUP-DESIGN.md) | Backup & sync design spec |
-| [docs/STATUS-FLOW.md](docs/STATUS-FLOW.md) | Memory lifecycle status flow |
-| [docs/MULTI-MACHINE.md](docs/MULTI-MACHINE.md) | Multi-machine deployment guide |
-| [USAGE.md](USAGE.md) | Detailed usage manual |
+| [docs/guides/USER-GUIDE.md](docs/guides/USER-GUIDE.md) | Beginner's guide (which file to download, first run, troubleshooting) |
+| [docs/guides/USAGE.md](docs/guides/USAGE.md) | Detailed usage manual (command pipelines and file layout) |
+| [docs/guides/DESKTOP-MIGRATION.md](docs/guides/DESKTOP-MIGRATION.md) | Data migration (dev environment → desktop build) |
+| [docs/guides/MULTI-MACHINE.md](docs/guides/MULTI-MACHINE.md) | Multi-machine deployment guide |
+| [docs/guides/PROFILE-EXPORT.md](docs/guides/PROFILE-EXPORT.md) | Usage-profile export |
+
+**Design & specs**
+
+| Doc | Description |
+| --- | --- |
+| [docs/design/ARCHITECTURE.md](docs/design/ARCHITECTURE.md) | Architecture (layers, layout, path resolution, host integration) |
+| [docs/design/BACKUP-DESIGN.md](docs/design/BACKUP-DESIGN.md) | Backup & sync design spec |
+| [docs/design/STATUS-FLOW.md](docs/design/STATUS-FLOW.md) | Memory lifecycle status flow |
+| [docs/design/RETENTION.md](docs/design/RETENTION.md) | Tiered retention policy |
+| [docs/design/DISTILL-RULES.md](docs/design/DISTILL-RULES.md) | Distillation rules (what is worth storing) |
+| [docs/design/RECIPES.md](docs/design/RECIPES.md) | Recipe governance (four scopes, versioned sharing) |
+
+**Maintenance & release**
+
+| Doc | Description |
+| --- | --- |
+| [docs/dev/REPO-RELEASE-CHECKLIST.md](docs/dev/REPO-RELEASE-CHECKLIST.md) | Sync scope, commit convention, release checklist |
+| [docs/dev/PLATFORM.md](docs/dev/PLATFORM.md) | Platform charter and governance |
+| [docs/dev/TOOLS.md](docs/dev/TOOLS.md) | Scripts and tools inventory |
+| [docs/dev/CODE-SIGNING.md](docs/dev/CODE-SIGNING.md) | Code signing and distribution notes |
 | [CHANGELOG.md](CHANGELOG.md) | Changelog |
 
 ## Contributing
 
 Contributions of any form are welcome — usage feedback, issues, feature suggestions, pull requests.
+**Full guidelines: [CONTRIBUTING.md](CONTRIBUTING.md).** Key points:
 
 1. **Fork** this repo and create a feature branch: `git checkout -b feat/xxx`
 2. **Commit convention (bilingual)**: title as `type(scope): English summary — 中文摘要` (e.g. `fix(web): fix promote 404 — 修复转正假成功`); for notable changes, add a brief EN and ZH paragraph in the body.
 3. **Quality gates** (must all pass before committing):
-   - `python -m py_compile mem.py harvest.py backup.py web/server.py`
-   - `node --check web/index.js web/channel.js`
-   - `python scripts/frontend_smoke.py` (contract smoke test 5/5)
-   - `python tests/test_recall.py` (regression)
-4. **Discipline**: never commit memory data, secrets, or confidential content; new features must update README and CHANGELOG.
+   - `python -m py_compile mem.py harvest.py backup.py paths.py web/server.py`
+   - `node --check web/index.js && node --check web/channel.js && node --check web/i18n.js`
+   - `python scripts/frontend_smoke.py` (frontend contract smoke test)
+   - `python -m unittest discover -s tests` (regression tests)
+   - `python scripts/check_all.py` (full self-check; requires local port binding)
+4. **Zero dependency is a hard constraint**: the core engine and web backend may only use the Python standard library.
+5. **Discipline**: never commit memory data, secrets, or confidential content; never hardcode drive letters
+   or user directories; use placeholders for real organisation and person names in docs;
+   new features must update README and CHANGELOG.
+
+By participating you agree to the [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
+Report security issues privately per [SECURITY.md](SECURITY.md).
 
 ## License
 

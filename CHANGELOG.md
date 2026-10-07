@@ -83,13 +83,13 @@
 
 ### 文档修正
 
-- **下载产物命名与实际 Release 资产对齐**：`README.md`、`README.en.md`、`docs/USER-GUIDE.md`
+- **下载产物命名与实际 Release 资产对齐**：`README.md`、`README.en.md`、`docs/guides/USER-GUIDE.md`
   此前仍写 Windows 为单文件 `Evermem-windows-v*.exe`、Linux 为"无后缀裸 ELF"（v0.2.3 时代形态），
   而实际产物自 v0.2.5 起已是「绿色版 + 安装版」两类，**用户照文档会找不到文件**。现统一为：
   Windows `Evermem-windows-v*-portable.zip` / `Evermem-setup-v*.exe`；
   macOS `Evermem-macos-v*.app.zip` / `Evermem-macos-v*.dmg`；
   Linux `Evermem-linux-v*-portable.tar.gz` / `Evermem-linux-v*.deb`，并分别给出解压与运行步骤。
-- `docs/REPO-RELEASE-CHECKLIST.md`：产物清单补全为六件表格；订正"Linux 仅裸 ELF、无 deb"的过时描述；
+- `docs/dev/REPO-RELEASE-CHECKLIST.md`：产物清单补全为六件表格；订正"Linux 仅裸 ELF、无 deb"的过时描述；
   新增「发布后核对 README / USER-GUIDE 下载表与实际资产一致」检查项。
 
 ### 工程与验证
@@ -110,8 +110,8 @@
   `actions/checkout@v4`（`fetch-depth: 0`），并排除 `*.log` 构建日志进入校验清单。
   本次 v0.2.7 由 CI 全自动生成并上传统一清单，无需人工干预。
 - **v0.2.6 发布配套文档补提交**：`.gitignore`（补充 `.gitout.txt`、`*.out.txt`，
-  移除已不再使用的 `*.spec` 构建产物例外说明）、`docs/BRAND.md`（新增「工程落地对照表」章节）、
-  `docs/DISTRIBUTION-PLAN.md`（v0.2.6 实现状态、deb/AppImage/校验清单修复说明）、
+  移除已不再使用的 `*.spec` 构建产物例外说明）、`docs/dev/BRAND.md`（新增「工程落地对照表」章节）、
+  `docs/dev/DISTRIBUTION-PLAN.md`（v0.2.6 实现状态、deb/AppImage/校验清单修复说明）、
   `installers/windows/evermem.iss` 与 `scripts/gen_update_manifest.py` 注释版本号
   同步至 0.2.7 —— 以上随 v0.2.6 改动但滞留工作区，本次随发布一并提交。
 
@@ -214,7 +214,7 @@
 
 ### 发行版本安装规范（文档）
 
-- **`docs/DISTRIBUTION-PLAN.md`**：明确两个发行形态——免安装绿色版（onedir，解压即用、
+- **`docs/dev/DISTRIBUTION-PLAN.md`**：明确两个发行形态——免安装绿色版（onedir，解压即用、
   不写注册表/系统服务）与安装版（Inno/dmg/deb，安装向导、卸载、开始菜单快捷方式、
   系统集成），含差异对比、环境依赖、安装/卸载流程、文件目录结构、验收标准，
   以及缺失需求清单（6-1~6-10，供后续分别构建两个版本）。
@@ -254,12 +254,12 @@
 
 ### 数据与调试分离（2026-10-01）
 
-- 正式数据根迁至 `<数据目录>/db`（用户级 `PMEM_HOME` 环境变量）；白名单复制保留源作回滚；
+- 正式数据根迁至独立数据盘目录（用户级 `PMEM_HOME` 环境变量指定）；白名单复制保留源作回滚；
   代码目录作为调试数据区（`.debug-data/`）。
 
 ### 分发形态（2026-10-01）
 
-- `docs/CODE-SIGNING.md`：Windows 签名（EV/OV 无免费路径，单位 OV 为性价比选项）、macOS 公证
+- `docs/dev/CODE-SIGNING.md`：Windows 签名（EV/OV 无免费路径，单位 OV 为性价比选项）、macOS 公证
   （$99/年，免费仅 xattr 引导）、Linux AppImage（免费，CI 已加 `continue-on-error` 步骤）。
 - codegraph 接入：`.githooks/pre-push` 增量同步索引（`codegraph sync --quiet`，绝不阻断推送）。
 
@@ -282,8 +282,8 @@
 
 ### 文档
 
-- 新增 `docs/DESKTOP-MIGRATION.md`：开发环境 → 桌面工具的数据导出 / 迁移 / 导入 / 校验 / 回滚完整步骤。
-- 新增 `docs/REPO-RELEASE-CHECKLIST.md`：GitHub 同步范围、提交规范、打包与发布检查清单。
+- 新增 `docs/guides/DESKTOP-MIGRATION.md`：开发环境 → 桌面工具的数据导出 / 迁移 / 导入 / 校验 / 回滚完整步骤。
+- 新增 `docs/dev/REPO-RELEASE-CHECKLIST.md`：GitHub 同步范围、提交规范、打包与发布检查清单。
 
 ### 面向零基础用户的分发改进
 
@@ -293,7 +293,7 @@
 - **自动创建 GitHub Release**：`build.yml` 在 tag 触发时若 Release 不存在则自动创建（此前会提示 release not found 导致上传失败）。
 - **生成 SHA256SUMS.txt**：每平台打包完成后自动生成校验文件并随 Release 上传。
 - **新增版本入口**：UI「系统 → 版本与更新」显示当前版本，并提供一键跳转到 GitHub Releases 最新页。
-- **新增 `docs/USER-GUIDE.md`**：零基础中文使用说明（下载哪个文件、双击没反应/被杀软拦截/白屏怎么办、首次运行如何设置数据位置、如何更新不丢数据）。
+- **新增 `docs/guides/USER-GUIDE.md`**：零基础中文使用说明（下载哪个文件、双击没反应/被杀软拦截/白屏怎么办、首次运行如何设置数据位置、如何更新不丢数据）。
 
 ### 多源更新检查（可访问性，P0）
 
@@ -313,7 +313,7 @@
 - **新增一级模块「数据与维护」**：原「接入设置」的③④⑤三张卡（数据位置 / 核心经验同步 / 经验沉淀）移入——这三项是本机的设置与维护动作，与「接入别的 AI 工具」不是一回事。
 - **「接入设置」收敛为 4 张卡**：① 技能安装 ② MCP 工具接入 ③ 开机启动（原「⑦ 桌面常驻」改名）④ 兼容说明，编号重排，顺带修掉此前缺 ⑥ 的断号。
 - **父模块不再套同名卡**：一级模块的页头就是模块名，内容直接分卡，不再出现「版本与更新 › 版本与更新」这类同名嵌套（此前「数据导入」踩过同样的坑）。
-- **新增 `docs/UI-MODULES.md`**：一级模块清单、卡片归属，以及「什么算一级模块」的判断标准，避免后续继续往一个模块里堆卡。
+- **新增 `docs/design/UI-MODULES.md`**：一级模块清单、卡片归属，以及「什么算一级模块」的判断标准，避免后续继续往一个模块里堆卡。
 - **防白页回归**：`scripts/frontend_smoke.py` 新增第六项「视图路由一致性」——侧栏 `data-view` ↔ `VIEWS` ↔ `render` 分支 ↔ 模板函数，四方交叉校验（加侧栏入口却漏 render 分支会直接白页）。
 
 ### 更新清单改为「可只下发镜像列表」（修掉一个假最新）
@@ -332,7 +332,7 @@
 
 ### 配方管理（作用域隔离与跨项目共享）
 
-- **docs/RECIPES.md**：配方治理规范——四层作用域（core/org/project/session）、`scope/name@version` 命名、semver + 不可变基线、引用/播种双形态、禁止隐式覆盖、六类冲突仲裁流程。
+- **docs/design/RECIPES.md**：配方治理规范——四层作用域（core/org/project/session）、`scope/name@version` 命名、semver + 不可变基线、引用/播种双形态、禁止隐式覆盖、六类冲突仲裁流程。
 - **recipes.py**（新增，零依赖）：`scan`（分层盘点 + 同命名空间同名 P0 + 隐式覆盖 P1 检测）/ `resolve`（就近优先求值链，主 scope + 归属组织）/ `lock`（生成 `.recipe-lock.json` 依赖锁）。
 - 存量笔记兼容：frontmatter 扩展字段对 `mem.py` 解析零破坏；未标 scope 默认归项目层。
 
@@ -442,14 +442,14 @@
   ≥1000 条或 ≥200MB 先写摘要再打包冷存 / T4 证据流 ≥90 天 gzip 压缩）。默认 dry-run，
   `--apply` 才动文件，`--prune` 才删原文。Web「统计诊断」页底部有同一份只读报告（GET /api/gc）。
 - **mem.py profile**：导出使用画像草稿（指令/身份/职业/项目/偏好），按标签权重 3 / 标题权重 1 挑候选，
-  附覆盖率说明；配套 `templates/usage-profile.prompt.md` 与 `docs/PROFILE-EXPORT.md`。
-- **docs/RETENTION.md**：清理机制评估与推荐方案（触发条件、策略、对检索与性能的影响、保障措施、收益风险权衡）。
+  附覆盖率说明；配套 `templates/usage-profile.prompt.md` 与 `docs/guides/PROFILE-EXPORT.md`。
+- **docs/design/RETENTION.md**：清理机制评估与推荐方案（触发条件、策略、对检索与性能的影响、保障措施、收益风险权衡）。
 
 - **README 双语重写**（README.md 中文 / README.en.md 英文）：按优质开源项目标准重构——徽章、特性矩阵、界面预览（System Diagram 4 图）、快速开始、使用说明、架构、配置、隐私安全、贡献指南、许可；公开维护就绪。
 - **harvest 任务级提炼**：识别同一会话"多次失败→成功"完整任务链，产出 lesson 级经验候选（含任务意图/踩坑/最终方案）；防归档/转正后循环重生。
 - **评审修正**：任务经验候选不再被新颖官按"主题相近"误判重复归档；涉密/危险否决一律留人工。
 
-- **数据多渠道同步备份 v3**（规格 docs/BACKUP-DESIGN.md）：
+- **数据多渠道同步备份 v3**（规格 docs/design/BACKUP-DESIGN.md）：
   - 渠道模型：local（增量镜像，零依赖）/ archive（全量快照 zip，保留 N 份）/ remote（ssh/scp 增量镜像，可选）/ mail（SMTP 附件，可选）。
   - 每渠道独立：范围（notes/events/index/meta）、频率（小时）、启用开关、失败记录与连续失败计数。
   - 全局：自动备份（后台线程按频率轮询）、告警邮箱（连续失败≥2 发邮件，可选）、备份日志 backup.log、最近 20 条历史。

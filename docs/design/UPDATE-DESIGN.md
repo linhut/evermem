@@ -2,8 +2,9 @@
 
 > 目标：让**国内网络环境下的普通用户**也能稳定地「知道有新版本 → 拿到安装包 → 换上新版」，
 > 全程不依赖直连 GitHub；任何一环失败都必须**说人话**，不允许静默失败。
-> 参考实现：**DSH-manager**（`packages/core/src/github-mirror.js`、`version-manager.js`、`doh-resolver.js`、
-> `packages/marketplace/src/github-api.js`、`electron/ipc-handlers.js` 更新检查、`RELEASE.md`）。
+> 参考实现：**DSH-manager**（另一个独立项目，非本仓库；其更新检查相关逻辑见该项目内的
+> `packages/core/src/github-mirror.js`、`version-manager.js`、`doh-resolver.js`、
+> `packages/marketplace/src/github-api.js`、`electron/ipc-handlers.js` 与 `RELEASE.md`）。
 
 ---
 

@@ -1,0 +1,28 @@
+cff-version: 1.2.0
+title: "恒忆 Evermem — 个人跨会话经验记忆系统"
+message: "如果本项目对你的研究或工作有帮助，请按下方信息引用。"
+type: software
+authors:
+  - alias: "Jose-AI"
+    website: "https://www.linhut.cn"
+repository-code: "https://github.com/linhut/evermem"
+url: "https://www.linhut.cn"
+abstract: >-
+  恒忆（Evermem，代号 pmem）是一个本地优先的个人跨会话经验记忆系统。
+  它直接读取 AI 宿主（WorkBuddy / Claude Code / DSH 等）的会话落盘记录，
+  无需任何钩子即可自动捕获会话中的试错过程，沉淀为可检索的本地 Markdown 知识，
+  并在下一次会话前把最相关的经验注入上下文。全本地、零云端、零第三方依赖。
+keywords:
+  - 记忆系统
+  - 跨会话记忆
+  - <工作区>
+  - AI Agent
+  - local-first
+  - BM25
+  - retrieval
+  - markdown
+  - memory
+  - knowledge-management
+license: MIT
+version: "0.2.9"
+date-released: "2026-10-07"

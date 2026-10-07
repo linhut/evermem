@@ -1,0 +1,30 @@
+# 依赖更新策略
+#
+# 本项目运行本体零第三方依赖（requirements-build.txt 仅打包期使用），
+# 因此这里只跟踪 CI 中使用的 GitHub Actions，避免版本漂移导致构建不可复现。
+
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Shanghai"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "ci"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    # 主版本升级可能改变构建产物形态，需要人工确认后再合；
+    # 补丁与次版本自动聚合成一个 PR，减少噪音。
+    groups:
+      actions-minor:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+    ignore:
+      # 打包工具链的主版本升级需人工验证三平台产物，禁止自动提 PR
+      - dependency-name: "actions/upload-artifact"
+        update-types: ["version-update:semver-major"]

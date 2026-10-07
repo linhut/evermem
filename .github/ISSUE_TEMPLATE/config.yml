@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 安全漏洞（私密报告）· Security vulnerability
+    url: https://github.com/linhut/evermem/security/advisories/new
+    about: 越权读文件、凭证泄露、本地服务暴露等高危问题，请走私密通道，不要开公开 Issue。
+  - name: 使用问题先看文档 · Read the docs first
+    url: https://github.com/linhut/evermem/blob/main/docs/README.md
+    about: 安装、首次运行、白屏、杀软拦截、数据迁移等问题，用户指南里多半已有答案。
+  - name: 提问与交流 · Questions & discussion
+    url: https://github.com/linhut/evermem/discussions
+    about: 用法咨询、经验分享、想法讨论请走 Discussions。

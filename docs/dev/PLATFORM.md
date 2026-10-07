@@ -159,4 +159,4 @@
 
 ---
 
-*与 ARCHITECTURE.md 的关系：ARCHITECTURE.md 为早期桌面版分层设想；本文档为平台总纲与评审基准，实现以本文档与现状（mem.py + Web + MCP）为准。*
+*与 `docs/design/ARCHITECTURE.md` 的关系：ARCHITECTURE.md 描述**已实现**的系统结构（模块分层、目录布局、路径解析、宿主集成）；本文档是知识库的**运营与治理总纲**（采集/萃炼/治理/检索/注入/反馈 SOP 与验收指标）。两者互补，不重复。*

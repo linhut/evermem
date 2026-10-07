@@ -2,7 +2,7 @@
 
 > 目标：解决"渠道配置繁琐、用户体验不佳"，参考成熟开源备份工具（Rclone / restic / Duplicati / Borg）
 > 的"多存储后端统一管理"理念，在不破坏现有数据安全与兼容性的前提下，让配置直观、易用、可测试。
-> 现状实现见 docs/BACKUP-DESIGN.md；本文为 UX 优化方案与改动范围。
+> 现状实现见 docs/design/BACKUP-DESIGN.md；本文为 UX 优化方案与改动范围。
 
 ---
 

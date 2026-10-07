@@ -85,7 +85,7 @@ Evermem/                      ← 整体即"安装目录"，可改名/移动/拷
 | 安装 | 解压 zip 到任意**可写目录** → 双击 `Evermem.exe`。无注册表、无服务、无自启（用户可在菜单勾选自启） |
 | 卸载 | 删除整个 `Evermem/` 目录。若用户设过 `PMEM_HOME` 指向外部，卸载前提示保留该目录 |
 | 更新 | 程序内「版本与更新 → 内置下载 → 更新并重启」。P3 已适配 onedir：备份整个程序目录（`Evermem.old`）→ 解压 zip 替换 → 失败自动回滚 → 重启（仅 Windows 打包版；macOS/Linux 手动替换） |
-| 数据迁移 | 整目录拷贝即可；跨机器用 `docs/DESKTOP-MIGRATION.md` 白名单复制 |
+| 数据迁移 | 整目录拷贝即可；跨机器用 `docs/guides/DESKTOP-MIGRATION.md` 白名单复制 |
 
 ### 3.4 验收标准
 

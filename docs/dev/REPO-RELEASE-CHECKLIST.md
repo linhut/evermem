@@ -6,8 +6,10 @@
 ## 一、必须纳入版本控制
 
 - 源码：`*.py`、`web/*.js`、`web/index.html`
-- 文档：`README.md`、`README.en.md`、`USAGE.md`、`CHANGELOG.md`、`docs/**`
-- 平台文件：`VERSION`、`.gitignore`、`requirements-build.txt`、`LICENSE`
+- 文档：`README.md`、`README.en.md`、`CHANGELOG.md`、`docs/**`（`design` / `guides` / `dev` / `ui` 四类）
+- 平台文件：`VERSION`、`LICENSE`、`.gitignore`、`.gitattributes`、`.editorconfig`、`requirements-build.txt`
+- **社区健康文件**（GitHub 规范）：`CONTRIBUTING.md`、`SECURITY.md`、`CODE_OF_CONDUCT.md`、`CITATION.cff`、
+  `.github/ISSUE_TEMPLATE/**`、`.github/PULL_REQUEST_TEMPLATE.md`、`.github/dependabot.yml`
 - CI：`.github/workflows/**`
 - 测试源码：`tests/**`
 - 模板（不含真实值）：`templates/**`
@@ -34,7 +36,7 @@
 | 系统与编辑器残留 | `.DS_Store`、`._*`、`Thumbs.db`、`desktop.ini` |
 | 一次性快照 | `docs/archive/`、`docs/AUDIT-*.md`、`docs/REVIEW-*.md`、`docs/MONTHLY-20*.md`、`docs/*-research-*.md`、`docs/bench-*.json` |
 
-数据迁移不走 Git，走白名单复制或备份渠道，见 `docs/DESKTOP-MIGRATION.md`。
+数据迁移不走 Git，走白名单复制或备份渠道，见 `docs/guides/DESKTOP-MIGRATION.md`。
 
 ## 三、临时文件纪律
 
@@ -54,25 +56,36 @@
 | **R4 可再生成** | 基准数据、构建产物、日志、缓存（跑个命令就有） | 不进仓（写进 `.gitignore`） |
 | **R5 形态一致性** | 描述已废弃入口 / 旧命名 / 旧视图数 | 必改；改不动就删，**不留过时文档误导读者** |
 
-### 4.1 必留（核心文档，14 份）
+### 4.1 必留（核心文档，按 `docs/` 三类分组）
 
-| 文档 | 命中规则 |
-| --- | --- |
-| `ARCHITECTURE.md` | R1 R2（架构总纲） |
-| `BACKUP-DESIGN.md` | R1 R2（备份设计，README 引用） |
-| `BACKUP-UX.md` | R2（备份 UX 设计依据；需补「已实施」状态标注） |
-| `DESKTOP-MIGRATION.md` | R1 R2（用户迁移，README 引用） |
-| `DISTILL-RULES.md` | R2（记忆提取规范，核心规则） |
-| `MULTI-MACHINE.md` | R1 R2（README 引用） |
-| `PLATFORM.md` | R2（平台总纲，月报模板的依据） |
-| `PROFILE-EXPORT.md` | R1 R2（README 引用） |
-| `RECIPES.md` | R1 R2（配方治理规范） |
-| `REPO-RELEASE-CHECKLIST.md` | R1 R2（本文件） |
-| `RETENTION.md` | R1 R2（README 引用） |
-| `STATUS-FLOW.md` | R1 R2（README 引用） |
-| `TOOLS.md` | R2（工具清单，协作者入口） |
-| `USER-GUIDE.md` | R1 R2（零基础用户说明，README 引用） |
-| `ui/*.png`（8 张界面图） | R1（README 界面预览直接引用；若后续改用图床则整体移出） |
+`docs/` 已按读者分层：`design/`（设计规格）、`guides/`（使用与运维）、`dev/`（维护与发布），
+外加 `ui/`（README 引用的界面截图）与 `docs/README.md`（索引）。
+
+| 文档 | 分组 | 命中规则 |
+| --- | --- | --- |
+| `docs/README.md` | — | R1 R2（文档索引，导航入口） |
+| `docs/design/ARCHITECTURE.md` | design | R1 R2（架构设计） |
+| `docs/design/BACKUP-DESIGN.md` | design | R1 R2（备份设计，README 引用） |
+| `docs/design/BACKUP-UX.md` | design | R2（备份 UX 设计依据） |
+| `docs/design/STATUS-FLOW.md` | design | R1 R2（README 引用） |
+| `docs/design/RETENTION.md` | design | R1 R2（README 引用） |
+| `docs/design/DISTILL-RULES.md` | design | R2（记忆提取规范，核心规则） |
+| `docs/design/RECIPES.md` | design | R1 R2（配方治理规范） |
+| `docs/design/UPDATE-DESIGN.md` | design | R2（更新方案设计） |
+| `docs/design/UI-MODULES.md` | design | R2（界面模块划分） |
+| `docs/guides/USER-GUIDE.md` | guides | R1 R2（零基础用户说明，README 引用） |
+| `docs/guides/USAGE.md` | guides | R1 R2（使用手册，README 引用） |
+| `docs/guides/DESKTOP-MIGRATION.md` | guides | R1 R2（数据迁移，README 引用） |
+| `docs/guides/MULTI-MACHINE.md` | guides | R1 R2（README 引用） |
+| `docs/guides/PROFILE-EXPORT.md` | guides | R1 R2（README 引用） |
+| `docs/dev/PLATFORM.md` | dev | R2（平台总纲，月报模板的依据） |
+| `docs/dev/TOOLS.md` | dev | R2（工具清单，协作者入口） |
+| `docs/dev/REPO-RELEASE-CHECKLIST.md` | dev | R1 R2（本文件） |
+| `docs/dev/CODE-SIGNING.md` | dev | R2（签名与分发决策依据） |
+| `docs/dev/BRAND.md` | dev | R2（品牌规范与资产用法） |
+| `docs/dev/DISTRIBUTION-PLAN.md` | dev | R2（分发产物与流程） |
+| `docs/dev/MONTHLY-TEMPLATE.md` | dev | R2（可复用模板） |
+| `docs/ui/*.png`（8 张界面图） | ui | R1（README 界面预览直接引用；若后续改用图床则整体移出） |
 
 ### 4.2 不进仓（已在或应加入 `.gitignore`）
 
@@ -85,7 +98,7 @@
 | `bench-search-baseline-20260927.json` | R4（基准数据，可重跑生成） |
 | `docs/archive/`（归档区） | R3 的落点，整目录忽略 |
 
-`MONTHLY-TEMPLATE.md` 属 R2（可复用模板），保留。
+`docs/dev/MONTHLY-TEMPLATE.md` 属 R2（可复用模板），保留。
 
 ### 4.3 落地：`.gitignore` 按类别全覆盖，不逐条列名字
 
@@ -201,7 +214,7 @@ Release 由 CI 自动创建并上传三平台产物（若 tag 对应的 Release 
 | macOS | `Evermem-macos-v*.app.zip` | `Evermem-macos-v*.dmg` |
 | Linux | `Evermem-linux-v*-portable.tar.gz` | `Evermem-linux-v*.deb` |
 
-另附 `SHA256SUMS.txt`（全平台统一校验清单）。发布后核对 README / `docs/USER-GUIDE.md` 的下载表是否与上述命名一致——历史上曾出现文档仍写单文件 `Evermem-windows-v*.exe` 而实际已改为 portable.zip + setup.exe 的脱节。
+另附 `SHA256SUMS.txt`（全平台统一校验清单）。发布后核对 README / `docs/guides/USER-GUIDE.md` 的下载表是否与上述命名一致——历史上曾出现文档仍写单文件 `Evermem-windows-v*.exe` 而实际已改为 portable.zip + setup.exe 的脱节。
 
 ## 九、已知待清理项（下个版本处理）
 

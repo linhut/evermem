@@ -22,11 +22,11 @@
 | GPG 签名 + SHA256SUMS | 用户可校验文件真实性与完整性（不消除 SmartScreen） | ✅ **免费落地**（SUMS 已在 CI 生成；GPG 为可选增强） |
 | 自建证书（makecert/自签） | 只在你自己的机器受信任，对外分发无意义 | ❌ 不推荐 |
 | 申请"微软商店"路径 | 个人开发者账户 $19/年，走 MSIX/商店分发——**是另一条分发形态**，不是 exe 签名 | 可选远期 |
-| 众筹/公司申请 | 若单位以组织身份申请 OV（某政务单位/某活动组委会），价格由单位承担 | **最可行省钱路径**：单位名义办 OV 即可显示"已验证发布者"，比个人自掏 EV 便宜 |
+| 众筹/公司申请 | 若以组织身份申请 OV（所在单位 / 公司），价格由组织承担 | **最可行省钱路径**：组织名义办 OV 即可显示"已验证发布者"，比个人自掏 EV 便宜 |
 
 ### 建议（按优先级）
 
-1. **现在**：保持现状 + SHA256SUMS（已生成）+ 把 SmartScreen 绕过图文写进 `docs/USER-GUIDE.md`（免费）。
+1. **现在**：保持现状 + SHA256SUMS（已生成）+ 把 SmartScreen 绕过图文写进 `docs/guides/USER-GUIDE.md`（免费）。
 2. **若单位可承担**：以单位名义办 **Certum OV**（¥1200 档，云签名免硬件），"已验证发布者"即可，
    不需 EV（非驱动、非大规模商业分发，OV 足够）。
 3. **个人自费则暂缓**：EV 的 ¥2500+/年对个人工具性软件不划算。
@@ -46,7 +46,7 @@
 
 - **无免费公证**：任何"免费绕过 Gatekeeper"的方案本质都是把操作成本转嫁给用户（右键打开 / xattr）。
 - **决策**：若 macOS 用户占比低（个人工具，Windows 为主），保持"未签名 + 图文引导 xattr/右键打开"
-  （`docs/USER-GUIDE.md` 已含）。若将来 macOS 用户增多或进入单位分发，再投入 $99/年。
+  （`docs/guides/USER-GUIDE.md` 已含）。若将来 macOS 用户增多或进入单位分发，再投入 $99/年。
 - 注意：**未公证的 macOS 应用无法做自动更新**（Electron/Tauri 系同理）——与 P3 一键替换的
   Windows 优先设计一致（macOS 自动替换本就排后）。
 
@@ -104,11 +104,11 @@
 | 项 | 状态 | 说明 |
 |---|---|---|
 | SHA256SUMS.txt 随 Release | ✅ 已在 CI 生成 | 用户可 `sha256sum -c` 校验文件 |
-| SmartScreen 绕过指引 | ✅ `docs/USER-GUIDE.md` 已有 | "更多信息 → 仍要运行" 图文 |
-| Gatekeeper 绕过指引 | ✅ `docs/USER-GUIDE.md` 已有 | 右键打开 / `xattr -cr` |
+| SmartScreen 绕过指引 | ✅ `docs/guides/USER-GUIDE.md` 已有 | "更多信息 → 仍要运行" 图文 |
+| Gatekeeper 绕过指引 | ✅ `docs/guides/USER-GUIDE.md` 已有 | 右键打开 / `xattr -cr` |
 | Linux AppImage CI 步骤 | 🆕 本轮写入 build.yml（continue-on-error） | 首次 CI 试跑验证 |
 | GPG 签名（可选） | 待办 | 若你有 GPG 密钥，可在 Release 加 `.asc` 签名文件并在 README 给公钥；没有则 SHA256 足够 |
-| 单位名义 OV 证书 | 决策项 | 若某政务单位/某活动组委会可走单位采购，¥1200 档 OV 即显示"已验证发布者" |
+| 单位名义 OV 证书 | 决策项 | 若所在单位可走组织采购，¥1200 档 OV 即显示"已验证发布者" |
 
 ## 五、决策建议（给用户）
 

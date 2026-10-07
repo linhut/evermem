@@ -1,0 +1,103 @@
+name: 缺陷报告 · Bug report
+description: 报告一个可复现的缺陷（界面报错、命令失败、数据异常等）
+title: "[Bug] "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈。**中英文均可，中文优先。**
+        提交前请先搜索 [已有 Issue](https://github.com/linhut/evermem/issues?q=is%3Aissue)，避免重复。
+
+        > 安全类问题请**不要**在这里报告，走 [SECURITY.md](https://github.com/linhut/evermem/blob/main/SECURITY.md) 的私密通道。
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: 提交前自查
+      options:
+        - label: 我已搜索过已有 Issue，确认不是重复问题
+          required: true
+        - label: 我使用的是最新版本（或已确认问题在新版仍存在）
+          required: true
+        - label: 我已在报告中去掉真实姓名、单位名、密钥与本机绝对路径
+          required: true
+
+  - type: dropdown
+    id: run-mode
+    attributes:
+      label: 运行方式
+      description: 你是怎么启动恒忆的？
+      options:
+        - 桌面版（Evermem.exe / Evermem.app）
+        - 安装版（setup.exe / dmg / deb）
+        - 源码运行（python desktop.py）
+        - 源码运行（python web/server.py，浏览器访问）
+        - 仅命令行（mem.py / harvest.py 等）
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: 版本号
+      description: 可在「版本与更新」页或 `VERSION` 文件查看
+      placeholder: "0.2.9"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: 操作系统
+      options:
+        - Windows 11
+        - Windows 10
+        - Windows Server
+        - macOS（Apple Silicon）
+        - macOS（Intel）
+        - Linux（Debian / Ubuntu 系）
+        - Linux（其他发行版）
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: 现象
+      description: 你期望发生什么？实际发生了什么？
+      placeholder: |
+        期望：点击「转正」后笔记状态变为 active
+        实际：提示"服务未响应"，刷新后状态未变
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      description: 从干净状态开始，一步步写清楚。能稳定复现的问题最好修。
+      placeholder: |
+        1. 打开恒忆 → 候选审核
+        2. 选中任意一条候选
+        3. 点击「多角色评审并自动处理」
+        4. 观察提示
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 报错原文 / 截图
+      description: 直接粘贴错误文本（**请先去掉个人数据与真实路径**），或拖入截图
+      render: text
+    validations:
+      required: false
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: 补充信息
+      description: 数据规模、是否配置了备份渠道、是否修改过默认路径等，都可能与问题相关
+    validations:
+      required: false
