@@ -1,5 +1,34 @@
 # 变更日志
 
+## [0.2.8] - 2026-10-07（自动收割缺陷修复 + 下载文档对齐）
+
+### 真实缺陷修复
+
+- **`harvest.py` 缺 `import os` 致自动收割静默失败**：`save_state()` 用 `os.getpid()` / `os.replace()`
+  做状态文件原子写，但模块顶部从未导入 `os`，因此**每次收割都在保存游标那一步抛 `NameError`**，
+  被 `web/server.py` 与 `desktop.py` 的 `except` 吞掉、只留一行 stderr。后果极具迷惑性：
+  界面、检索、手动添加、候选生成全部正常，但 `harvest_state.json` 游标永不推进、收割结果重复写入——
+  而自动积累经验恰恰是恒忆的核心能力。已补 `import os`；另以 AST 全仓扫描确认无其他同类漏导入。
+- 验证：直接调用 `harvest.save_state()` 通过（修复前必抛 `NameError`）；完整 `harvest.cmd_scan()` 返回 0。
+
+### 文档修正
+
+- **下载产物命名与实际 Release 资产对齐**：`README.md`、`README.en.md`、`docs/USER-GUIDE.md`
+  此前仍写 Windows 为单文件 `Evermem-windows-v*.exe`、Linux 为"无后缀裸 ELF"（v0.2.3 时代形态），
+  而实际产物自 v0.2.5 起已是「绿色版 + 安装版」两类，**用户照文档会找不到文件**。现统一为：
+  Windows `Evermem-windows-v*-portable.zip` / `Evermem-setup-v*.exe`；
+  macOS `Evermem-macos-v*.app.zip` / `Evermem-macos-v*.dmg`；
+  Linux `Evermem-linux-v*-portable.tar.gz` / `Evermem-linux-v*.deb`，并分别给出解压与运行步骤。
+- `docs/REPO-RELEASE-CHECKLIST.md`：产物清单补全为六件表格；订正"Linux 仅裸 ELF、无 deb"的过时描述；
+  新增「发布后核对 README / USER-GUIDE 下载表与实际资产一致」检查项。
+
+### 工程与验证
+
+- 发布前检查：`scripts/check_all.py` 38/38、`scripts/frontend_smoke.py` 6/6、
+  `python -m unittest discover -s tests` 全绿。
+- 官方 Windows 绿色版实测：SHA256 与 `SHA256SUMS.txt` 逐字符一致；`--smoke` 退出码 0；
+  真实窗口启动监听 `127.0.0.1:8765`，`/api/health`、`/api/stats`、`/api/version`、`/api/spaces` 均 200。
+
 ## [0.2.7] - 2026-10-02（发布链路修复）
 
 ### 真实缺陷修复

@@ -1,5 +1,5 @@
 <p align="center">
-  <img alt="恒忆 Evermem" src="brand/evermem-logo-full.svg" width="160">
+  <img alt="恒忆 Evermem" src="brand/evermem-logo-full.svg" width="240">
 </p>
 
 <h1 align="center">恒忆 Evermem</h1>
@@ -9,7 +9,7 @@
 <p align="center">
   <img alt="License MIT" src="https://img.shields.io/badge/License-MIT-yellow.svg">
   <img alt="Python 3.10+" src="https://img.shields.io/badge/Python-3.10%2B-blue">
-  <img alt="Version 0.2.7" src="https://img.shields.io/badge/Version-0.2.7-green">
+  <img alt="Version 0.2.8" src="https://img.shields.io/badge/Version-0.2.8-green">
   <img alt="Zero Dependency" src="https://img.shields.io/badge/Dependencies-Zero-orange">
   <img alt="Platform Win/macOS/Linux" src="https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey">
 </p>
@@ -159,15 +159,17 @@ python desktop.py            # 桌面壳（单实例 / 托盘 / 关闭即最小�
 > （打包产物为可执行文件同级目录；不用当前工作目录，避免双击 / 托盘 / 开机自启三种启动方式落到不同位置）。
 > 从开发环境迁移数据到桌面版，见 [docs/DESKTOP-MIGRATION.md](docs/DESKTOP-MIGRATION.md)。
 
-> 也可直接用发布产物（GitHub Release 的 `Evermem-<平台>-v*`，每平台一个桌面运行包）：
+> 也可直接用发布产物（GitHub Release，每平台提供「绿色版」与「安装版」两种）：
 
-> - **Windows**：`Evermem-windows-v*.exe`，双击运行
-> - **macOS**：`Evermem-macos-v*.app.zip`，解压出 `Evermem.app` 后双击（未签名首次：右键 → 打开）
-> - **Linux**：`Evermem-linux-v*`（无后缀的 ELF 可执行文件），下载后先 `chmod +x` 再运行：
->
->   ```bash
->   chmod +x Evermem-linux-v0.2.3 && ./Evermem-linux-v0.2.3
->   ```
+> - **Windows**
+>   - 绿色版：`Evermem-windows-v*-portable.zip` —— 解压出 `Evermem` 文件夹，双击其中的 `Evermem.exe`，免安装
+>   - 安装版：`Evermem-setup-v*.exe` —— 双击按向导安装（自动建立开始菜单 / 可选开机自启）
+> - **macOS**
+>   - 绿色版：`Evermem-macos-v*.app.zip` —— 解压出 `Evermem.app` 后双击（未签名首次：右键 → 打开）
+>   - 安装版：`Evermem-macos-v*.dmg` —— 打开后把 `Evermem.app` 拖入「应用程序」
+> - **Linux**
+>   - 绿色版：`Evermem-linux-v*-portable.tar.gz` —— 解压后进入 `Evermem/` 目录执行 `./Evermem`（GitHub 下载会丢执行位，先 `chmod +x Evermem`）
+>   - 安装版：`Evermem-linux-v*.deb` —— Debian / Ubuntu 系 `sudo dpkg -i` 安装
 >
 > **完全不懂技术的用户请直接看**：[docs/USER-GUIDE.md](docs/USER-GUIDE.md)（零基础使用说明：下载哪一个文件、
 > 双击后没反应/被杀软拦截/白屏怎么办、首次运行如何设置数据位置、如何更新不丢数据）。

@@ -1,5 +1,5 @@
 <p align="center">
-  <img alt="Evermem" src="brand/evermem-logo-full.svg" width="160">
+  <img alt="Evermem" src="brand/evermem-logo-full.svg" width="240">
 </p>
 
 <h1 align="center">Evermem (pmem)</h1>
@@ -9,7 +9,7 @@
 <p align="center">
   <img alt="License MIT" src="https://img.shields.io/badge/License-MIT-yellow.svg">
   <img alt="Python 3.10+" src="https://img.shields.io/badge/Python-3.10%2B-blue">
-  <img alt="Version 0.2.7" src="https://img.shields.io/badge/Version-0.2.7-green">
+  <img alt="Version 0.2.8" src="https://img.shields.io/badge/Version-0.2.8-green">
   <img alt="Zero Dependency" src="https://img.shields.io/badge/Dependencies-Zero-orange">
   <img alt="Platform Win/macOS/Linux" src="https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey">
 </p>
@@ -160,15 +160,17 @@ python desktop.py            # desktop shell (single instance / tray / close = m
 > directory, which differs between double-click, tray and autostart launches).
 > To migrate data from a dev environment to the desktop build, see [docs/DESKTOP-MIGRATION.md](docs/DESKTOP-MIGRATION.md).
 
-> Or grab the release artifact (`Evermem-<platform>-v*`, one runnable package per platform):
+> Or grab the release artifact (each platform ships a **portable** and an **installer** build):
 
-> - **Windows**: `Evermem-windows-v*.exe`, double-click to run
-> - **macOS**: `Evermem-macos-v*.app.zip`, unzip → double-click `Evermem.app` (unsigned first time: right-click → Open)
-> - **Linux**: `Evermem-linux-v*` (extension-less ELF binary). GitHub downloads drop the exec bit, so:
->
->   ```bash
->   chmod +x Evermem-linux-v0.2.3 && ./Evermem-linux-v0.2.3
->   ```
+> - **Windows**
+>   - Portable: `Evermem-windows-v*-portable.zip` — unzip and double-click `Evermem/Evermem.exe`, no install needed
+>   - Installer: `Evermem-setup-v*.exe` — run the wizard (Start-menu entry, optional autostart)
+> - **macOS**
+>   - Portable: `Evermem-macos-v*.app.zip` — unzip → double-click `Evermem.app` (unsigned first time: right-click → Open)
+>   - Installer: `Evermem-macos-v*.dmg` — open it and drag `Evermem.app` into Applications
+> - **Linux**
+>   - Portable: `Evermem-linux-v*-portable.tar.gz` — unzip, then `chmod +x Evermem/Evermem && ./Evermem/Evermem`
+>   - Installer: `Evermem-linux-v*.deb` — Debian/Ubuntu: `sudo dpkg -i`
 >
 > **For non-technical users**: see [docs/USER-GUIDE.md](docs/USER-GUIDE.md) (Chinese, zero-beginner guide:
 > which file to download, what to do when nothing happens / antivirus blocks it / the window is blank,

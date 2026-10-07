@@ -33,14 +33,19 @@
 
 ### 1.2 该下载哪一个？
 
+每个系统都有**绿色版**（解压即用）和**安装版**两种，按你的习惯选一个就行：
+
 | 你的电脑系统 | 下载这个文件名 | 大概体积 | 说明 |
 |---|---|---|---|
-| **Windows**（Win10/Win11） | `Evermem-windows-v*.exe` | 约 200 MB | 单个 exe，不用安装 |
-| **macOS**（苹果电脑） | `Evermem-macos-v*.app.zip` | 约 180 MB | 压缩包，解压出 `.app` |
-| **Linux** | `Evermem-linux-v*` | 约 240 MB | 无后缀的可执行文件 |
+| **Windows**（Win10/Win11） | `Evermem-windows-v*-portable.zip` | 约 211 MB | **推荐**：解压后双击里面的 `Evermem.exe`，免安装 |
+| **Windows**（Win10/Win11） | `Evermem-setup-v*.exe` | 约 142 MB | 双击按向导安装，自动建开始菜单、可选开机自启 |
+| **macOS**（苹果电脑） | `Evermem-macos-v*.app.zip` | 约 178 MB | **推荐**：解压出 `Evermem.app` 后双击 |
+| **macOS**（苹果电脑） | `Evermem-macos-v*.dmg` | 约 220 MB | 打开后把 `Evermem.app` 拖进「应用程序」 |
+| **Linux** | `Evermem-linux-v*-portable.tar.gz` | 约 231 MB | 解压后进入 `Evermem/` 目录，`chmod +x Evermem` 再运行 |
+| **Linux** | `Evermem-linux-v*.deb` | 约 177 MB | Debian / Ubuntu 系安装包 |
 
-> 文件名里的 `*` 是版本号，比如 `v0.2.3`，**选数字最大（最新）的那个**。
-> 如果你下载到的是 `evergem-...` 开头的文件名，那是旧版本的命名，功能一样，也能用。
+> 文件名里的 `*` 是版本号，比如 `v0.2.8`，**选数字最大（最新）的那个**。
+> 拿不定主意就选带 `portable` 的绿色版：不写注册表、卸载直接删文件夹、数据也存在同目录。
 
 ### 1.3 下载很慢 / 打不开 GitHub？
 
@@ -57,7 +62,7 @@ GitHub 在国内访问有时不稳定，可以：
 - **Windows**：在文件所在文件夹按住 `Shift` + 右键 →「在此处打开 PowerShell 窗口」，输入：
 
   ```
-  certutil -hashfile Evermem-windows-v0.2.3.exe SHA256
+  certutil -hashfile Evermem-windows-v0.2.8-portable.zip SHA256
   ```
 
 - **macOS**：终端里输入 `shasum -a 256 文件名`
@@ -77,11 +82,14 @@ GitHub 在国内访问有时不稳定，可以：
 最终路径类似：`D:\Evermem`
 
 **第 2 步：把下载的文件放进去**
-把下载的 `Evermem-windows-v*.exe` 移动（或复制）到 `D:\Evermem` 里面。
-> 建议把文件名改成固定的 `Evermem.exe`（去掉版本号）。这样以后更新版本、开机自启动都不会失效。
+
+- 下载的是**绿色版** `Evermem-windows-v*-portable.zip`：右键 →「全部解压缩」，得到 `Evermem` 文件夹，把整个文件夹移到 D 盘根目录，最终路径是 `D:\Evermem\Evermem.exe`。
+- 下载的是**安装版** `Evermem-setup-v*.exe`：双击运行，安装向导里把「目标目录」填成 `D:\Evermem`，装完直接跳到第 4 步。
+
+> 绿色版里的可执行文件本来就叫 `Evermem.exe`，不需要改名。以后升级请覆盖到同一目录，这样开机自启才不会失效。
 
 **第 3 步：双击运行**
-双击 `Evermem.exe`。
+双击 `D:\Evermem\Evermem.exe`。
 
 **第 4 步：（常见）如果弹出蓝色警告框**
  Windows 会显示：
@@ -145,20 +153,24 @@ xattr -dr com.apple.quarantine /Applications/Evermem.app
 
 ### 2.3 Linux 用户
 
-**第 1 步：加执行权限**
-浏览器下载下来的文件**默认没有执行权限**，双击会没反应或者被当成文本打开。
-在文件所在目录打开终端，执行：
+**第 1 步：解压（绿色版）**
+下载的是 `Evermem-linux-v*-portable.tar.gz` 时，在文件所在目录打开终端：
 
 ```bash
-chmod +x Evermem-linux-v0.2.3
+tar -xzf Evermem-linux-v0.2.8-portable.tar.gz
+cd Evermem
 ```
 
-（文件名按你实际下载的名字改）
+（文件名按你实际下载的版本号改）
 
-**第 2 步：运行**
+> 下载的是安装版 `Evermem-linux-v*.deb` 的话，`sudo dpkg -i Evermem-linux-v0.2.8.deb` 装完直接跳到第 3 步，应用菜单里会出现恒忆。
+
+**第 2 步：加执行权限并运行**
+浏览器下载下来的文件**默认没有执行权限**，双击会没反应或者被当成文本打开：
 
 ```bash
-./Evermem-linux-v0.2.3
+chmod +x Evermem
+./Evermem
 ```
 
 也可以在文件管理器里右键 →「属性」→「权限」→ 勾选「允许作为程序执行」，之后就能双击了。

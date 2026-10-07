@@ -154,14 +154,22 @@ git tag -a v0.2.3 -m "release: v0.2.3 — 中文摘要"
 git push origin main --tags
 ```
 
-Release 由 CI 自动创建并上传三平台产物（若 tag 对应的 Release 已存在则复用，不存在则自动创建）。产物命名统一为 `Evermem-<平台>-v*`。
+Release 由 CI 自动创建并上传三平台产物（若 tag 对应的 Release 已存在则复用，不存在则自动创建）。产物分「绿色版（解压即用）」与「安装版」两类：
+
+| 平台 | 绿色版 | 安装版 |
+| --- | --- | --- |
+| Windows | `Evermem-windows-v*-portable.zip` | `Evermem-setup-v*.exe`（Inno Setup） |
+| macOS | `Evermem-macos-v*.app.zip` | `Evermem-macos-v*.dmg` |
+| Linux | `Evermem-linux-v*-portable.tar.gz` | `Evermem-linux-v*.deb` |
+
+另附 `SHA256SUMS.txt`（全平台统一校验清单）。发布后核对 README / `docs/USER-GUIDE.md` 的下载表是否与上述命名一致——历史上曾出现文档仍写单文件 `Evermem-windows-v*.exe` 而实际已改为 portable.zip + setup.exe 的脱节。
 
 ## 九、已知待清理项（下个版本处理）
 
 | 项 | 说明 |
 | --- | --- |
 | 本机打包受限 | WorkBuddy 沙箱的批量删除保护会中断 pip 安装（site-packages 覆盖写触发 safe-delete guard），本机装不了 PySide6+PyInstaller。**打包走 GitHub Actions**：提交 tag 即触发三平台构建 |
-| 无代码签名与公证 | Windows 无 EV/OV 代码签名，macOS 未公证（首次需系统设置或 `xattr` 放行），Linux 仅裸 ELF、无 AppImage/deb。后续若面向完全零基础用户规模化分发，需考虑商业签名 |
+| 无代码签名与公证 | Windows 无 EV/OV 代码签名，macOS 未公证（首次需系统设置或 `xattr` 放行），Linux 有 `.deb` 但无 AppImage。后续若面向完全零基础用户规模化分发，需考虑商业签名 |
 | ~~`app.py` 与 `web/launcher.py`~~ | **2026-10-01 已清理**：确认无外部引用后移入 `_trash/` 并从索引移除 |
 | 核心经验同步目标 | 当前固定写宿主项目 `.workbuddy/memory/MEMORY.md`，未做成可配置项 |
 | 块库备份范围 | `backup.py` 的 `SCOPE_GROUPS` 未覆盖块库，需单独处理或扩充 scope |
