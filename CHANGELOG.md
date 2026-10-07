@@ -1,5 +1,45 @@
 # 变更日志
 
+## [0.2.9] - 2026-10-07（并发安全加固 + 模板路径修正）
+
+### 真实缺陷修复
+
+- **并发读到半成品笔记导致接口 500（现象：多角色评审「候选列表加载失败：服务未响应」，稍后自愈）**：
+  收割线程用 `Path.write_text` 写候选笔记（先截断再写入），界面此刻 glob 同一目录读取，
+  会读到被截断的多字节字符，`read_text(encoding="utf-8")` 抛 `UnicodeDecodeError`；
+  而 `parse_note` 只捕 `OSError`，异常穿透使**整个列表接口 500**。收割结束即自愈，
+  故表现为"过一会儿又正常"。三层后果由轻到重：① 一条读失败拖垮整表；② 自动评审把"读空"的候选
+  误判为低质而错误归档正常候选；③ **最严重**——改状态 / 改标签 / 编辑正文 / 取消核心经验等
+  "读-改-写"端点读到截断内容后原样写回，**笔记正文被永久截短且不报错**。
+  - 写入侧：`harvest.py` 抽出 `_atomic_write`（tmp + `os.replace`）用于候选与状态文件；
+    `mem.py` 公开 `atomic_write` 供 `evermem_mcp.py`（3 处）与 `memimport.py` 复用。
+  - 读取侧：`mem.parse_note` / `recipes.parse_note` 增捕 `UnicodeDecodeError` 返回 `None`；
+    列表接口对单文件解析失败**降级为跳过并返回 `skipped` 计数**；"/api/note/<id>/<action>" 前置读失败
+    一律返回 **409 放弃写入**，绝不把坏内容写回。
+  - 前端：`api()` 非 2xx 时回显服务端真实 `error` 文本；候选列表失败提示改为带原因，
+    并显示"N 条读取失败已跳过"。
+  - 隔离复现验证：注入截断 UTF-8 候选文件后，修复前 `500 UnicodeDecodeError`，
+    修复后 `200`（`total=1 / skipped=1`）。
+- **「其他记忆导入 → 使用画像提示词」报「模板未找到或 COPY 区间缺失」**：模板本身未丢失
+  （仓库与包内 `_internal/templates/` 均在，内容与用户提供原文逐字一致），真因是接口用了
+  `mem.ROOT`——它等于 `paths.data_root()`（**数据根** `…/db`），而模板在**代码根**；
+  同文件的 `SKILL_TEMPLATE` 用的正是 `CODE_ROOT`，仅此一处写错。改为 `CODE_ROOT` 后实测
+  部署包内由 `ok:false` 变为 `ok:true`（585 字）。该卡片另改为**失败时回显实际查找路径**。
+
+### 工程
+
+- **CI 并行 job 创建 Release 的竞态改为幂等**：三平台 job 并行执行 check-then-create，
+  后到者 `gh release create` 报 `HTTP 422 Release.tag_name already exists` 致整个 job 失败
+  （v0.2.8 的 macOS job 即因此中断，其两个产物与统一校验清单双双缺失，靠 `gh run rerun --failed` 补齐）。
+  现 create 失败后再确认一次：确已被并行 job 建好则放行，真的不存在才报错。
+
+### 验证
+
+- 发布前检查：`scripts/check_all.py` 38/38、`scripts/frontend_smoke.py` 6/6、
+  `python -m unittest discover -s tests` 35 项 OK。
+- 部署包端到端（打补丁后重启实测）：`/api/profile/prompt` `ok:true` 585 字、
+  `/api/candidates` 200、`/api/hosts` 探针 `template:true`、`/api/stats` 200。
+
 ## [0.2.8] - 2026-10-07（自动收割缺陷修复 + 下载文档对齐）
 
 ### 真实缺陷修复

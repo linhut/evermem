@@ -44,7 +44,7 @@
 | **Linux** | `Evermem-linux-v*-portable.tar.gz` | 约 231 MB | 解压后进入 `Evermem/` 目录，`chmod +x Evermem` 再运行 |
 | **Linux** | `Evermem-linux-v*.deb` | 约 177 MB | Debian / Ubuntu 系安装包 |
 
-> 文件名里的 `*` 是版本号，比如 `v0.2.8`，**选数字最大（最新）的那个**。
+> 文件名里的 `*` 是版本号，比如 `v0.2.9`，**选数字最大（最新）的那个**。
 > 拿不定主意就选带 `portable` 的绿色版：不写注册表、卸载直接删文件夹、数据也存在同目录。
 
 ### 1.3 下载很慢 / 打不开 GitHub？
@@ -62,7 +62,7 @@ GitHub 在国内访问有时不稳定，可以：
 - **Windows**：在文件所在文件夹按住 `Shift` + 右键 →「在此处打开 PowerShell 窗口」，输入：
 
   ```
-  certutil -hashfile Evermem-windows-v0.2.8-portable.zip SHA256
+  certutil -hashfile Evermem-windows-v0.2.9-portable.zip SHA256
   ```
 
 - **macOS**：终端里输入 `shasum -a 256 文件名`
@@ -157,13 +157,13 @@ xattr -dr com.apple.quarantine /Applications/Evermem.app
 下载的是 `Evermem-linux-v*-portable.tar.gz` 时，在文件所在目录打开终端：
 
 ```bash
-tar -xzf Evermem-linux-v0.2.8-portable.tar.gz
+tar -xzf Evermem-linux-v0.2.9-portable.tar.gz
 cd Evermem
 ```
 
 （文件名按你实际下载的版本号改）
 
-> 下载的是安装版 `Evermem-linux-v*.deb` 的话，`sudo dpkg -i Evermem-linux-v0.2.8.deb` 装完直接跳到第 3 步，应用菜单里会出现恒忆。
+> 下载的是安装版 `Evermem-linux-v*.deb` 的话，`sudo dpkg -i Evermem-linux-v0.2.9.deb` 装完直接跳到第 3 步，应用菜单里会出现恒忆。
 
 **第 2 步：加执行权限并运行**
 浏览器下载下来的文件**默认没有执行权限**，双击会没反应或者被当成文本打开：
