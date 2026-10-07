@@ -11,18 +11,28 @@
 - CI：`.github/workflows/**`
 - 测试源码：`tests/**`
 - 模板（不含真实值）：`templates/**`
+- **程序运行与打包必需资源**：`brand/**`（应用图标 / 关于页 logo，运行时读取）、
+  `assets/icon.*`（打包图标）、`installers/**`（安装器脚本与向导图）、`scripts/**`（构建 / 检查 / 生成工具）
+- Git 钩子约定：`.githooks/**`
+
+反向理解同一份清单：**除上面这些，其余一律不进仓**（数据、凭证、缓存、产物、日志、临时文件、本地配置、一次性快照）。
 
 ## 二、绝不推送（已在 `.gitignore`，提交前仍需复核）
 
 | 类别 | 内容 |
 | --- | --- |
-| 个人知识数据 | `notes/`、`events/`、`index.json`、`corpus_spaces.json`、`kb.json`、`knowledge-base.md` |
-| 本机配置 | `pmem_config.json`（含机器绝对路径） |
-| 凭证与备份配置 | `pmem_backup.json`（混淆后的 AK/SK、SMTP、归档密码）、`.pmem-*` |
-| 日志与状态 | `*.log`、`.lock`、`.pmem-backup-last.json`、`harvest_state.json` |
-| 构建产物 | `build/`、`dist/`、`*.spec`、`.venv/`、`venv/` |
+| 个人知识数据 | `notes/`、`events/`、`index.json`、`corpus_spaces.json`、`kb.json`、`knowledge-base.md`、`*.db*` |
+| 本机配置 | `pmem_config.json`（含机器绝对路径）、`.env`（保留 `.env.example`）、`*.local.json`、`local_settings.py` |
+| 宿主 / 编辑器本地目录 | `.workbuddy/`、`.codebuddy/`、`.claude/`、`.cursor/`、`.marvis/`、`.dsh/`、`.vscode/`、`.idea/`、`*.code-workspace` |
+| 凭证与备份配置 | `pmem_backup.json`（混淆后的 AK/SK、SMTP、归档密码）、`.pmem-*`、`update.json` |
+| 日志与状态 | `*.log`、`logs/`、`.lock`、`.pmem-backup-last.json`、`harvest_state.json`、`update_state.json`、`.recipe-lock.json` |
+| 编译与语言缓存 | `__pycache__/`、`*.py[cod]`、`.pytest_cache/`、`.mypy_cache/`、`.ruff_cache/`、`.tox/`、`.nox/`、`*.egg-info/`、`node_modules/`、`.codegraph/` |
+| 构建产物 | `build/`、`dist/`、`*.spec`、`.venv/`、`venv/`、`assets/version_info.txt` |
+| 分发包 | `*.zip`、`*.tar.gz`、`*.tgz`、`*.dmg`、`*.deb`、`*.rpm`、`*.msi`、`*.pkg`、`*.AppImage`、`updates/` |
 | 备份产物 | `tools/`、`*.tar.aes`、`*.tar.aes.sha256`、`evermem-*.zip` |
-| 临时文件 | `tmp_chk/`、`tmp_ui/`、`nul`、临时诊断脚本与截图 |
+| 临时文件 | `tmp/`、`tmp_chk/`、`tmp_ui/`、`_backup/`、`nul`、`*.tmp`、`*.bak`、`*.orig`、`*.rej`、`*~`、`*.swp`、`*.out.txt` |
+| 系统与编辑器残留 | `.DS_Store`、`._*`、`Thumbs.db`、`desktop.ini` |
+| 一次性快照 | `docs/archive/`、`docs/AUDIT-*.md`、`docs/REVIEW-*.md`、`docs/MONTHLY-20*.md`、`docs/*-research-*.md`、`docs/bench-*.json` |
 
 数据迁移不走 Git，走白名单复制或备份渠道，见 `docs/DESKTOP-MIGRATION.md`。
 
@@ -77,26 +87,21 @@
 
 `MONTHLY-TEMPLATE.md` 属 R2（可复用模板），保留。
 
-### 4.3 落地（`.gitignore` 规则化，避免靠记忆）
+### 4.3 落地：`.gitignore` 按类别全覆盖，不逐条列名字
 
-```gitignore
-# ===== 文档：一次性快照与可再生成产物不进仓（见 docs/REPO-RELEASE-CHECKLIST.md 第四节） =====
-docs/archive/
-docs/bench-*.json
-docs/AUDIT-*.md
-docs/REVIEW-*.md
-docs/MONTHLY-20*.md
-docs/*-research-*.md
-```
+`.gitignore` 已重构为**八段分类结构**（一、数据与知识；二、凭证与本机配置；三、编译与语言缓存；
+四、构建与分发包；五、日志与运行期状态；六、临时与过程文件；七、一次性快照与可再生成文档产物；
+八、个人数据调试区）。新增产物**先归类再写规则**，不要针对某个具体文件名补一行
+（按名补规则必然滞后——文件名会变，类别不会）。
 
 已跟踪的文件需先移出索引再归档（**执行前确认，勿直接删**）：
 
 ```bash
-git rm --cached docs/AUDIT-2026-09.md docs/AUDIT-STRUCTURE-2026-09-29.md \
-                docs/REVIEW-2026-09.md docs/MONTHLY-2026-09.md \
-                docs/backup-sync-oss-research-20260928.md docs/bench-search-baseline-20260927.json
+git rm --cached docs/AUDIT-2026-09.md docs/REVIEW-2026-09.md docs/MONTHLY-2026-09.md
 mkdir -p docs/archive && git mv <上述文件> docs/archive/   # 或移到<工作区> notes/
 ```
+
+`git rm --cached` 只把文件移出索引，**本地文件仍在**，随时可 `git add` 恢复。
 
 ### 4.4 新增文档时的自判顺序
 
@@ -104,6 +109,39 @@ mkdir -p docs/archive && git mv <上述文件> docs/archive/   # 或移到<工�
 2. 半年后还成立吗？→ 否（带日期/一次性）则不进仓。
 3. 能不能一条命令重新生成？→ 能则不进仓。
 4. 描述的是不是当前形态？→ 不是则先改，改不了就删。
+
+### 4.5 两条机械校验（改完 `.gitignore` 必跑）
+
+规则写对了不等于生效，两件事必须实测：
+
+**① 误伤校验**——确认新规则没有命中任何已跟踪文件（输出为空才通过）：
+
+```bash
+git ls-files | git check-ignore --stdin -v
+```
+
+一旦输出非空，说明某个正在入库的文件被规则吃掉了：将来 `git add -A` 会静默漏掉它的改动，
+是"看起来正常、实则丢文件"的隐性故障，必须立刻用 `!路径` 例外修回。
+
+**② 误入校验**——真造出各式产物，确认 git 一个都看不见：
+
+```bash
+mkdir -p tmp .pytest_cache node_modules/probe logs .vscode dist build
+touch tmp/x.py .pytest_cache/x node_modules/probe/i.js logs/a.log .vscode/s.json \
+      dist/a.bin build/a.bin probe.tmp probe.bak probe.log probe.zip probe.dmg \
+      .env probe.local.json local_settings.py probe.spec
+git status --porcelain -uall      # 期望：只有 .gitignore 自身的改动
+```
+
+**③ 历史清洁度**——确认历史上也从未混入数据 / 缓存 / 产物（输出为空才通过）：
+
+```bash
+git log --all --pretty=format: --name-only | sort -u \
+  | grep -E "^notes/|^events/|index\.json|pmem_config|pmem_backup|\.pyc$|__pycache__|\.log$|\.zip$|\.exe$|\.db$"
+```
+
+> 注意：忽略规则只作用于**未跟踪**文件，对历史提交中的内容无效。若历史里已有这类文件，
+> 光加规则不够——需 `git filter-repo` 重写历史后强推（破坏性操作，先自行备份并确认协作方）。
 
 ## 五、提交规范
 
@@ -117,6 +155,7 @@ mkdir -p docs/archive && git mv <上述文件> docs/archive/   # 或移到<工�
 
 - [ ] `git status` 干净，只含预期变更
 - [ ] `git ls-files` 复核：无个人数据、无凭证、无构建产物、无临时目录
+- [ ] `git ls-files | git check-ignore --stdin -v` 为空（无已跟踪文件被忽略规则误伤）
 - [ ] `git grep` 本机路径（`C:/Users/<你>`、盘符根目录）零命中
 - [ ] 提交说明中英双语
 - [ ] 新增接口：先直接请求验证（对的方法 + 错的方法），再接前端

@@ -1,71 +1,135 @@
-# 索引与状态可从笔记/证据重建，不进版本库
+# =====================================================================
+# 恒忆 Evermem (pmem) · 仓库同步范围
+# ---------------------------------------------------------------------
+# 进仓：程序源码 / 配置 / 依赖清单 / 测试源码 / 平台文档 /
+#       程序运行与打包必需资源（brand、assets、installers 图、templates）
+# 不进仓：数据与知识、凭证与本地配置、编译缓存、构建与分发包、
+#         日志与运行期状态、临时与过程文件、一次性快照
+#
+# 判定规则 R1–R5 与新增文档自判顺序见 docs/REPO-RELEASE-CHECKLIST.md 第四节。
+# 注意：忽略规则对「已被跟踪」的文件无效 —— 新增规则后需 `git rm --cached`
+#      移出索引才生效（文件仍留在本地磁盘，只是不再同步）。
+# =====================================================================
+
+# ===== 一、数据与知识（走云端备份，代码仓库不含） =====
+# 数据与知识只经 backup.py / PMEM_BACKUP_TARGET 同步；笔记是权威，索引可重建
+notes/
+events/
 index.json
 harvest_state.json
 .recipe-lock.json
-__pycache__/
-*.pyc
-
-# 临时产物与宿主残留（不进版本库）
-tmp_ui/
-tmp_chk/
-nul
-*.log
-.lock
-.gitout.txt
-*.out.txt
-
-# 代码索引缓存（codegraph 本地索引，可由 codegraph init/index 重建）
-.codegraph/
-
-# 待删除区：过期 / 可再生 / 非必要文件集中放置，确认一个版本周期后统一删除
-_trash/
-# 调试数据区（与正式数据分离，见 docs/AUDIT-2026-10.md 第五节）
-.debug-data/
-
-# ===== 数据（知识/证据/索引）——与代码分离，绝不同步到 GitHub =====
-# 数据与知识只经云端备份同步（backup.py / PMEM_BACKUP_TARGET），代码仓库仅含代码与平台文档
-notes/
-events/
 corpus_spaces.json
 kb.json
 knowledge-base.md
-pmem_config.json
 *.db
 *.db-shm
 *.db-wal
-.pmem-backup-last.json
 
-# ===== 备份渠道配置与产物（含混淆后的 AK/SK/密码，勿进版本库） =====
+# ===== 二、凭证与本机配置（含 AK/SK、机器路径，绝不进仓） =====
+pmem_config.json
 pmem_backup.json
-tools/
-*.tar.aes
-*.tar.aes.sha256
 .pmem-*
-evermem-*.zip
-evermem-*.tar.aes
+update.json
+.env
+.env.*
+!.env.example
+local_settings.py
+settings.local.*
+*.local.json
 
-# ===== 打包构建中间产物（PyInstaller 本地 / CI 均不入仓） =====
-build/
-dist/
-# 构建完全命令行化（--add-data/--icon 等参数写在 build.yml），不再需要 .spec 文件
-assets/version_info.txt
+# 宿主 / 编辑器的本地目录与设置（本机环境专属，克隆者不需要）
+.workbuddy/
+.codebuddy/
+.claude/
+.cursor/
+.marvis/
+.dsh/
+.vscode/
+.idea/
+*.code-workspace
+
+# ===== 三、编译与语言缓存（一条命令即可重建） =====
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+*.egg-info/
+.eggs/
 .venv/
 venv/
+node_modules/
 
-# ===== 更新检查：运行期状态与用户源配置（含本机路径，不进仓） =====
-# update.json 是用户可编辑的更新源配置（数据目录内），update_state.json 是检查缓存
-update.json
+# 代码索引缓存（codegraph 本地索引，由 codegraph init/index 重建）
+.codegraph/
+
+# ===== 四、构建与分发包（CI 产物走 Release 附件） =====
+build/
+dist/
+*.spec
+updates/
+# 构建期生成的版本资源（由 build.yml 命令行注入）
+assets/version_info.txt
+# 分发包：CI 上传 Release，不入库；确需入库请用 git add -f
+*.dmg
+*.deb
+*.rpm
+*.AppImage
+*.msi
+*.pkg
+*.zip
+*.tar.gz
+*.tgz
+*.tar.aes
+*.tar.aes.sha256
+evermem-*.zip
+
+# ===== 五、日志与运行期状态 =====
+*.log
+logs/
+.lock
+.pmem-backup-last.json
 update_state.json
 update.log
-# CI 阶段产物：清单片段不入库；合成后的 update-manifest.json 由 Release 附件分发，
-# 需要自建源时由维护者上传到自己的静态服务器（不进版本库，避免仓库里躺着过期版本）
+# CI 阶段清单片段与合成清单（合成后随 Release 分发，避免仓库里躺着过期版本）
 update-fragment.json
 update-manifest.json
 
-# ===== 文档：一次性快照与可再生成产物不进仓（判定依据见 docs/REPO-RELEASE-CHECKLIST.md 第四节） =====
+# ===== 六、临时与过程文件 =====
+tmp/
+tmp_chk/
+tmp_ui/
+_backup/
+nul
+*.tmp
+*.temp
+*.bak
+*.orig
+*.rej
+*~
+*.swp
+*.swo
+*.out.txt
+.gitout.txt
+
+# 系统与编辑器残留（跨平台克隆时常见）
+.DS_Store
+._*
+Thumbs.db
+desktop.ini
+
+# ===== 七、一次性快照与可再生成文档产物 =====
+# R3（带日期的审计/复盘/月报/调研）与 R4（基准数据，可重跑生成）
 docs/archive/
 docs/bench-*.json
 docs/AUDIT-*.md
 docs/REVIEW-*.md
 docs/MONTHLY-20*.md
 docs/*-research-*.md
+
+# ===== 八、个人数据调试区（与正式数据分离） =====
+# 见 docs/AUDIT-2026-10.md 第五节
+.debug-data/
+_trash/
