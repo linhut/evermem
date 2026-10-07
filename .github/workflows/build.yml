@@ -259,8 +259,14 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG="${GITHUB_REF_NAME}"
+          # 三个平台 job 并行运行，此处是 check-then-create 竞态：两个 job 可能同时判定
+          # "Release 不存在"，后到者的 create 报 HTTP 422 `Release.tag_name already exists`
+          # 并让整个 job 失败（v0.2.8 的 macOS job 即因此中断，产物与统一校验清单双双缺失）。
+          # 故 create 失败后再确认一次：确实已被并行 job 建好就放行，真的不存在才报错。
           if ! gh release view "$TAG" >/dev/null 2>&1; then
-            gh release create "$TAG" --title "Evermem (恒忆) v${TAG#v}" --generate-notes
+            gh release create "$TAG" --title "Evermem (恒忆) v${TAG#v}" --generate-notes || {
+              gh release view "$TAG" >/dev/null 2>&1 || exit 1
+            }
           fi
 
       - name: 上传二进制到 Release（tag 触发时）
