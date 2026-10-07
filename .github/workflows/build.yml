@@ -294,7 +294,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           # 不加 merge-multiple：三个平台各自落到 dist-all/<artifact-name>/，
           # 同名文件（各平台的 SHA256SUMS.txt）不会互相覆盖。
