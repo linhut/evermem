@@ -306,6 +306,29 @@ except (ValueError, TypeError):
 _live_leak = (Path(str(Paths.data_root())) / "notes" / "lessons" / f"web-{_nid}.md").exists() if _nid else False
 check("测试笔记未污染正式库（且写入成功）", bool(_nid) and not _live_leak,
       f"id={_nid}" if _nid else "未取到 id：写入未成功，断言无效")
+# 经验沉淀（/api/harvest）：同进程执行、返回 task_id、状态能收敛（done/error）。
+# 回归守卫：若该接口退回"子进程 sys.executable"实现，在打包态会再开一个 Evermem 窗口
+# 且任务永不返回——这里断言能拿到 task_id 且轮询到终态。
+st, body = api("/api/harvest", "POST", {}, port=_PORT_ISO)
+check("POST /api/harvest（经验沉淀返回 task_id）", st == 200 and "task_id" in body)
+_hid = json.loads(body).get("task_id", "") if body else ""
+if _hid:
+    import time as _ht
+    _hstate = "running"
+    for _try in range(30):  # 最多等 30s：harvest 要扫真实会话目录（与 PMEM_HOME 无关）
+        _ht.sleep(1)
+        st2, body2 = api(f"/api/task/status?task={_hid}", port=_PORT_ISO)
+        import json as _hj
+        try:
+            _hstate = _hj.loads(body2).get("state", "")
+        except (ValueError, TypeError):
+            _hstate = ""
+        if _hstate in ("done", "error"):
+            break
+    check("经验沉淀任务收敛（done/error，非卡死）", st2 == 200 and _hstate in ("done", "error"),
+          f"state={_hstate or '查询失败'}")
+else:
+    check("经验沉淀任务收敛（done/error，非卡死）", False, "未取到 task_id，断言无效")
 # 关闭自启 server（terminate 幂等；子进程若已自行退出也无害）
 for _p in (_srv, _srv_iso):
     try:

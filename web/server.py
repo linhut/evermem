@@ -1383,21 +1383,67 @@ class Handler(BaseHTTPRequestHandler):
             return
         if p == "/api/harvest":
             tid = _uuid.uuid4().hex[:10]
-            _run_task(tid, [sys.executable, str(CODE_ROOT / "harvest.py"), "scan", "--days", "3"])
+            # 同进程收割：不能启子进程 [sys.executable, harvest.py] —— 冻结态下
+            # sys.executable 是 Evermem 自己，会把参数当 GUI 启动参数再开一个程序窗口
+            # （desktop.py 的自动收割早有同款注释警告）。同进程调用能拿到 print 输出，
+            # 收割完自动 reindex，让新候选立即可检索。
+            def _harvest_worker():
+                try:
+                    from argparse import Namespace
+                    import io as _io
+                    import contextlib as _cl
+                    import harvest as _harvest
+                    buf = _io.StringIO()
+                    with _cl.redirect_stdout(buf), _cl.redirect_stderr(buf):
+                        rc = _harvest.cmd_scan(Namespace(days=3, min_failures=2, limit=20,
+                                                         dry_run=False, include_pure_failure=False,
+                                                         no_task_level=False))
+                    text = buf.getvalue()
+                    if not _TASKS.get(tid):
+                        _TASKS[tid] = {"state": "running", "output": ""}
+                    if rc != 0:
+                        _TASKS[tid] = {"state": "error", "output": text[-800:] or f"收割返回码 {rc}"}
+                        return
+                    # 收割写入候选后重建索引，新候选立即可检索（自动收割线程同一做法）
+                    try:
+                        idx = mem.build_index()
+                        terms = len(idx.get("postings", {}))
+                        built = f"\n[索引] 重建完成：{idx.get('doc_count', '?')} 条笔记，{terms} 个词项"
+                    except Exception as _e:  # noqa: BLE001 - 索引失败不影响收割结果展示
+                        built = f"\n[索引] 重建失败：{_e}"
+                    _TASKS[tid] = {"state": "done", "output": (text + built)[-1500:], "rc": rc}
+                except Exception as exc:  # noqa: BLE001
+                    _TASKS[tid] = {"state": "error", "output": f"收割异常：{exc}"}
+
+            _TASKS[tid] = {"state": "running", "output": "正在扫描会话记录…\n"}
+            _threading.Thread(target=_harvest_worker, daemon=True,
+                              name=f"pmem-harvest-{tid[:8]}").start()
             self._json({"ok": True, "task_id": tid, "note": "后台收割中，轮询 /api/task/status"})
             return
         # /api/task/status 只在 do_GET 定义：任务进度是只读查询，POST 版是历史复制残留
         # （前端 index.js 轮询用 GET，全仓无 POST 调用方），保留两份只会让两份实现各自漂移。
         if p == "/api/hotsync":
-            import subprocess as _sp
-            target = str(BASE.parent / ".workbuddy" / "memory" / "MEMORY.md")
-            cmd = [sys.executable, str(BASE / "mem.py"), "hot", "--limit", "20", "--apply", "--target", target]
+            # 同进程执行：冻结态下 sys.executable 是 Evermem 自己，启子进程会把参数当
+            # GUI 启动参数再开一个程序窗口（desktop.py 自动收割的同款坑）。mem 已在
+            # 顶部 import，直接调 cmd_hot 拿 print 输出。
             try:
-                r = _sp.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="ignore", timeout=120)
+                import io as _io
+                import contextlib as _cl
+                from argparse import Namespace as _NS
+                target = str(BASE.parent / ".workbuddy" / "memory" / "MEMORY.md")
+                buf = _io.StringIO()
+                with _cl.redirect_stdout(buf), _cl.redirect_stderr(buf):
+                    rc = mem.cmd_hot(_NS(action="list", limit=20, apply=True,
+                                         reindex=False, auto_fill=False,
+                                         include_auto=False, tokens=None,
+                                         digest=45, target=target))
+                out = buf.getvalue()
+                if rc != 0:
+                    self._json({"ok": False, "error": out[-500:] or f"hot 返回码 {rc}"}, 500)
+                    return
+                self._json({"ok": True, "output": out[-800:]})
             except Exception as exc:  # noqa: BLE001
                 self._json({"error": str(exc)}, 500)
-                return
-            self._json({"ok": True, "output": ((r.stdout or "") + (r.stderr or ""))[-800:]})
             return
         if p == "/api/installhost":
             b = self._body()

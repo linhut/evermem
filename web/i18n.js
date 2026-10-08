@@ -106,6 +106,11 @@
     '同步热层 → 宿主必读文件': 'Sync hot layer → host must-read file',
     '热层已满（20/20）：先移除再添加': 'Hot layer full (20/20): remove first',
     '已同步': 'Synced', '同步中…': 'Syncing…', '提取近 3 天会话经验': 'Extract 3-day session experience',
+    '提取中…（后台运行）': 'Extracting… (running in background)', '提取完成': 'Harvest complete',
+    '经验沉淀完成：': 'Harvest complete: ', '扫描 ': 'scanned ', ' 个会话文件': ' session files',
+    '写入 ': 'wrote ', ' 条证据': ' evidence records', '新增 ': 'added ', ' 条候选': ' candidates',
+    '索引已重建': 'index rebuilt', '写入': 'wrote', '新增': 'added',
+    '个会话文件': 'session files', '条证据': 'evidence records',
     '同步核心经验 → 宿主必读文件': 'Sync hot layer → host must-read file',
     /* 核心经验 · 条目详情（点卡片打开，复用 #viewMask 弹窗） */
     '移出核心经验': 'Remove from hot layer',

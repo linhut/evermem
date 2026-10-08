@@ -1,9 +1,16 @@
 # 变更日志
 
-## [0.2.11] - 2026-10-08（修复浏览器 HEAD/OPTIONS 请求误报 501）
+## [0.2.11] - 2026-10-08（修复 501 误报 + 经验沉淀体验优化）
 
 ### 缺陷修复
 
+- **经验沉淀 / 核心经验同步在桌面版会再打开一个程序窗口**：`/api/harvest` 与 `/api/hotsync`
+  用 `subprocess [sys.executable, ...]` 起子进程，而冻结态下 `sys.executable` 是 Evermem 自己，
+  会把 harvest.py/mem.py 当 GUI 启动参数再开一个新窗口（desktop.py 自动收割早有同款注释警告）。
+  已改为**同进程**调用 `harvest.cmd_scan` / `mem.cmd_hot`（沿用 desktop 正确模式），不再开新窗口。
+- **经验沉淀无进度/无完成提示**：改同进程后任务输出经 `/api/task/status` 实时可见；前端轮询
+  完成后从输出解析「扫描会话文件数 / 证据写入 / 候选笔记写入 / 索引重建」并 toast 汇总结果。
+- **收割后候选不可检索**：/api/harvest 完成后自动 `mem.build_index()`，新候选立即可检索。
 - **Web 服务对 HEAD / OPTIONS 请求误报 501**：Python 标准库 `BaseHTTPRequestHandler` 对未实现的
   `do_HEAD` / `do_OPTIONS` 一律回 `501 Unsupported method`，而本服务只实现了 GET/POST。
   浏览器 / QWebEngine 探测资源（favicon、缓存检查）、`curl -I`、CORS 预检发出 HEAD/OPTIONS 时，

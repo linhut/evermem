@@ -1231,8 +1231,26 @@ async function loadMaint() {
   $('#hotSyncBtn').onclick = () => { toast('同步中…'); post('/api/hotsync').then(d => { toast(d.ok ? '核心经验已同步' : '失败'); if (d.output) $('#hotSyncInfo').innerHTML = `<pre class="out">${esc(d.output)}</pre>`; }); };
   // ③ 经验沉淀
   $('#harvBtn').onclick = () => { toast('提取中…（后台运行）'); post('/api/harvest').then(d => {
-    if (!d.ok) { toast('失败：' + (d.error || '')); return; }
-    pollTask(d.task_id, out => { $('#harvInfo').innerHTML = `<pre class="out">${esc(out)}</pre>`; toast('提取完成'); });
+    if (!d.ok) { toast('失败：' + (d.error || ''), 'danger'); return; }
+    $('#harvInfo').innerHTML = '<div class="sub">提取中…（后台运行，完成后自动刷新）</div>';
+    pollTask(d.task_id, out => {
+      $('#harvInfo').innerHTML = `<pre class="out">${esc(out)}</pre>`;
+      // 从输出里提炼结果摘要（扫描会话数 / 证据写入 / 候选写入 / 索引重建）
+      const m = {};
+      (out || '').split('\n').forEach(l => {
+        const mv = l.match(/扫描会话文件\s+(\d+)\s+个/); if (mv) m.files = mv[1];
+        const me = l.match(/证据写入\s+(\d+)\s+条/); if (me) m.ev = me[1];
+        const mc = l.match(/候选笔记写入\s+(\d+)\s+条/); if (mc) m.cand = mc[1];
+        const mi = l.match(/索引\] 重建完成/); if (mi) m.ridx = true;
+      });
+      const parts = [];
+      if (m.files) parts.push(`${t('扫描')} ${m.files} ${t('个会话文件')}`);
+      if (m.ev) parts.push(`${t('写入')} ${m.ev} ${t('条证据')}`);
+      if (m.cand) parts.push(`${t('新增')} ${m.cand} ${t('条候选')}`);
+      if (m.ridx) parts.push(t('索引已重建'));
+      toast(parts.length ? (t('经验沉淀完成：') + parts.join('、')) : t('提取完成'), 'success');
+      loadSide();
+    });
   }); };
   const st = await (await fetch('/api/stats')).json();
   $('#hotSyncInfo').textContent = `当前核心经验 ${st.hot} 条（上限 20）· 索引更新于 ${st.built_at || '—'}`;
