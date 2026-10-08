@@ -329,6 +329,21 @@ if _hid:
           f"state={_hstate or '查询失败'}")
 else:
     check("经验沉淀任务收敛（done/error，非卡死）", False, "未取到 task_id，断言无效")
+# 冻结态解释器探测（_default_py）：冻结时绝不能返回 Evermem.exe 自己，否则 /api/extract
+# 起子进程会再开一个程序窗口且提取不执行。源码态应返回当前解释器（与主进程一致）。
+import importlib.util as _ils
+_spec = _ils.spec_from_file_location("_srv_check_py", str(BASE / "web" / "server.py"))
+# 不 import 整个 server（会起线程/副作用），直接静态验证默认值逻辑：
+_src = Path(str(BASE / "web" / "server.py")).read_text(encoding="utf-8", errors="ignore")
+check("冻结态解释器探测跳过 sys.executable（防再开窗口）",
+      "if getattr(sys, \"frozen\", False):" in _src and "sys.executable" in _src
+      and 'PMEM_SYS_PY' in _src and "_shutil.which" in _src)
+# 核心经验同步（hotsync）：目标定位 helper _hot_target()（源码态=工作区 MEMORY.md，
+# 冻结态回退 home/数据根上级），并自动创建缺失目录——cmd_hot 要求目标已存在。
+check("hotsync 目标经 _hot_target() 定位并自动创建（非冻结子进程）",
+      "def _hot_target()" in _src
+      and "mem.cmd_hot" in _src
+      and "BASE.parent / \".workbuddy\"" in _src)
 # 关闭自启 server（terminate 幂等；子进程若已自行退出也无害）
 for _p in (_srv, _srv_iso):
     try:

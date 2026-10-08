@@ -181,11 +181,63 @@ def host_prereq(name: str) -> tuple[bool, str]:
         pass
     return False, hint
 
+def _hot_target() -> Path:
+    """核心经验同步目标：宿主每次会话读取的 MEMORY.md。
+
+    优先级：PMEM_HOT_TARGET 环境变量（显式指定，跨形态最可靠）
+    > 源码态 BASE.parent = 知识库工作区（宿主在此读取 MEMORY.md）
+    > 冻结态回退探测 home / 数据根上级 / cwd 的 .workbuddy（用户工作区常在主目录
+      或数据根旁边），仍无则退回程序目录旁的默认（会在下次同步时自动创建）。
+    """
+    env = os.environ.get("PMEM_HOT_TARGET", "").strip()
+    if env:
+        return Path(env).expanduser()
+    cfg = load_pmem_config()
+    if cfg.get("hot_target"):
+        return Path(cfg["hot_target"]).expanduser()
+    base_target = Path(BASE.parent / ".workbuddy" / "memory" / "MEMORY.md")
+    if not getattr(sys, "frozen", False):
+        return base_target
+    for root in (Path.home(), DATA_ROOT.parent, Path.cwd()):
+        cand = root / ".workbuddy" / "memory" / "MEMORY.md"
+        if cand.exists():
+            return cand
+    return base_target
+
+
 # ---------- MCP 一键安装配置（各宿主） ----------
 def _default_py() -> str:
-    """Python 解释器探测：PMEM_SYS_PY > 当前解释器 > PATH，发布可移植。"""
-    for cand in (os.environ.get("PMEM_SYS_PY", "").strip(),
-                 sys.executable, _shutil.which("python"), _shutil.which("python3")):
+    """系统 Python 解释器探测：PMEM_SYS_PY > 含文档库的系统 Python > PATH python。
+
+    冻结态（PyInstaller 打包）下 sys.executable 是 Evermem 自己——**绝不能**把它当
+    解释器去起子进程（ingest.py 提取 / MCP 服务器），否则参数会被当作 GUI 启动参数，
+    再开一个程序窗口且脚本根本不执行（harvest 同款坑，此处一并预防）。
+    探测到的解释器还要**验证能 import python-docx/pypdf**（文档提取的硬依赖），
+    避免选中一个"存在但缺库"的 python 让 /api/extract 静默失败。
+    """
+    env = os.environ.get("PMEM_SYS_PY", "").strip()
+    if env:
+        return env
+    import subprocess as _sp
+    candidates = []
+    if not getattr(sys, "frozen", False):
+        candidates.append(sys.executable)
+    for c in (_shutil.which("python"), _shutil.which("python3"),
+              str(Path("C:/Python314/python.exe")) if os.name == "nt" else None):
+        if c:
+            candidates.append(str(c))
+    for cand in candidates:
+        if not cand or not Path(cand).exists():
+            continue
+        try:
+            r = _sp.run([cand, "-c", "import docx, openpyxl, pypdf"],
+                        capture_output=True, timeout=30)
+            if r.returncode == 0:
+                return cand
+        except Exception:  # noqa: BLE001 - 探测失败换下一个候选
+            continue
+    # 找不到可用的：返回 PATH 上的 python 让子进程自行报错，至少不回退到 Evermem 自己
+    for cand in (_shutil.which("python"), _shutil.which("python3")):
         if cand:
             return str(cand)
     return "python"
@@ -1376,6 +1428,23 @@ class Handler(BaseHTTPRequestHandler):
             if not path or not Path(path).exists():
                 self._json({"error": "路径不存在"}, 400)
                 return
+            # 冻结态下 PY_ABS 已是"非 Evermem 自己"的系统 Python（_default_py 冻结态跳过
+            # sys.executable）。但系统 Python 未必装了 python-docx/pypdf——提前探测，
+            # 缺依赖直接报明原因，避免静默失败（曾表现为点「提取」没反应/再开窗口）。
+            try:
+                import subprocess as _sp
+                _probe = _sp.run(
+                    [PY_ABS, "-c", "import docx, openpyxl, pypdf"],
+                    capture_output=True, text=True, encoding="utf-8",
+                    errors="ignore", timeout=30)
+                if _probe.returncode != 0:
+                    self._json({"error": "文档提取需要系统 Python 且装有 python-docx / "
+                                        "openpyxl / pypdf；请安装或用 PMEM_SYS_PY 指定后重试。"
+                                        f"（{PY_ABS}）"}, 400)
+                    return
+            except Exception as _exc:  # noqa: BLE001 - 探测超时/解释器不可执行
+                self._json({"error": f"无法执行文档提取解释器 {PY_ABS}：{_exc}"}, 400)
+                return
             CHUNKS_ROOT.mkdir(parents=True, exist_ok=True)
             tid = _uuid.uuid4().hex[:10]
             _run_task(tid, [PY_ABS, str(CODE_ROOT / "scripts" / "ingest.py"), "extract", path, "--out-dir", str(CHUNKS_ROOT)])
@@ -1426,22 +1495,28 @@ class Handler(BaseHTTPRequestHandler):
             # 同进程执行：冻结态下 sys.executable 是 Evermem 自己，启子进程会把参数当
             # GUI 启动参数再开一个程序窗口（desktop.py 自动收割的同款坑）。mem 已在
             # 顶部 import，直接调 cmd_hot 拿 print 输出。
+            # 目标：优先「宿主会话读取的工作区 MEMORY.md」（BASE.parent 即代码目录上级，
+            # 源码态=知识库工作区；冻结态需回落 data_root 上级），不存在时创建空文件——
+            # cmd_hot 要求目标已存在，缺失直接报错（曾因此"同步成功但宿主读不到"）。
             try:
                 import io as _io
                 import contextlib as _cl
                 from argparse import Namespace as _NS
-                target = str(BASE.parent / ".workbuddy" / "memory" / "MEMORY.md")
+                target = _hot_target()
+                target.parent.mkdir(parents=True, exist_ok=True)
+                if not target.exists():
+                    target.write_text("", encoding="utf-8")
                 buf = _io.StringIO()
                 with _cl.redirect_stdout(buf), _cl.redirect_stderr(buf):
                     rc = mem.cmd_hot(_NS(action="list", limit=20, apply=True,
                                          reindex=False, auto_fill=False,
                                          include_auto=False, tokens=None,
-                                         digest=45, target=target))
+                                         digest=45, target=str(target)))
                 out = buf.getvalue()
                 if rc != 0:
                     self._json({"ok": False, "error": out[-500:] or f"hot 返回码 {rc}"}, 500)
                     return
-                self._json({"ok": True, "output": out[-800:]})
+                self._json({"ok": True, "output": out[-800:], "target": str(target)})
             except Exception as exc:  # noqa: BLE001
                 self._json({"error": str(exc)}, 500)
             return
@@ -1618,20 +1693,24 @@ def main() -> int:
     _threading.Thread(target=_auto_loop, daemon=True, name="pmem-auto-backup").start()
 
     # 自动收割线程：定时 harvest scan（会话证据 → 候选池，自动积累待审核）
-    # 默认开启，环境变量 PMEM_NO_AUTO_HARVEST=1 可禁用
+    # 默认开启，环境变量 PMEM_NO_AUTO_HARVEST=1 可禁用。
+    # 同进程调用（与 desktop.py 一致）：不能 subprocess [sys.executable, ...] ——
+    # 冻结态下 sys.executable 是 Evermem 自己，会把参数当 GUI 启动参数再开一个窗口。
     if not os.environ.get("PMEM_NO_AUTO_HARVEST"):
         harvest_secs = int(os.environ.get("PMEM_AUTO_HARVEST_SECONDS", "3600"))
 
         def _harvest_loop():
             while True:
                 try:
-                    subprocess.run(
-                        [sys.executable, str(CODE_ROOT / "harvest.py"), "scan", "--days", "1"],
-                        capture_output=True, text=True, timeout=300, cwd=str(CODE_ROOT))
+                    from argparse import Namespace as _NS
+                    import harvest as _harvest
+                    _harvest.cmd_scan(_NS(days=1, min_failures=2, limit=20,
+                                          dry_run=False, include_pure_failure=False,
+                                          no_task_level=False))
                     # 扫描后自动评审：多角色转正（仅 lesson）+ 否决项归档，防止候选池随收割爆满
-                    subprocess.run(
-                        [sys.executable, str(CODE_ROOT / "mem.py"), "candidates", "auto", "--purge"],
-                        capture_output=True, text=True, timeout=300, cwd=str(CODE_ROOT))
+                    import mem as _mem
+                    _mem.cmd_candidates(_NS(action="auto", cap=None, ids=None,
+                                            purge=False, no_purge=False, reindex=False))
                 except Exception as exc:  # noqa: BLE001
                     print(f"[auto-harvest] 失败：{exc}", file=sys.stderr)
                 time.sleep(harvest_secs)

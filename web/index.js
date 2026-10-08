@@ -590,12 +590,12 @@ function bindImport() {
     if (!ok) return;
     $('#impInfo').innerHTML = '提取中…（后台运行，完成后自动刷新）'; toast('正在提取 ' + p, 'info');
     post('/api/extract', { path: p }).then(d => {
-      if (!d.ok) { toast('失败：' + (d.error || '')); return; }
+      if (!d.ok) { $('#impInfo').innerHTML = `<div class="errbox">${esc(d.error || '提取失败')}</div>`; toast('提取失败：' + (d.error || ''), 'danger'); return; }
       pollTask(d.task_id, out => {
-        $('#impInfo').innerHTML += `<br><pre class="out">${esc(out)}</pre>`;
+        $('#impInfo').innerHTML = `<pre class="out">${esc(out)}</pre>`;
         loadBlocks(name);
         toast('提取完成');
-      });
+      }, out => { $('#impInfo').innerHTML = `<pre class="out">${esc(out.slice(-400))}</pre>`; });
     });
   };
   // 块过滤

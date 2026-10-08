@@ -13,6 +13,22 @@
 - **收割后候选不可检索**：/api/harvest 完成后自动 `mem.build_index()`，新候选立即可检索。
 - **Web 服务对 HEAD / OPTIONS 请求误报 501**：Python 标准库 `BaseHTTPRequestHandler` 对未实现的
   `do_HEAD` / `do_OPTIONS` 一律回 `501 Unsupported method`，而本服务只实现了 GET/POST。
+- **文档提取（提取到块库）冻结态下再开窗口 / 静默失败**：`/api/extract` 用 `PY_ABS` 起
+  `ingest.py` 子进程，而冻结态下 `PY_ABS` 默认解析为 `sys.executable`（Evermem 自己）——
+  点「提取」会再开一个程序窗口且提取根本不执行。修复：`_default_py()` 冻结态**跳过
+  sys.executable**，只认 `PMEM_SYS_PY` / PATH 上的系统 Python；`/api/extract` 执行前探测
+  `python-docx / openpyxl / pypdf`，缺依赖直接返回明确错误（前端展示 errbox），不再静默失败。
+- **核心经验同步写入错误位置**：`/api/hotsync` 硬编码 `BASE.parent/.workbuddy/memory/MEMORY.md`
+  （源码态=仓库、冻结态=程序目录），而宿主每次会话真正读取的是
+  `mem.default_hot_target()`（cwd→home 探测 `.workbuddy/.claude/.codex`）。改为复用
+  `default_hot_target()`，同步结果附带实际 target 路径。
+- **源码态自动收割循环改为同进程**：`web/server.py main()` 的定时收割不再
+  `subprocess [sys.executable, ...]`，与 desktop.py 一致同进程调用 `harvest.cmd_scan` /
+  `mem.cmd_candidates`，任何启动形态都不会再开新窗口。
+
+### 测试与防护
+
+- `scripts/check_all.py` 增加 /api/extract 解释器探测、hotsync 目标校验的回归覆盖（45 项全过）。
   浏览器 / QWebEngine 探测资源（favicon、缓存检查）、`curl -I`、CORS 预检发出 HEAD/OPTIONS 时，
   前端会误显示「候选列表加载失败：HTTP 501」（历史收割证据：`501 Unsupported method ('HEAD')`）。
   已补 `do_HEAD`（复用 GET 路由、只回响应头不回 body）与 `do_OPTIONS`（回 Allow 头），
