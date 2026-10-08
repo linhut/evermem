@@ -1350,3 +1350,67 @@ $('#kbdHint').textContent = (navigator.platform || '').toLowerCase().includes('m
 /* 数据自动刷新：切回窗口 + 每 30s 轮询（浏览/候选视图），保证展示及时 */
 window.addEventListener('focus', () => { if (VIEW === 'browse') loadNotes(); else if (VIEW === 'triage') loadTriage(); });
 setInterval(() => { if (VIEW === 'browse') loadNotes(); else if (VIEW === 'triage') loadTriage(); }, 30000);
+
+/* ================= 首次使用引导（onboarding） =================
+   首次启动自动弹出 4 步导览：欢迎 → 自动收割说明 → 数据位置 → 开始使用。
+   完成或跳过写入 localStorage['pmem-onboarded']，之后不再打扰；菜单里可手动重开。 */
+function obSteps() {
+  return [
+    { title: t('欢迎使用恒忆 Evermem'),
+      body: `<div style="font-size:16px;font-weight:600;margin-bottom:10px">🪝 ${t('经验自动进库、跨会话复用')}</div>
+        <p>${t('恒忆直接读取 AI 助手的会话记录，自动识别「失败→重试→成功」的试错过程，')}</p>
+        <p>${t('沉淀为本地可复用的经验笔记，下次会话直接注入，不再从零试起。')}</p>
+        <p style="color:var(--text2)">${t('零依赖 · 全本地 · 无云端 —— 记忆数据只存在你自己的电脑上。')}</p>` },
+    { title: t('自动收割经验'),
+      body: `<p style="font-weight:600">⏱ ${t('每小时自动扫描会话并评审候选')}</p>
+        <p>${t('后台自动运行「经验沉淀」：扫描会话 → 提取候选 → 多角色评审 → 高质量转正。')}</p>
+        <p>${t('在「数据与维护 → 经验沉淀」可手动触发，或在「候选审核」人工终审。')}</p>
+        <p style="color:var(--text2)">${t('提示：涉密/危险候选会留人工处置，绝不自动归档。')}</p>` },
+    { title: t('数据位置'),
+      body: `<p style="font-weight:600">📁 ${t('记忆数据存在本地目录')}</p>
+        <p id="obCfg" style="color:var(--text2)">${t('读取中…')}</p>
+        <p>${t('可在「数据与维护」随时改位置；整个目录拷贝走 = 数据跟着走（换机迁移）。')}</p>
+        <p style="color:var(--text2)">${t('注意：请勿把数据目录同步到公网网盘或代码仓库。')}</p>` },
+    { title: t('开始使用'),
+      body: `<p style="font-weight:600">${t('从左侧 9 个模块开始探索')}</p>
+        <p>· ${t('记忆浏览：查看已沉淀的经验')}<br>
+           · ${t('候选审核：评审待确认的记忆')}<br>
+           · ${t('数据导入：收进旧文档 / 其他记忆')}<br>
+           · ${t('核心经验：每次会话自动携带的精选')}<br>
+           · ${t('接入设置：安装到各 AI 助手（技能 + MCP）')}</p>
+        <p style="color:var(--text2)">${t('完整说明见界面右上「?」或项目文档 USER-GUIDE.md。')}</p>` },
+  ];
+}
+function obShow() {
+  const mask = $('#onboardMask'); if (!mask) return;
+  const steps = obSteps();
+  let i = 0;
+  const title = $('#obTitle'), body = $('#obBody'),
+        next = $('#obNext'), prev = $('#obPrev');
+  function render() {
+    title.textContent = steps[i].title;
+    body.innerHTML = steps[i].body;
+    prev.style.display = i ? '' : 'none';
+    next.textContent = i < steps.length - 1 ? t('下一步') : t('开始使用');
+    // 第 3 步动态填充数据位置
+    if (i === 2 && !body.querySelector('#obCfg').dataset.loaded) {
+      body.querySelector('#obCfg').dataset.loaded = '1';
+      fetch('/api/config').then(r => r.json()).then(d => {
+        const el = body.querySelector('#obCfg'); if (!el) return;
+        el.textContent = `${t('记忆库')}：${(d.current && d.current.home) || '—'}`;
+      }).catch(() => {});
+    }
+  }
+  $('#obSkip').onclick = () => { mask.classList.remove('show'); localStorage.setItem('pmem-onboarded', '1'); };
+  prev.onclick = () => { if (i > 0) { i -= 1; render(); } };
+  next.onclick = () => {
+    if (i < steps.length - 1) { i += 1; render(); }
+    else { mask.classList.remove('show'); localStorage.setItem('pmem-onboarded', '1'); toast(t('欢迎使用恒忆 Evermem'), 'success'); }
+  };
+  render();
+  mask.classList.add('show');
+}
+/* 首次启动：未完成/未跳过引导时弹出（已导览过则不再打扰） */
+if (!localStorage.getItem('pmem-onboarded')) {
+  setTimeout(() => { try { obShow(); } catch (e) { /* 引导失败不影响主界面 */ } }, 600);
+}

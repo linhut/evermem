@@ -445,6 +445,21 @@ pre.out{background:var(--surface2);border:1px solid var(--hairline);border-radiu
   <div class="actions"><button class="btn ghost" id="cfCancel" data-i18n="取消">取消</button><button class="btn danger" id="cfOk" data-i18n="确认">确认</button></div>
 </div></div>
 
+<!-- 首次使用引导（onboarding）：首次启动自动弹出，可跳过；localStorage['pmem-onboarded'] 记录 -->
+<div class="modal-mask" id="onboardMask">
+  <div class="modal" style="max-width:560px">
+    <h3 id="obTitle" style="margin-bottom:10px">欢迎使用恒忆 Evermem</h3>
+    <div id="obBody" style="min-height:200px;font-size:13px;line-height:1.9;color:var(--text)"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px">
+      <button class="btn ghost small" id="obSkip" data-i18n="跳过引导">跳过引导</button>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn ghost small" id="obPrev" style="display:none" data-i18n="上一步">上一步</button>
+        <button class="btn primary small" id="obNext">下一步</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"><span class="dot"></span><span id="toastMsg"></span></div>
 <script src="i18n.js?v=20260929a"></script>
 <script src="channel.js?v=20260929a"></script>

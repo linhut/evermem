@@ -1704,7 +1704,7 @@ def main() -> int:
                 try:
                     from argparse import Namespace as _NS
                     import harvest as _harvest
-                    _harvest.cmd_scan(_NS(days=1, min_failures=2, limit=20,
+                    _harvest.cmd_scan(_NS(days=3, min_failures=2, limit=20,
                                           dry_run=False, include_pure_failure=False,
                                           no_task_level=False))
                     # 扫描后自动评审：多角色转正（仅 lesson）+ 否决项归档，防止候选池随收割爆满

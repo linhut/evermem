@@ -106,6 +106,15 @@ ok, out, ms = run([PY, "harvest.py", "scan", "--days", "1", "--dry-run"])
 check("scan（dry-run 不落盘）", ok and "dry-run" in out, f"{ms:.0f}ms")
 ok, out, ms = run([PY, "harvest.py", "signals", "--days", "1"])
 check("signals（统计）", ok and "执行记录" in out)
+# 收割质量守卫：只读探测命令（ls/npm view/grep 等）不得产出"成功配方"候选。
+# 曾因判定只看复杂度，收割 622 组候选几乎全是这类一次性调试命令，淹没真正经验。
+ok2, out2, _ = run([PY, "-c",
+    "import sys; sys.path.insert(0, '.'); import harvest;"
+    "assert not harvest.looks_like_complex_cmd('Bash:ls -la <path> && head -n <n> <path>'), '只读命令不应成为配方';"
+    "assert not harvest.looks_like_complex_cmd('Bash:npm view gongwen-skill versions --json'), 'npm view 不应成为配方';"
+    "assert harvest.looks_like_complex_cmd('Bash:cd <path> && git add package.json && git commit -m <str>'), '含实作动作应成为配方';"
+    "print('OK')"])
+check("收割质量：只读命令过滤 + 实作动作保留", ok2 and "OK" in out2, out2[-120:])
 
 print()
 print("三、提取（scripts/ingest.py）")

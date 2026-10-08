@@ -111,6 +111,34 @@
     '写入 ': 'wrote ', ' 条证据': ' evidence records', '新增 ': 'added ', ' 条候选': ' candidates',
     '索引已重建': 'index rebuilt', '写入': 'wrote', '新增': 'added',
     '个会话文件': 'session files', '条证据': 'evidence records',
+    /* 首次使用引导（onboarding） */
+    '欢迎使用恒忆 Evermem': 'Welcome to Evermem',
+    '经验自动进库、跨会话复用': 'Experience auto-saved & reused across sessions',
+    '恒忆直接读取 AI 助手的会话记录，自动识别「失败→重试→成功」的试错过程，':
+        'Evermem reads your AI assistant session logs and auto-detects the "fail → retry → succeed" process,',
+    '沉淀为本地可复用的经验笔记，下次会话直接注入，不再从零试起。':
+        'distilling it into reusable local notes that are injected into your next session — no more starting from scratch.',
+    '零依赖 · 全本地 · 无云端 —— 记忆数据只存在你自己的电脑上。':
+        'Zero-dependency · fully local · no cloud — your memory lives only on this machine.',
+    '自动收割经验': 'Auto-harvest experience',
+    '每小时自动扫描会话并评审候选': 'Scans sessions & reviews candidates every hour',
+    '后台自动运行「经验沉淀」：扫描会话 → 提取候选 → 多角色评审 → 高质量转正。':
+        'Runs automatically: scan sessions → extract candidates → multi-role review → promote the good ones.',
+    '在「数据与维护 → 经验沉淀」可手动触发，或在「候选审核」人工终审。':
+        'Trigger it manually under "Data & Maintenance → Harvest", or review manually under "Candidates".',
+    '数据位置': 'Data location',
+    '记忆数据存在本地目录': 'Your memory is stored in a local folder',
+    '从左侧 9 个模块开始探索': 'Explore the 9 modules on the left',
+    '候选审核：评审待确认的记忆': 'Candidates: review pending memories',
+    '开始使用': 'Get started', '下一步': 'Next', '上一步': 'Back', '跳过引导': 'Skip tour',
+    '提示：涉密/危险候选会留人工处置，绝不自动归档。':
+        'Note: sensitive/dangerous candidates are kept for human review, never auto-archived.',
+    '可在「数据与维护」随时改位置；整个目录拷贝走 = 数据跟着走（换机迁移）。':
+        'Change it anytime under "Data & Maintenance"; copy the whole folder to migrate.',
+    '注意：请勿把数据目录同步到公网网盘或代码仓库。':
+        'Caution: never sync the data folder to public cloud storage or code repos.',
+    '完整说明见界面右上「?」或项目文档 USER-GUIDE.md。':
+        'Full guide: the "?" at top-right or USER-GUIDE.md.',
     '同步核心经验 → 宿主必读文件': 'Sync hot layer → host must-read file',
     /* 核心经验 · 条目详情（点卡片打开，复用 #viewMask 弹窗） */
     '移出核心经验': 'Remove from hot layer',

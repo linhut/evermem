@@ -318,13 +318,47 @@ _TOOL_NAME_ONLY = re.compile(
     r"AskUserQuestion|ToolSearch|present_files|show_widget|Skill|Agent|TaskCreate|TaskUpdate|"
     r"TaskGet|TaskList|DeferExecuteTool|Grep|Glob|mcp__\S+)\b[^\w]*$")
 
+# 只读探测/查询命令：即便带管道/多命令也不算"可复用配方"——它们只是当场看结果的调试动作，
+# 沉淀下来只会堆满候选池（历史实测：收割产出 354 条 procedure，几乎全是 ls/npm view/grep 这类）。
+# 命中任一即视为"纯只读探测"，不作为成功配方候选。
+_READONLY_HINTS = (
+    "ls ", "dir ", "head ", "tail ", "cat ", "grep ", "find ", "wc ", "diff ", "tree ",
+    "npm view", "npm ls", "pip show", "pip list", "git log", "git status", "git ls-files",
+    "git diff", "git show", "git remote", "git branch", "git tag", "echo ", "pwd ", "whoami",
+    "node -e", "python -c", "curl -I", "curl -s", "curl -o /dev/null", "sed -n", "awk ",
+    "rg ", "jq ", "lsusb", "systemctl status", "tasklist", "netstat", "ping ", "which ",
+    "type ", "chcp", "where ", "ver", "docker ps", "docker images", "kubectl get",
+)
+# 高价值实作信号：命令包含"变更/安装/构建/写入/创建"等动作 → 成功配方才有沉淀价值
+_ACTION_HINTS = (
+    "npm i", "npm install", "npm run", "pip install", "pip uninstall", "git add", "git commit",
+    "git push", "git pull", "git clone", "git reset", "git merge", "git checkout -b",
+    "docker build", "docker run", "docker compose", "make ", "cmake", "msbuild", "gradle",
+    "mvn ", "yarn ", "pnpm ", "python -m pip", "uv ", "poetry", "cargo ", "go build",
+    "npm init", "npx ", "tar -", "unzip", "7z ", "copy ", "xcopy ", "robocopy", "mv ", "cp ",
+    "rm ", "mkdir", "mkdir -p", "touch ", "chmod", "chown", "install", "msiexec", "winget",
+    "choco", "scoop", "npm publish", "npm version", "node ", "python ", "python3 ", "py ",
+    "reg add", "schtasks", "sc config", "Write", "Edit", "Save",
+)
+
 def looks_like_complex_cmd(sig: str) -> bool:
-    """高价值"成功配方"信号：非常规命令且带复杂度（多命令/变量/参数化路径/管道）。"""
+    """高价值"成功配方"信号：非只读探测 + 含实作/变更动作（多命令/变量/参数化路径/管道）。
+
+    只判断复杂度会堆满低价值候选（ls/npm view/grep 这类只看结果的调试命令）；
+    叠加「动作信号」后，成功配方才真正代表"一次可复用的实作"。
+    """
     if _TOOL_NAME_ONLY.match(sig.strip()):
         return False
-    if any(k in sig for k in ("&&", ";", "$", "|", "python", "--")):
+    low = sig.lower()
+    if not any(k in low for k in ("&&", ";", "$", "|", "python", "--", "\\", "/")):
+        return False
+    # 纯只读探测命令（哪怕复杂）不作为成功配方
+    if any(k in low for k in _READONLY_HINTS):
+        return False
+    # 含实作动作 → 高价值成功配方
+    if any(k in low for k in _ACTION_HINTS):
         return True
-    return not bool(_SIMPLE_CMD.match(sig))
+    return False
 
 def build_success_candidate(sig: str, items: list[dict], session_id: str) -> tuple[str, str] | None:
     """成功配方候选（procedure）：一次成功、命令复杂、会话内认可用它完成实作。"""
@@ -365,8 +399,11 @@ _META_HINTS = ("总结", "入库", "记住", "回忆", "回顾", "沉淀", "怎�
 _SHORT_OK = {"好的", "可以", "可以了", "没问题", "行", "好", "谢谢", "感谢", "知道了", "收到", "ok"}
 # 任务"最终方案"只看执行类工具，跳过 show_widget/present_files 等汇报调用
 _EXEC_TOOLS = ("Bash", "PowerShell", "Python", "Write", "Edit", "Node", "Cmd", "Shell")
-# 附件/引用占位（图片、文件）不是任务指令：@image#xxx / <image_local_path>... 等
-_ATTACH = re.compile(r"@image#|<image_local_path>|<file_path>|<attachment", re.I)
+# 附件/引用占位（图片、文件）不是任务指令：@image#xxx / <image_local_path>... 等；
+# 宿主系统标签（<task-notification> 后台任务通知、<system-reminder> 注入块）也不是任务指令
+_ATTACH = re.compile(r"@image#|<image_local_path>|<file_path>|<attachment|"
+                     r"<task-notification|</task-notification|<system-reminder|</system-reminder|"
+                     r"<system_warning|<additional-data|</additional-data|<user_query", re.I)
 
 # ---- 标题蒸馏（L1）：把原始口语化指令压成"动宾规则"，避免标题变成一整句原话 ----
 # 口语前缀：用户下指令时常带"给你一个思路/能不能/请帮我…"，这些不是任务本体

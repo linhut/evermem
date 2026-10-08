@@ -278,7 +278,7 @@ class EmbeddedServer:
                     try:
                         import harvest
                         from argparse import Namespace
-                        harvest.cmd_scan(Namespace(days=1, min_failures=2, limit=20,
+                        harvest.cmd_scan(Namespace(days=3, min_failures=2, limit=20,
                                                    dry_run=False, include_pure_failure=False,
                                                    no_task_level=False))
                         import mem as _mem
