@@ -241,6 +241,10 @@ def api(path, method="GET", body=None, port: int = _PORT):
         if method == "POST":
             c.request("POST", path, body=json.dumps(body) if body else "{}",
                       headers={"Content-Type": "application/json"})
+        elif method == "HEAD":
+            c.request("HEAD", path)
+        elif method == "OPTIONS":
+            c.request("OPTIONS", path)
         else:
             c.request("GET", path)
         r = c.getresponse()
@@ -279,6 +283,12 @@ check("GET /api/update/sources（离线返回源配置）",
       st == 200 and '"config"' in body and '"platform"' in body)
 st, body = api("/api/doesnotexist")
 check("GET 未知路径→404", st == 404)
+# 浏览器/爬虫/探测会发 HEAD 与 OPTIONS；BaseHTTPRequestHandler 对未实现方法一律回 501，
+# 曾导致前端误报「候选列表加载失败：HTTP 501」。回归守卫：HEAD 须 200、OPTIONS 须 204。
+st, _ = api("/api/health", "HEAD")
+check("HEAD /api/health（不 501，回 200 且无 body）", st == 200)
+st, _ = api("/api/candidates", "OPTIONS")
+check("OPTIONS /api/candidates（不 501，回 204）", st == 204)
 # 写用例打在**隔离实例**（PMEM_HOME=临时数据根）上，正式库零写入、零清理依赖。
 # 旧实现在正式库里建笔记再用 unlink 删除：本机 safe-delete 守卫会拦住 unlink，
 # 脚本在此处抛异常 → 后段检查不跑、汇总行不打印、测试笔记永久留在正式库（假成功）。

@@ -1,5 +1,22 @@
 # 变更日志
 
+## [0.2.11] - 2026-10-08（修复浏览器 HEAD/OPTIONS 请求误报 501）
+
+### 缺陷修复
+
+- **Web 服务对 HEAD / OPTIONS 请求误报 501**：Python 标准库 `BaseHTTPRequestHandler` 对未实现的
+  `do_HEAD` / `do_OPTIONS` 一律回 `501 Unsupported method`，而本服务只实现了 GET/POST。
+  浏览器 / QWebEngine 探测资源（favicon、缓存检查）、`curl -I`、CORS 预检发出 HEAD/OPTIONS 时，
+  前端会误显示「候选列表加载失败：HTTP 501」（历史收割证据：`501 Unsupported method ('HEAD')`）。
+  已补 `do_HEAD`（复用 GET 路由、只回响应头不回 body）与 `do_OPTIONS`（回 Allow 头），
+  实测：HEAD `/index.js` 200、OPTIONS `/api/candidates` 204、GET 与 POST 全部不受影响。
+- 注：`server.py` 编译进打包产物（PyInstaller `--paths web` 收集为模块），**明文热改不生效**，
+  本修复必须随 v0.2.11 重新打包分发；绿色版请更新此版本或同步官方包。
+
+### 说明
+
+- 本地明文副本（`_internal/web/server.py`）已同步本修复（CRLF）；源码态直接生效。
+
 ## [0.2.10] - 2026-10-07（仓库去敏与规范化 + 首启可用性修复 + Marvis 宿主接入）
 
 ### 安全与隐私

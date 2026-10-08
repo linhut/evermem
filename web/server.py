@@ -468,6 +468,9 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, *args):  # 静默访问日志
         pass
 
+    # 标记 HEAD 请求：各 _bytes/_json/_html 只回头部、不写 body（POST/GET 不受影响）。
+    head_only = False
+
     # ---------- 工具 ----------
     def _json(self, obj: dict, code: int = 200):
         body = json.dumps(obj, ensure_ascii=False).encode("utf-8")
@@ -476,7 +479,8 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
-        self.wfile.write(body)
+        if not self.head_only:
+            self.wfile.write(body)
 
     def _html(self):
         try:
@@ -489,7 +493,8 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(raw)))
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
-        self.wfile.write(raw)
+        if not self.head_only:
+            self.wfile.write(raw)
 
     def handle(self):
         # 客户端中途断开（浏览器刷新/取消请求）时优雅吞掉，不刷 traceback（原会打印 ConnectionReset/Aborted 大栈）
@@ -505,7 +510,8 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Cache-Control", "no-store")
         self.send_header("Content-Length", str(len(raw)))
         self.end_headers()
-        self.wfile.write(raw)
+        if not self.head_only:
+            self.wfile.write(raw)
 
     def _static(self, name: str, ctype: str):
         try:
@@ -546,6 +552,38 @@ class Handler(BaseHTTPRequestHandler):
             if origin not in allowed:
                 return False
         return True
+
+    # ---------- HEAD / OPTIONS ----------
+    def do_HEAD(self):
+        """HEAD：与 GET 同路由（校验/分发一致），但不返回 body。
+
+        Python 标准库 BaseHTTPRequestHandler 对未实现的 do_HEAD 一律回 501
+        （历史现象：浏览器/QWebEngine 探测 favicon、curl -I、健康探针发 HEAD
+        → "501 Unsupported method ('HEAD')"，被误报为服务故障）。补上以消除。
+        """
+        self.head_only = True
+        try:
+            self._do_GET()
+        except Exception as exc:  # noqa: BLE001 - 与 GET 一致的异常兜底
+            try:
+                self._json({"ok": False, "error": f"内部错误：{type(exc).__name__}"}, 500)
+            except Exception:
+                pass
+        finally:
+            self.head_only = False
+
+    def do_OPTIONS(self):
+        """OPTIONS：预检请求（CORS preflight / 探测）——回允许的方法即可。
+
+        同样由 BaseHTTPRequestHandler 默认 501；补上避免前端预检报错。
+        本地服务无跨域需求，Allow 恒为 GET/HEAD/POST + OPTIONS 本身。
+        """
+        self.send_response(204)
+        self.send_header("Allow", "GET, HEAD, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Methods", "GET, HEAD, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header("Content-Length", "0")
+        self.end_headers()
 
     # ---------- GET ----------
     def do_GET(self):
