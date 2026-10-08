@@ -24,6 +24,9 @@
 ### 测试与防护
 
 - `scripts/check_all.py` 新增收割质量守卫：断言只读命令被拒、实作命令被保留（48 项全过）。
+- `tests/test_update_check.py` 临时目录显式放本地盘（`LOCALAPPDATA`）：本机 TEMP 指向
+  Y 盘网络盘（NAS），网络盘拒绝 rename/unlink（WinError 5）导致 13 个用例假失败；
+  改本地盘后 35 个单元测试全部通过（CI 不受影响，runner TEMP 本就是本地盘）。
 
 ## [0.2.11] - 2026-10-08（修复 501 误报 + 经验沉淀体验优化）
 

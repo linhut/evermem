@@ -25,7 +25,11 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-TMP = tempfile.mkdtemp(prefix="pmem_update_test_")
+# 测试临时目录显式放本地盘：本机 TEMP 指向 Y 盘网络盘（NAS），网络盘不支持
+# rename/unlink 原子语义，test 清理文件会被 safe-delete 守卫 / EPERM 拦截（WinError 5），
+# 导致整组测试假失败。CI runner 的 TEMP 本就是本地盘，此处显式指定同样有效。
+_LOCAL_TMP_ROOT = Path(os.environ.get("LOCALAPPDATA") or str(Path.home()))
+TMP = tempfile.mkdtemp(prefix="pmem_update_test_", dir=str(_LOCAL_TMP_ROOT))
 os.environ["PMEM_HOME"] = TMP
 
 import update  # noqa: E402
@@ -82,11 +86,12 @@ def github_payload(version="0.9.9", with_asset=True, sha_asset=False, form="port
 
 class UpdateCheckTest(unittest.TestCase):
     def setUp(self):
-        # 每个用例都从干净的数据目录开始，避免状态串味
+        # 每个用例都从干净的数据目录开始，避免状态串味。
+        # TMP 现已显式放本地盘（见文件头），unlink 不再被网络盘 EPERM 拦截。
         for name in (update.CONFIG_NAME, update.STATE_NAME):
             p = Path(TMP) / name
             if p.exists():
-                p.unlink()
+                p.unlink(missing_ok=True)
 
     # ---------- 版本比较 ----------
     def test_01_semver_compare(self):
