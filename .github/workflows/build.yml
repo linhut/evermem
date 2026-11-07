@@ -52,7 +52,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           # PyInstaller + PySide6 在 3.12 三平台 wheel 最稳定
           python-version: "3.12"
